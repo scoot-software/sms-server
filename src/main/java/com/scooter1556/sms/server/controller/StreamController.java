@@ -183,7 +183,7 @@ public class StreamController {
             }
             
             // Set response header
-            profile.setMimeType(TranscodeService.getAudioMimeType(TranscodeService.getAudioFormatFromCodec(profile.getAudioCodec())));
+            profile.setMimeType(TranscodeService.getVideoMimeType(profile.getFormat()));
             response.setContentType(profile.getMimeType());
             
             // Tell client we don't support byte range requests.

@@ -27,12 +27,12 @@ public class AndroidVideoTranscode {
     @Autowired
     private TranscodeService transcodeService;
     
-    private static final String SUPPORTED_VIDEO_CODECS = "vp8,h264";
-    private static final String SUPPORTED_AUDIO_CODECS = "vorbis,mp3,aac";
+    private static final String SUPPORTED_VIDEO_CODECS = "h264,vp8";
+    private static final String SUPPORTED_AUDIO_CODECS = "aac,mp3,vorbis";
         
     private static final Integer DEFAULT_QUALITY = 360;
     private static final Integer MAX_SAMPLE_RATE = 48000;
-    
+   
     public List<String> createTranscodeCommand(MediaElement mediaElement, TranscodeProfile profile)
     {
         List<String> command = new ArrayList<>();
@@ -46,6 +46,9 @@ public class AndroidVideoTranscode {
         // Quality Setting
         profile.setVideoQuality(TranscodeService.validateVideoQuality(profile.getVideoQuality(), DEFAULT_QUALITY));
         Integer sourceQuality = transcodeService.getVideoSourceQuality(mediaElement);
+        
+        // Container Format
+        profile.setFormat(TranscodeService.getVideoFormatFromCodec(TranscodeService.getDefault(SUPPORTED_VIDEO_CODECS)));
         
         // Quality setting used is limited by the source file regardless of clients capabilities
         if(sourceQuality != null)
@@ -131,10 +134,6 @@ public class AndroidVideoTranscode {
         // Video codec
         command.addAll(transcodeService.getVideoCodecCommands(TranscodeService.getDefault(SUPPORTED_VIDEO_CODECS)));
         
-        // Fixes some issues with mpegts
-        command.add("-bsf");
-        command.add("h264_mp4toannexb");
-        
         // Audio
         if(profile.getAudioTrack() != null)
         {
@@ -154,12 +153,8 @@ public class AndroidVideoTranscode {
         command.add("-threads");
         command.add("0");
         
-        //
-        // Segmenter options
-        //
-        
         command.add("-f");
-        command.add(TranscodeService.getVideoFormatFromCodec(TranscodeService.getDefault(SUPPORTED_VIDEO_CODECS)));
+        command.add(profile.getFormat());
         
         // Output Pipe
         command.add("-");

@@ -128,10 +128,14 @@ public class TranscodeService {
     
     private static final String[][] VIDEO_MIME_TYPES = {
         {"webm", "video/webm"},
+        {"3gp", "video/3gpp"},
+        {"flv", "video/x-flv"},
         {"mpeg", "video/mpeg"},
+        {"mpegts", "video/MP2T"},
         {"mp4", "video/mp4"},
+        {"m4v", "video/mp4"},
         {"matroska", "video/x-matroska"},
-        {"mkv", "video/x-matroska"},};
+        {"mkv", "video/x-matroska"}};
     
     private static final String[][] AUDIO_MIME_TYPES = {
         {"mp3", "audio/mpeg"},
@@ -144,7 +148,7 @@ public class TranscodeService {
     
     private static final String[][] SUBTITLE_MIME_TYPES = {
         {"vtt", "text/vtt"},
-        {"srt", "text/plain"},};
+        {"srt", "text/plain"}};
     
     /*
      * Returns a file reference to the transcoder.
@@ -691,7 +695,7 @@ public class TranscodeService {
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public static class TranscodeProfile {
         
-        private String videoCodec, audioCodec, mimeType;
+        private String videoCodec, audioCodec, format, mimeType;
         private Integer videoQuality, audioQuality, audioBitrate, audioTrack, subtitleTrack, maxSampleRate, maxChannelCount;
         private Integer offset = 0;
         private Boolean multiChannel = false;
@@ -716,6 +720,16 @@ public class TranscodeService {
         public void setAudioCodec(String audioCodec)
         {
             this.audioCodec = audioCodec;
+        }
+        
+        public String getFormat()
+        {
+            return format;
+        }
+        
+        public void setFormat(String format)
+        {
+            this.format = format;
         }
         
         public String getMimeType()
