@@ -15,6 +15,8 @@ import com.scooter1556.sms.server.domain.UserStats;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.List;
+import javax.annotation.PreDestroy;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +29,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @EnableScheduling
-public class JobService {
+public class JobService implements DisposableBean {
     
     private static final String CLASS_NAME = "JobService";
     
@@ -105,8 +107,7 @@ public class JobService {
         }
     }
     
-    // Check for and end inactive jobs every 15 minutes
-    @Scheduled(fixedDelay=900000)
+    // Check for and end inactive jobs
     private void cleanupJobs()
     {
         List<Job> jobs = jobDao.getActiveJobs();
@@ -136,6 +137,35 @@ public class JobService {
                 
                 jobDao.updateEndTime(job.getID());
             }
+        }
+    }
+    
+    // Check for inactive jobs every 15 minutes
+    @Scheduled(fixedDelay=900000)
+    private void monitorJobs() {
+        cleanupJobs();
+    }
+
+    // End all active jobs before the application exits
+    @Override
+    public void destroy() {
+        List<Job> jobs = jobDao.getActiveJobs();
+        
+        // If there are no jobs to process don't bother going any further
+        if(jobs == null)
+        {
+            return;
+        }
+            
+        // End all active jobs
+        for(Job job : jobs)
+        {   
+            if(job.getType() == JobType.ADAPTIVE_STREAM)
+            {
+                adaptiveStreamingService.endProcess(job.getID());
+            }
+
+            jobDao.updateEndTime(job.getID());
         }
     }
 }

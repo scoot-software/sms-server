@@ -12,14 +12,14 @@ import javax.sql.DataSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 /**
  *
  * @author scott2ware
  */
 
-@Repository
+@Component
 public final class SettingsDatabase {
     
     DataSource dataSource = null;
