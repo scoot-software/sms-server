@@ -55,8 +55,12 @@ public final class LogService {
      * @param message The message to accompany this entry.
      * @param exception Exception stack trace (Optional).
      */
-    public void addLogEntry(Level level, String category, String message, Throwable exception)
-    {
+    public void addLogEntry(Level level, String category, String message, Throwable exception) {
+        
+        if(message == null || category == null || level == null) {
+            return;
+        }
+        
         LogEntry entry = new LogEntry(level, category, message);
         
         // If debugging is not enabled and this is a debug entry, ignore it.

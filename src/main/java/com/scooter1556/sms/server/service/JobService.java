@@ -11,11 +11,11 @@ import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.UserStats;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.List;
-import javax.annotation.PreDestroy;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -64,12 +64,15 @@ public class JobService implements DisposableBean {
         // Update media element and parent media element if necessary
         mediaDao.updateLastPlayed(mediaElement.getID());
         
-        mediaElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
+        MediaElement parentElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
         
-        if(mediaElement != null)
+        if(parentElement != null)
         {
-            mediaDao.updateLastPlayed(mediaElement.getID());
+            mediaDao.updateLastPlayed(parentElement.getID());
         }
+        
+        // Log event
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, getLogMessage(false, job.getType(), job.getUsername(), mediaElement), null);
         
         return job;
     }
@@ -104,6 +107,9 @@ public class JobService implements DisposableBean {
             
             // Update database
             userDao.updateUserStats(userStats);
+            
+            // Log event
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, getLogMessage(true, job.getType(), job.getUsername(), mediaDao.getMediaElementByID(job.getMediaElement())), null);
         }
     }
     
@@ -167,5 +173,53 @@ public class JobService implements DisposableBean {
 
             jobDao.updateEndTime(job.getID());
         }
+    }
+    
+    private String getLogMessage(boolean ended, byte type, String username, MediaElement element) {
+        
+        if(element == null || username == null) {
+            return null;
+        }
+        
+        StringBuilder message = new StringBuilder();
+        
+        message.append(username);
+        
+        if(ended) {
+            message.append(" finished ");
+        } else {
+           message.append(" started "); 
+        }
+        
+        switch(type) {
+            
+            case JobType.ADAPTIVE_STREAM: case JobType.AUDIO_STREAM: case JobType.VIDEO_STREAM:
+                message.append("streaming ");
+                break;
+                
+            case JobType.DOWNLOAD:
+                message.append("downloading ");
+                break;
+                
+            default:
+                return null;
+        }
+        
+        switch(element.getType()) {
+            case MediaElementType.AUDIO:
+                message.append("'").append(element.getTitle()).append("'");
+                message.append(" by ");
+                message.append("'").append(element.getArtist()).append("'");
+                break;
+                
+            case MediaElementType.VIDEO:
+                message.append("'").append(element.getTitle()).append("'");
+                break;
+                
+            default:
+                return null;
+        }
+        
+        return message.toString();
     }
 }
