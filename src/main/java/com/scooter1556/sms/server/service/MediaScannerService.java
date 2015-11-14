@@ -9,6 +9,12 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import static java.nio.file.FileVisitResult.CONTINUE;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.regex.Matcher;
@@ -713,5 +719,29 @@ public class MediaScannerService {
         }
         
         return directory.getParentFile().getName();
+    }
+    
+    private static class ParseFiles extends SimpleFileVisitor<Path> {
+        
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {            
+            return CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {
+            return CONTINUE;
+        }
+        
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            return CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path file, IOException exc) {
+            System.err.println(exc);
+            return CONTINUE;
+        }
     }
 }
