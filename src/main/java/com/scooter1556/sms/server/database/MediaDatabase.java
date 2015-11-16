@@ -33,7 +33,7 @@ public class MediaDatabase {
         {
             dataSource = getDataSource();
             createSchema();
-            //updateSchema();
+            updateSchema();
         }
     }
     

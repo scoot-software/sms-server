@@ -34,7 +34,7 @@ public final class UserDatabase {
         {
             dataSource = getDataSource();
             createSchema();
-            //updateSchema();
+            updateSchema();
         }
     }
     

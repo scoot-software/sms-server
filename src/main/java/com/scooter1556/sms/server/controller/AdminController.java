@@ -314,13 +314,30 @@ public class AdminController {
         }
         
         // Start scanning media
-        mediaScannerService.startScanning();
+        mediaScannerService.startScanning(null);
+        
+        return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/media/scan/{id}", method=RequestMethod.GET)
+    public ResponseEntity<String> scanMediaFolder(@PathVariable("id") Long id)
+    {        
+        if (mediaScannerService.isScanning()) {
+            return new ResponseEntity<>("Media is already being scanned.", HttpStatus.NOT_ACCEPTABLE);
+        }
+        
+        if(settingsDao.getMediaFolderByID(id) == null) {
+            return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
+        }
+        
+        // Start scanning media
+        mediaScannerService.startScanning(id);
         
         return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
     }
     
     @RequestMapping(value="/media/scan/count", method=RequestMethod.GET)
-    public ResponseEntity<Integer> getMediaScanCount()
+    public ResponseEntity<Long> getMediaScanCount()
     {   
         return new ResponseEntity<>(mediaScannerService.getScanCount(), HttpStatus.OK);
     }

@@ -34,7 +34,7 @@ public final class SettingsDatabase {
         {
             dataSource = getDataSource();
             createSchema();
-            //updateSchema();
+            updateSchema();
         }
     }
     
@@ -68,6 +68,9 @@ public final class SettingsDatabase {
                     + "Name VARCHAR(50) NOT NULL,"
                     + "Type TINYINT NOT NULL,"
                     + "Path VARCHAR NOT NULL,"
+                    + "Folders BIGINT,"
+                    + "Files BIGINT,"
+                    + "LastScanned TIMESTAMP,"
                     + "Enabled BOOLEAN DEFAULT 1 NOT NULL,"
                     + "PRIMARY KEY (ID))");
             
@@ -82,6 +85,11 @@ public final class SettingsDatabase {
     {
         // Any updates to the database structure go here.
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Updating database.", null);
+        
+        // 0.3.6
+        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS Folders BIGINT AFTER Path");
+        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS Files BIGINT AFTER Folders");
+        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS LastScanned TIMESTAMP AFTER Files");
     }
 }
 

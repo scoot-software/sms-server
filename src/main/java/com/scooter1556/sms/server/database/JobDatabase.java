@@ -34,7 +34,7 @@ public final class JobDatabase {
         {
             dataSource = getDataSource();
             createSchema();
-            //updateSchema();
+            updateSchema();
         }
     }
     

@@ -127,9 +127,9 @@ public class MediaDao {
         return true;
     }
     
-    public void removeDeletedMediaElements(Timestamp lastScanned) 
+    public void removeDeletedMediaElements(String path, Timestamp lastScanned) 
     {            
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE LastScanned != ?", lastScanned);
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ParentPath LIKE '?%' AND LastScanned != ?", path, lastScanned);
     }
     
     public boolean updateMediaElement(MediaElement mediaElement)
