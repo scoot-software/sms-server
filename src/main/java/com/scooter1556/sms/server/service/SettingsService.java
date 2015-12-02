@@ -17,8 +17,8 @@ public class SettingsService {
     private static final String CLASS_NAME = "SettingsService";
     
     // SMS Version
-    private static final String VERSION = "0.3.5";
-    private static final Integer VERSION_INT = 35;
+    private static final String VERSION = "0.3.6";
+    private static final Integer VERSION_INT = 36;
     
     // SMS home directory
     private static final File HOME_DIRECTORY = new File(System.getProperty( "user.home" ) + "/.sms/server");

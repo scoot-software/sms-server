@@ -4,7 +4,7 @@
 
     <groupId>com.srw</groupId>
     <artifactId>sms-server</artifactId>
-    <version>0.3.5</version>
+    <version>0.3.6</version>
     <packaging>war</packaging>
 
     <name>sms-server</name>
