@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -307,27 +308,23 @@ public class AdminController {
     }
     
     @RequestMapping(value="/media/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> scanMedia()
+    public ResponseEntity<String> scanMedia(@RequestParam(value = "id", required = false) Long id,
+                                            @RequestParam(value = "forcerescan", required = false) Boolean forceRescan)
     {        
         if (mediaScannerService.isScanning()) {
             return new ResponseEntity<>("Media is already being scanned.", HttpStatus.NOT_ACCEPTABLE);
         }
         
-        // Start scanning media
-        mediaScannerService.startScanning(null);
-        
-        return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
-    }
-    
-    @RequestMapping(value="/media/scan/{id}", method=RequestMethod.GET)
-    public ResponseEntity<String> scanMediaFolder(@PathVariable("id") Long id)
-    {        
-        if (mediaScannerService.isScanning()) {
-            return new ResponseEntity<>("Media is already being scanned.", HttpStatus.NOT_ACCEPTABLE);
+        if(id != null) {
+            if(settingsDao.getMediaFolderByID(id) == null) {
+                return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
+            }
         }
         
-        if(settingsDao.getMediaFolderByID(id) == null) {
-            return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
+        if(forceRescan != null) {
+            if(forceRescan) {
+                settingsDao.forceRescan(id);
+            }
         }
         
         // Start scanning media

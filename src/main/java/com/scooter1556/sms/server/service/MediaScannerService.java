@@ -14,14 +14,17 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
+import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Timestamp;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,8 +62,7 @@ public class MediaScannerService {
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
     private boolean scanning = false;
-    private long tCount = 0, tFolders = 0, tFiles = 0;
-    private long count = 0, files = 0, folders = 0;
+    private long tCount = 0, count = 0, files = 0, folders = 0;
     private List<MediaFolder> mediaFolders;
 
     //
@@ -114,12 +116,7 @@ public class MediaScannerService {
     }
     
     private void scanMedia() {
-        // Start scanning
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started to scan media.", null);
-
         tCount = 0;
-        tFolders = 0;
-        tFiles = 0;
         scanning = true;
 
         for (MediaFolder folder : mediaFolders) {
@@ -128,36 +125,39 @@ public class MediaScannerService {
             ParseFiles fileParser = new ParseFiles(folder);
 
             try {
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
+                // Start Scan directory
+                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
                 Files.walkFileTree(path, fileParser);
+                
+                // Update folder statistics
+                folder.setFolders(folders);
+                folder.setFiles(files);
+                folder.setLastScanned(fileParser.getScanTime());
+                settingsDao.updateMediaFolder(folder);
+
+                // Remove files which no longer exist
+                mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
+                
+                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + count + " Folders Processed: " + folders + " Files Processed: " + files + ")", null);
             } catch (IOException ex) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
             }
-
-            // Update folder statistics
-            folder.setFolders(folders);
-            folder.setFiles(files);
-            settingsDao.updateMediaFolder(folder);
-
-            // Remove files which no longer exist
-            mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
         }
         
         // Scanning finished
-        scanning = false;
-        
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Media scan complete (Items Scanned: " + tCount + " Folders Processed: " + tFolders + " Files Processed: " + tFiles + ")", null);
+        scanning = false;        
     }
 
     private class ParseFiles extends SimpleFileVisitor<Path> {
         
         boolean directoryChanged = false;
 
-        Timestamp scanTime = new Timestamp(new Date().getTime());;
-        private NFOData data;
-        private MediaFolder folder;
-        private MediaElement directory;
-        private List<MediaElement> elements;
+        Timestamp scanTime = new Timestamp(new Date().getTime());
+        private final MediaFolder folder;
+        private final Deque<MediaElement> directories = new ArrayDeque<>();
+        private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
+        private final Deque<NFOData> nfoData = new ArrayDeque<>();
+        private final HashSet<Path> directoriesToUpdate = new HashSet<>();
         
         public ParseFiles(MediaFolder folder) {
             this.folder = folder;
@@ -168,27 +168,28 @@ public class MediaScannerService {
         }
 
         @Override
-        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing directory " + dir.toString(), null);
-            
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {            
             // Check if we need to scan this directory
             if(!containsMedia(dir.toFile())) {
-                return SKIP_SUBTREE;
+                return SKIP_SIBLINGS;
             }
             
-            // Clear variables
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing directory " + dir.toString(), null);
+            
+            // Initialise variables
             directoryChanged = false;
-            directory = null;
-            elements = new ArrayList<>();
-            data = null;
+            directoryElements.add(new ArrayDeque<MediaElement>());
+            
+            // Determine if this directory has changed
+            directoryChanged = folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned());
             
             // If this is the root directory procede without processing
             if(dir.toString().equals(folder.getPath())) {
                 return CONTINUE;
             }
-
-            // Check if media file already has an associated media element
-            directory = mediaDao.getMediaElementByPath(dir.toString());
+                
+            // Check if directory already has an associated media element
+            MediaElement directory = mediaDao.getMediaElementByPath(dir.toString());
 
             if (directory == null) {
                 directory = getMediaElementFromPath(dir);
@@ -196,40 +197,37 @@ public class MediaScannerService {
 
                 // Parse file name for media element attributes
                 directory = parseFileName(dir, directory);
-                
-                // Add new media element to database
-                mediaDao.createMediaElement(directory);
-                directory = mediaDao.getMediaElementByPath(dir.toString());
             }
-            
-            if(folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(directory.getLastScanned())) {
+
+            if(directory.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
+                // Add directory to update list
+                directoriesToUpdate.add(dir);
+                
                 // Determine if the directory should be excluded from categorised lists
                 if (isExcluded(dir.getFileName())) {
                     directory.setExcluded(true);
                 }
-                
-                directoryChanged = true;
             }
-            
+
             // Update timestamp
             directory.setLastScanned(scanTime);
+            
+            // Add directory to list
+            directories.add(directory);
 
             return CONTINUE;
         }
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing file " + file.toString(), null);
-            
-            // Update statistics
-            count++;
-            tCount++;
-            
             // Determine type of file and how to process it
             if(isAudioFile(file) || isVideoFile(file)) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing file " + file.toString(), null);
+                
                 // Update statistics
+                count++;
+                tCount++;
                 files++;
-                tFiles++;
                 
                 // Check if media file already has an associated media element
                 MediaElement mediaElement = mediaDao.getMediaElementByPath(file.toString());
@@ -238,17 +236,18 @@ public class MediaScannerService {
                     mediaElement = getMediaElementFromPath(file);
                     mediaElement.setType(getMediaType(file));
                     mediaElement.setFormat(getFileExtension(file.getFileName()));
-
+                }
+                
+                // Determine if we need to process the file
+                if(mediaElement.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing file " + file.toString(), null);
+                    
+                    // Add parent directory to update list
+                    directoriesToUpdate.add(file.getParent());
+                    
                     // Parse file name for media element attributes
                     mediaElement = parseFileName(file.getFileName(), mediaElement);
                     
-                    // Add new media element to database
-                    mediaDao.createMediaElement(mediaElement);
-                    mediaElement = mediaDao.getMediaElementByPath(file.toString());
-                }
-                
-                // Determine if we need to parse the file
-                if (folder.getLastScanned() == null || mediaElement.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).before(mediaElement.getLastScanned())) {
                     mediaElement.setSize(attr.size());
 
                     // Parse Metadata
@@ -260,12 +259,14 @@ public class MediaScannerService {
                 mediaElement.setLastScanned(scanTime);
                 
                 // Add media element to list
-                elements.add(mediaElement);
+                directoryElements.getLast().add(mediaElement);
                 
             } else if(isInfoFile(file)) {
                 // Determine if we need to parse this file
                 if(directoryChanged || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
-                    data = nfoParser.parse(file);
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing file " + file.toString(), null);
+                    
+                    nfoData.add(nfoParser.parse(file));
                 }
             }
             
@@ -278,48 +279,72 @@ public class MediaScannerService {
             count++;
             tCount++;
             folders++;
-            tFolders++;
+            
+            MediaElement directory = null;
+            Deque<MediaElement> dirElements;
+            NFOData dirData = null;
+            
+            // Retrieve directory from list
+            if(!directories.isEmpty()) {
+                directory = directories.removeLast();
+            }
+            
+            // Get child elements for directory
+            dirElements = directoryElements.removeLast();
+            
+            // Get NFO data for directory
+            if(!nfoData.isEmpty()) {
+                if(nfoData.getLast().getPath().equals(dir)) {
+                    dirData = nfoData.removeLast();
+                }
+            }
             
             // Process child media elements
-            for(MediaElement element : elements) {
-                if(data != null) {
-                    nfoParser.updateMediaElement(element, data);
+            for(MediaElement element : dirElements) {
+                if(dirData != null) {
+                    nfoParser.updateMediaElement(element, dirData);
                 }
                 
-                mediaDao.updateMediaElement(element);
+                if(element.getID() == null) {
+                    mediaDao.createMediaElement(element);
+                } else {
+                    mediaDao.updateMediaElementByPath(element);
+                }
             }
             
             // Update directory element if necessary
-            if(directoryChanged) {
-                if(data != null) {
-                    nfoParser.updateMediaElement(directory, data);
+            if(directory != null && directoriesToUpdate.contains(dir)) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing directory " + dir.toString(), null);
+                
+                if(dirData != null) {
+                    nfoParser.updateMediaElement(directory, dirData);
                 }
                 
                 // Determine directory media type
-                directory.setDirectoryType(getDirectoryMediaType(elements));
+                directory.setDirectoryType(getDirectoryMediaType(dirElements));
                 
                 // Check for common attributes if the directory contains media
                 if (!directory.getDirectoryType().equals(DirectoryMediaType.NONE)) {
                     // Get year if not set
                     if (directory.getYear() == 0) {
-                        directory.setYear(getDirectoryYear(elements));
+                        directory.setYear(getDirectoryYear(dirElements));
                     }
 
                     // Get common media attributes for the directory if available (artist, collection, TV series etc...)                
                     if (directory.getDirectoryType().equals(DirectoryMediaType.AUDIO) || directory.getDirectoryType().equals(DirectoryMediaType.MIXED)) {
                         // Get directory description if possible.
-                        String description = getDirectoryDescription(elements);
+                        String description = getDirectoryDescription(dirElements);
 
                         if (description != null) {
                             directory.setDescription(description);
                         }
 
                         // Get directory artist if possible.
-                        String artist = getDirectoryArtist(elements);
+                        String artist = getDirectoryArtist(dirElements);
 
                         // Try album artist
                         if (artist == null) {
-                            artist = getDirectoryAlbumArtist(elements);
+                            artist = getDirectoryAlbumArtist(dirElements);
                         }
 
                         // Try root directory name
@@ -335,7 +360,7 @@ public class MediaScannerService {
 
                     if (directory.getDirectoryType().equals(DirectoryMediaType.VIDEO)) {
                         // Get directory collection/series if possible.
-                        String collection = getDirectoryCollection(elements);
+                        String collection = getDirectoryCollection(dirElements);
 
                         // Try root directory name
                         if (collection == null) {
@@ -355,9 +380,13 @@ public class MediaScannerService {
             
             // Update database
             if(directory != null) {
-                mediaDao.updateMediaElement(directory);
+                if(directory.getID() == null) {
+                    mediaDao.createMediaElement(directory);
+                } else {
+                    mediaDao.updateMediaElementByPath(directory);
+                }
             }
-
+                    
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Finished parsing directory " + dir.toString(), null);
             
             return CONTINUE;
@@ -437,7 +466,8 @@ public class MediaScannerService {
                     mediaElement.setYear(Short.parseShort(matcher.group(3)));
                 }
             } else {
-                mediaElement.setTitle(path.getFileName().toString());
+                int extensionIndex = path.getFileName().toString().lastIndexOf(".");
+                mediaElement.setTitle(extensionIndex == -1 ? path.getFileName().toString() : path.getFileName().toString().substring(0, extensionIndex));
             }
 
             return mediaElement;
@@ -470,7 +500,7 @@ public class MediaScannerService {
             return extensionIndex == -1 ? null : path.getFileName().toString().substring(extensionIndex + 1).toLowerCase().trim();
         }
 
-        private Byte getDirectoryMediaType(List<MediaElement> mediaElements) {
+        private Byte getDirectoryMediaType(Deque<MediaElement> mediaElements) {
             Byte type = DirectoryMediaType.NONE;
 
             for (MediaElement child : mediaElements) {
@@ -488,7 +518,7 @@ public class MediaScannerService {
         }
 
         // Get directory year from child media elements
-        private Short getDirectoryYear(List<MediaElement> mediaElements) {
+        private Short getDirectoryYear(Deque<MediaElement> mediaElements) {
             Short year = 0;
 
             for (MediaElement child : mediaElements) {
@@ -508,7 +538,7 @@ public class MediaScannerService {
         }
 
         // Get directory artist from child media elements
-        private String getDirectoryArtist(List<MediaElement> mediaElements) {
+        private String getDirectoryArtist(Deque<MediaElement> mediaElements) {
             String artist = null;
 
             for (MediaElement child : mediaElements) {
@@ -528,7 +558,7 @@ public class MediaScannerService {
         }
 
         // Get directory album artist from child media elements
-        private String getDirectoryAlbumArtist(List<MediaElement> mediaElements) {
+        private String getDirectoryAlbumArtist(Deque<MediaElement> mediaElements) {
             String albumArtist = null;
 
             for (MediaElement child : mediaElements) {
@@ -548,7 +578,7 @@ public class MediaScannerService {
         }
 
         // Get directory collection from child media elements
-        private String getDirectoryCollection(List<MediaElement> mediaElements) {
+        private String getDirectoryCollection(Deque<MediaElement> mediaElements) {
             String collection = null;
 
             for (MediaElement child : mediaElements) {
@@ -568,7 +598,7 @@ public class MediaScannerService {
         }
 
         // Get directory description from child media elements (audio only)
-        private String getDirectoryDescription(List<MediaElement> mediaElements) {
+        private String getDirectoryDescription(Deque<MediaElement> mediaElements) {
             String description = null;
 
             for (MediaElement child : mediaElements) {

@@ -51,7 +51,7 @@ public final class JobDatabase {
     {   
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/job");
+        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/job;" + "MV_STORE=FALSE;MVCC=FALSE");
         
         return ds;
     }

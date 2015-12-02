@@ -50,7 +50,7 @@ public class MediaDatabase {
     {   
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/media");
+        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/media;" + "MV_STORE=FALSE;MVCC=FALSE");
         
         return ds;
     }

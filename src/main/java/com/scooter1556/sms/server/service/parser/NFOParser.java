@@ -39,6 +39,9 @@ public class NFOParser {
 
         // Parse File
         NFOData data = new NFOData();
+        
+        // Set path
+        data.setPath(path.getParent());
 
         try {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -163,6 +166,7 @@ public class NFOParser {
 
     public class NFOData {
 
+        private Path path;
         private String title;
         private Short year = 0;
         private String genre;
@@ -172,6 +176,14 @@ public class NFOParser {
         private String certificate;
         private String collection;
 
+        public Path getPath() {
+            return path;
+        }
+        
+        public void setPath(Path path) {
+            this.path = path;
+        }
+        
         public String getTitle() {
             return title;
         }

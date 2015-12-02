@@ -129,10 +129,10 @@ public class MediaDao {
     
     public void removeDeletedMediaElements(String path, Timestamp lastScanned) 
     {            
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ParentPath LIKE '?%' AND LastScanned != ?", path, lastScanned);
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ParentPath LIKE ? AND LastScanned != ?", new Object[] {path + "%",lastScanned});
     }
     
-    public boolean updateMediaElement(MediaElement mediaElement)
+    public boolean updateMediaElementByID(MediaElement mediaElement)
     {
         try
         {
@@ -168,6 +168,57 @@ public class MediaDao {
                                               mediaElement.getCertificate(),
                                               mediaElement.getCollection(),
                                               mediaElement.getID()});
+        }
+        catch (InvalidResultSetAccessException e) 
+        {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to update media element for file: " + mediaElement.getPath(), e);
+            return false;
+        } 
+        catch (DataAccessException e)
+        {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to update media element for file: " + mediaElement.getPath(), e);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean updateMediaElementByPath(MediaElement mediaElement)
+    {
+        try
+        {
+            mediaDatabase.getJdbcTemplate().update("UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?", 
+                                new Object[] {mediaElement.getDirectoryType(),
+                                              mediaElement.getLastScanned(),
+                                              mediaElement.getExcluded(),
+                                              mediaElement.getSize(),
+                                              mediaElement.getDuration(),
+                                              mediaElement.getBitrate(),
+                                              mediaElement.getVideoWidth(),
+                                              mediaElement.getVideoHeight(),
+                                              mediaElement.getVideoCodec(),
+                                              mediaElement.getAudioCodec(),
+                                              mediaElement.getAudioSampleRate(),
+                                              mediaElement.getAudioConfiguration(),
+                                              mediaElement.getAudioLanguage(),
+                                              mediaElement.getSubtitleLanguage(),
+                                              mediaElement.getSubtitleFormat(),
+                                              mediaElement.getSubtitleForced(),
+                                              mediaElement.getTitle(),
+                                              mediaElement.getArtist(),
+                                              mediaElement.getAlbumArtist(),
+                                              mediaElement.getAlbum(),
+                                              mediaElement.getYear(),
+                                              mediaElement.getDiscNumber(),
+                                              mediaElement.getDiscSubtitle(),
+                                              mediaElement.getTrackNumber(),
+                                              mediaElement.getGenre(),
+                                              mediaElement.getRating(),
+                                              mediaElement.getTagline(),
+                                              mediaElement.getDescription(),
+                                              mediaElement.getCertificate(),
+                                              mediaElement.getCollection(),
+                                              mediaElement.getPath()});
         }
         catch (InvalidResultSetAccessException e) 
         {

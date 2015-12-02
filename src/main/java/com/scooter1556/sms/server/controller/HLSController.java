@@ -147,7 +147,7 @@ public class HLSController {
     @RequestMapping(value="/stream.ts", method=RequestMethod.GET, produces = "video/MP2T")
     public @ResponseBody
     ResponseEntity<FileSystemResource> getHLSSegment(@RequestParam(value = "id", required = true) final Long id,
-                                            @RequestParam(value = "segment", required = true) final Integer segmentNumber) throws InterruptedException
+                                                     @RequestParam(value = "segment", required = true) final Integer segmentNumber) throws InterruptedException
     {
         // Get associated job
         Job job = jobDao.getJobByID(id);

@@ -9,6 +9,7 @@ import com.scooter1556.sms.server.database.SettingsDatabase;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -119,6 +120,22 @@ public class SettingsDao {
         }
 
         return mediaFolder;
+    }
+    
+    public boolean forceRescan(Long id)
+    {
+        try {
+            if(id == null) {
+                settingsDatabase.getJdbcTemplate().update("UPDATE MediaFolder SET LastScanned=NULL");
+            } else {
+                settingsDatabase.getJdbcTemplate().update("UPDATE MediaFolder SET LastScanned=NULL WHERE ID=?", new Object[] {id});
+            }
+        }
+        catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
     }
 
     private static final class MediaFolderMapper implements RowMapper {
