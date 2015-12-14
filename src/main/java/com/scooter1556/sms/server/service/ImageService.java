@@ -34,40 +34,36 @@ public class ImageService {
     @Autowired
     private TranscodeService transcodeService;
     
-    public byte[] getCoverArt(MediaElement element, Integer scale)
-    {
+    public byte[] getCoverArt(MediaElement element, Integer scale) {
         File imageFile;
         
         // Get directory or file parent directory
-        if(element.getType() == MediaElementType.DIRECTORY)
-        {
+        if(element.getType() == MediaElementType.DIRECTORY) {
             imageFile = findCoverArt(new File(element.getPath()));
-        }
-        else
-        {
+        } else {
             imageFile = findCoverArt(new File(element.getParentPath()));
         }
         
         // If cover art is not found return.
-        if(imageFile == null)
-        {
+        if(imageFile == null) {
             return null;
         }
         
         return processImage(imageFile, scale);
     }
     
-    public byte[] getFanArt(MediaElement element, Integer scale)
-    {
+    public byte[] getFanArt(MediaElement element, Integer scale) {
         File imageFile;
         
         // Get directory or file parent directory
-        if(element.getType() == MediaElementType.DIRECTORY)
-        {
+        if(element.getType() == MediaElementType.DIRECTORY) {
             imageFile = findFanArt(new File(element.getPath()));
-        }
-        else
-        {
+            
+            // Try parent path
+            if(imageFile == null) {
+                imageFile = findFanArt(new File(element.getParentPath()));
+            }
+        } else {
             imageFile = findFanArt(new File(element.getParentPath()));
         }
         
