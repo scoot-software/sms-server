@@ -29,6 +29,7 @@ public class AndroidVideoTranscode {
     
     private static final String SUPPORTED_VIDEO_CODECS = "h264,vp8";
     private static final String SUPPORTED_AUDIO_CODECS = "aac,mp3,vorbis";
+    private static final String MULTI_CHANNEL_CODEC = "ac3";
         
     private static final Integer DEFAULT_QUALITY = 360;
     private static final Integer MAX_SAMPLE_RATE = 48000;
@@ -141,7 +142,6 @@ public class AndroidVideoTranscode {
             command.add("-map");
             command.add("0:a:" + profile.getAudioTrack());
             
-            // Stereo Audio
             profile.setAudioCodec(TranscodeService.getDefault(SUPPORTED_AUDIO_CODECS));
             profile.setMaxChannelCount(2);
             profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));

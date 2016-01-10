@@ -76,7 +76,7 @@ public class KodiAudioTranscode {
         int channelCount = TranscodeService.getAudioChannelCount(mediaElement.getAudioConfiguration());
         
         // Multichannel Audio
-        if(profile.isMultiChannelEnabled() && channelCount > 2)
+        if(profile.getMaxChannelCount() > 2 && channelCount > 2)
         {
             if(mediaElement.getAudioCodec() != null)
             {
@@ -108,7 +108,6 @@ public class KodiAudioTranscode {
                 if(TranscodeService.isSupported(SUPPORTED_CODECS, mediaElement.getAudioCodec()))
                 {
                     profile.setAudioCodec(TranscodeService.validateAudioCodec(mediaElement.getAudioCodec()));
-                    profile.setMultiChannelEnabled(false);
                     if(profile.getMaxSampleRate() == null) { profile.setMaxSampleRate(TranscodeService.getMaxSampleRateForCodec(profile.getAudioCodec())); }
 
                     // Test if we need to transcode
@@ -134,7 +133,6 @@ public class KodiAudioTranscode {
                 if(TranscodeService.isSupported(LOSSY_CODECS, mediaElement.getAudioCodec()))
                 { 
                     profile.setAudioCodec(TranscodeService.validateAudioCodec(mediaElement.getAudioCodec()));
-                    profile.setMultiChannelEnabled(false);
                     if(profile.getMaxSampleRate() == null) { profile.setMaxSampleRate(TranscodeService.getMaxSampleRateForCodec(profile.getAudioCodec())); }
                     profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
                     
@@ -168,7 +166,6 @@ public class KodiAudioTranscode {
     {
         profile.setAudioCodec(TranscodeService.getDefault(LOSSLESS_CODECS));
         if(profile.getMaxSampleRate() == null) { profile.setMaxSampleRate(TranscodeService.getMaxSampleRateForCodec(profile.getAudioCodec())); }
-        profile.setMultiChannelEnabled(false);
         profile.setAudioTranscodeRequired(true);
             
         return profile;
@@ -179,7 +176,6 @@ public class KodiAudioTranscode {
         profile.setAudioCodec(TranscodeService.getDefault(LOSSY_CODECS));
         if(profile.getMaxSampleRate() == null) { profile.setMaxSampleRate(TranscodeService.getMaxSampleRateForCodec(profile.getAudioCodec())); }
         profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
-        profile.setMultiChannelEnabled(false);
         profile.setAudioTranscodeRequired(true);
             
         return profile;

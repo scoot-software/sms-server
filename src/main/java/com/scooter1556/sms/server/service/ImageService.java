@@ -28,8 +28,10 @@ public class ImageService {
     
     private static final String CLASS_NAME = "ImageService";
     
-    private static final String COVER_ART = "folder.jpg,cover.jpg";
-    private static final String FAN_ART = "fanart.jpg";
+    private static final String SUPPORTED_IMAGE_FORMATS = "jpg,jpeg,png,bmp";
+    
+    private static final String COVER_ART = "folder,cover";
+    private static final String FAN_ART = "fanart";
     
     @Autowired
     private TranscodeService transcodeService;
@@ -70,19 +72,14 @@ public class ImageService {
         return processImage(imageFile, scale);
     }
     
-    private File findCoverArt(File directory)
-    {
-        if(!directory.isDirectory())
-        {
+    private File findCoverArt(File directory) {
+        if(!directory.isDirectory()) {
             return null;
         }
         
-        for(File file : directory.listFiles()) 
-        {
-            for (String name : COVER_ART.split(","))
-            {
-                if(file.getPath().endsWith(name))
-                {
+        for(File file : directory.listFiles()) {
+            for (String name : COVER_ART.split(",")) {
+                if(file.getName().toLowerCase().contains(name) && isSupportedFormat(file)) {
                     return file;
                 }
             }
@@ -91,25 +88,30 @@ public class ImageService {
         return null;
     }
     
-    private File findFanArt(File directory)
-    {
-        if(!directory.isDirectory())
-        {
+    private File findFanArt(File directory) {
+        if(!directory.isDirectory()) {
             return null;
         }
         
-        for(File file : directory.listFiles()) 
-        {            
-            for (String name : FAN_ART.split(","))
-            {
-                if(file.getPath().endsWith(name))
-                {
+        for(File file : directory.listFiles()) {            
+            for (String name : FAN_ART.split(",")){
+                if(file.getName().toLowerCase().contains(name) && isSupportedFormat(file)){
                     return file;
                 }
             }
         }
         
         return null;
+    }
+    
+    private boolean isSupportedFormat(File file) {
+        for (String type : SUPPORTED_IMAGE_FORMATS.split(",")) {
+            if (file.getName().toLowerCase().endsWith("." + type)) {
+                return true;
+            }
+        }
+
+        return false;
     }
     
     private byte[] processImage(File imageFile, Integer scale) {

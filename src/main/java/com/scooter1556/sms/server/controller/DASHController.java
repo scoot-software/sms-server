@@ -117,12 +117,7 @@ public class DASHController {
         {
             profile.setSubtitleTrack(subtitleTrack);
         }
-        
-        if(multiChannel != null)
-        {
-            profile.setMultiChannelEnabled(multiChannel);
-        }
-        
+
         // Initialise a new MPEG-DASH transcode and get it's unique job number
         Long jobID = adaptiveStreamingService.initialise(request.getUserPrincipal().getName(), mediaElement, profile);
         

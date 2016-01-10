@@ -154,20 +154,9 @@ public class HLSTranscode {
             command.add("-map");
             command.add("0:a:" + profile.getAudioTrack());
             
-            // Multi-channel
-            if(profile.isMultiChannelEnabled() && transcodeService.getAudioStreamChannelCount(profile.getAudioTrack(), mediaElement) > 2)
-            {
-                profile.setAudioCodec(MULTI_CHANNEL_CODEC);
-                profile.setMaxChannelCount(TranscodeService.getMaxChannelsForCodec(profile.getAudioCodec()));
-                profile.setAudioBitrate(TranscodeService.getMultiChannelAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));                
-            }
-            // Stereo
-            else
-            {
-                profile.setAudioCodec(AUDIO_CODEC);
-                profile.setMaxChannelCount(2);
-                profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
-            }
+            profile.setAudioCodec(AUDIO_CODEC);
+            profile.setMaxChannelCount(2);
+            profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
             
             command.addAll(transcodeService.getAudioCommands(mediaElement, profile));
         }

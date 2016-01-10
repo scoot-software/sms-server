@@ -6,6 +6,7 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.io.FileDownloadProcess;
 import com.scooter1556.sms.server.io.StreamGobbler;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
@@ -14,12 +15,21 @@ import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
 import com.scooter1556.sms.server.service.transcode.AndroidAudioTranscode;
 import com.scooter1556.sms.server.service.transcode.AndroidVideoTranscode;
 import com.scooter1556.sms.server.service.transcode.KodiAudioTranscode;
+import com.scooter1556.sms.server.utilities.NetworkUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.*;
@@ -72,6 +82,27 @@ public class StreamController {
         if(mediaElement == null)
         {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        boolean localIP = false;
+        
+        try {
+            InetAddress local = InetAddress.getByName(request.getLocalAddr());
+            InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
+                        
+            for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+                if(address.getAddress().equals(local)) {
+                    int mask = address.getNetworkPrefixLength();
+                    localIP = NetworkUtils.isLocalIP(local, remote, mask);
+                }
+            }
+        } catch (UnknownHostException | SocketException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Failed to check IP adress of client", ex);
+        }
+        
+        if(localIP) {
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Client is on the local network", null);
         }
         
         // Determine job type
@@ -157,7 +188,6 @@ public class StreamController {
             // Build Transcode Profile
             TranscodeProfile profile = new TranscodeProfile();
             profile.setVideoQuality(quality);
-            if(multiChannel != null) { profile.setMultiChannelEnabled(multiChannel); }
             if(audioTrack != null) { profile.setAudioTrack(audioTrack); }
             if(subtitleTrack != null) { profile.setSubtitleTrack(subtitleTrack); }
             if(offset != null) { profile.setOffset(offset); }
@@ -277,7 +307,6 @@ public class StreamController {
         // Build Transcode Profile
         TranscodeProfile profile = new TranscodeProfile();
         profile.setAudioQuality(quality);
-        if(multiChannel != null) { profile.setMultiChannelEnabled(multiChannel); }
         if(maxSampleRate != null) { profile.setMaxSampleRate(maxSampleRate); }
 
         // Determine which client we are transcoding for
@@ -317,7 +346,6 @@ public class StreamController {
         Job job = null;
         long bytesTransferred = 0;
         boolean headerOnly = false;
-        boolean autoEnd = false;
         String[] ranges = {};
         Process process = null;
         
@@ -366,7 +394,6 @@ public class StreamController {
             // Build Transcode Profile
             TranscodeProfile profile = new TranscodeProfile();
             profile.setAudioQuality(quality);
-            if(multiChannel != null) { profile.setMultiChannelEnabled(multiChannel); }
             if(maxSampleRate != null) { profile.setMaxSampleRate(maxSampleRate); }
             if(offset != null) { profile.setOffset(offset); }
             
@@ -378,13 +405,11 @@ public class StreamController {
                 case "kodi":
                     profile = kodiAudioTranscode.processTranscodeProfile(mediaElement, profile);
                     command = kodiAudioTranscode.createTranscodeCommand(mediaElement, profile);
-                    autoEnd = true;
                     break;
                     
                 case "android":
                     profile = androidAudioTranscode.processTranscodeProfile(mediaElement, profile);
                     command = androidAudioTranscode.createTranscodeCommand(mediaElement, profile);
-                    autoEnd = false;
                     break;
                     
                 default:
@@ -475,9 +500,62 @@ public class StreamController {
             if(job != null && !headerOnly)
             {
                 jobDao.updateBytesTransferred(id, bytesTransferred);
-                
-                // If this isn't a manual seeking client end job automatically.
-                if(autoEnd) { jobService.endJob(id); }
+            }
+        }
+    }
+    
+    @RequestMapping(value="/file", method = RequestMethod.GET)
+    @ResponseBody
+    public void getFile(@RequestParam(value = "id", required = true) Long id,
+                        HttpServletRequest request, 
+                        HttpServletResponse response) {
+        // Variables
+        MediaElement mediaElement;
+        Job job = null;
+        FileDownloadProcess process = null;
+        
+        /*********************** DEBUG: Get Request Headers *********************************/        
+        String requestHeader = "\n***************\nRequest Header:\n***************\n";
+	Enumeration requestHeaderNames = request.getHeaderNames();
+        
+	while (requestHeaderNames.hasMoreElements()) {
+            String key = (String) requestHeaderNames.nextElement();
+            String value = request.getHeader(key);
+            requestHeader += key + ": " + value + "\n";
+	}
+        
+        // Print Headers
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
+        
+        /********************************************************************************/
+
+       try {
+            // Retrieve Job
+            job = jobDao.getJobByID(id);
+
+            if(job == null) {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
+                return;
+            }
+
+            // Retrieve and check media element
+            mediaElement = mediaDao.getMediaElementByID(job.getMediaElement());
+
+            if(mediaElement == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Media Element cannot be retrieved.");
+                return;
+            }
+
+            process = new FileDownloadProcess(Paths.get(mediaElement.getPath()),
+                                              TranscodeService.getVideoMimeType(mediaElement.getFormat()),
+                                              request, response);
+
+            process.start();
+        } catch (IOException ex) {
+            // Called if client closes the connection early.
+        } finally {
+            if(job != null && process != null) {
+                jobDao.updateBytesTransferred(id, process.getBytesTransferred());
             }
         }
     }

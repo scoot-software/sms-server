@@ -26,16 +26,21 @@ public class TranscodeService {
     
     private static final String TRANSCODER = "ffmpeg";
     
-    private static final String SUPPORTED_VIDEO_CODECS = "h264,vp8";
-    private static final String SUPPORTED_AUDIO_CODECS = "mp3,vorbis,aac,flac,pcm,ac3,dsd,alac";
+    private static final String SUPPORTED_VIDEO_CODECS = "h264,vc1,vp8,mpeg2";
+    private static final String SUPPORTED_AUDIO_CODECS = "mp3,vorbis,aac,flac,pcm,ac3,dsd,alac,dts,truehd";
     private static final String SUPPORTED_SUBTITLE_CODECS = "srt,subrip,webvtt,dvb,dvd,pgs";
     private static final String LOSSLESS_AUDIO_CODECS = "flac,alac,pcm,dsd";
     
     private static final String[][] VIDEO_FORMATS = {
         {"h264", "matroska"},
+        {"h264", "hls"},
         {"vp8", "webm"}};
     
     private static final String[][] AUDIO_FORMATS = {
+        {"aac", "hls"},
+        {"mp3", "hls"},
+        {"ac3", "hls"},
+        {"vorbis", "webm"},
         {"mp3", "mp3"},
         {"vorbis", "ogg"},
         {"opus", "ogg"},
@@ -698,7 +703,7 @@ public class TranscodeService {
         private String videoCodec, audioCodec, format, mimeType;
         private Integer videoQuality, audioQuality, audioBitrate, audioTrack, subtitleTrack, maxSampleRate, maxChannelCount;
         private Integer offset = 0;
-        private Boolean multiChannel = false;
+        private Boolean directPlay = false;
         private Boolean videoTranscodeRequired = false;
         private Boolean audioTranscodeRequired = false;
         
@@ -829,14 +834,14 @@ public class TranscodeService {
         }
         
         @JsonIgnore
-        public Boolean isMultiChannelEnabled()
+        public Boolean isDirectPlayEnabled()
         {
-            return multiChannel;
+            return directPlay;
         }
         
-        public void setMultiChannelEnabled(boolean multiChannel)
+        public void setDirectPlayEnabled(boolean directPlay)
         {
-            this.multiChannel = multiChannel;
+            this.directPlay = directPlay;
         }
         
         @JsonIgnore

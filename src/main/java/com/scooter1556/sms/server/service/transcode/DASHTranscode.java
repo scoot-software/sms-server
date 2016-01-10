@@ -196,29 +196,18 @@ public class DASHTranscode {
             command.add("-map");
             command.add("0:a:" + profile.getAudioTrack());
             
-            // Multi-channel
-            if(!profile.getType().equals(StreamType.DASH_WEBM) && profile.isMultiChannelEnabled() && transcodeService.getAudioStreamChannelCount(profile.getAudioTrack(), mediaElement) > 2)
+            // Set channel configuration to stereo
+            profile.setMaxChannelCount(2);
+
+            if(profile.getType().equals(StreamType.DASH_WEBM))
             {
-                profile.setAudioCodec(MULTI_CHANNEL_CODEC);
-                profile.setMaxChannelCount(TranscodeService.getMaxChannelsForCodec(profile.getAudioCodec()));
-                profile.setAudioBitrate(TranscodeService.getMultiChannelAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));                
+                profile.setAudioCodec(AUDIO_CODEC_WEBM);
+                profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
             }
-            // Stereo
             else
             {
-                // Set channel configuration to stereo
-                profile.setMaxChannelCount(2);
-                
-                if(profile.getType().equals(StreamType.DASH_WEBM))
-                {
-                    profile.setAudioCodec(AUDIO_CODEC_WEBM);
-                    profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));
-                }
-                else
-                {
-                    profile.setAudioCodec(AUDIO_CODEC);
-                    profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));                    
-                }
+                profile.setAudioCodec(AUDIO_CODEC);
+                profile.setAudioBitrate(TranscodeService.getAudioBitrateForCodec(profile.getAudioCodec(), profile.getAudioQuality()));                    
             }
             
             command.addAll(transcodeService.getAudioCommands(mediaElement, profile));

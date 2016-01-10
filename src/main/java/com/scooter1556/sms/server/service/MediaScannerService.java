@@ -9,6 +9,7 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import com.scooter1556.sms.server.service.parser.NFOParser.NFOData;
+import com.scooter1556.sms.server.utilities.FileUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -194,14 +195,14 @@ public class MediaScannerService {
             if (directory == null) {
                 directory = getMediaElementFromPath(dir);
                 directory.setType(MediaElementType.DIRECTORY);
-
-                // Parse file name for media element attributes
-                directory = parseFileName(dir, directory);
             }
 
             if(directory.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
                 // Add directory to update list
                 directoriesToUpdate.add(dir);
+                
+                // Parse file name for media element attributes
+                directory = parseFileName(dir, directory);
                 
                 // Determine if the directory should be excluded from categorised lists
                 if (isExcluded(dir.getFileName())) {
@@ -235,7 +236,7 @@ public class MediaScannerService {
                 if (mediaElement == null) {
                     mediaElement = getMediaElementFromPath(file);
                     mediaElement.setType(getMediaType(file));
-                    mediaElement.setFormat(getFileExtension(file.getFileName()));
+                    mediaElement.setFormat(FileUtils.getFileExtension(file.getFileName()));
                 }
                 
                 // Determine if we need to process the file
@@ -465,6 +466,8 @@ public class MediaScannerService {
                 if (matcher.group(2) != null) {
                     mediaElement.setYear(Short.parseShort(matcher.group(3)));
                 }
+            } else if(path.toFile().isDirectory()){
+                mediaElement.setTitle(path.getFileName().toString());
             } else {
                 int extensionIndex = path.getFileName().toString().lastIndexOf(".");
                 mediaElement.setTitle(extensionIndex == -1 ? path.getFileName().toString() : path.getFileName().toString().substring(0, extensionIndex));
@@ -493,11 +496,6 @@ public class MediaScannerService {
             }
 
             return false;
-        }
-
-        private String getFileExtension(Path path) {
-            int extensionIndex = path.getFileName().toString().lastIndexOf(".");
-            return extensionIndex == -1 ? null : path.getFileName().toString().substring(extensionIndex + 1).toLowerCase().trim();
         }
 
         private Byte getDirectoryMediaType(Deque<MediaElement> mediaElements) {
