@@ -9,6 +9,7 @@ import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.service.LogService.Level;
 import java.awt.Dimension;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -26,21 +27,20 @@ public class TranscodeService {
     
     private static final String TRANSCODER = "ffmpeg";
     
-    private static final String SUPPORTED_VIDEO_CODECS = "h264,vc1,vp8,mpeg2";
-    private static final String SUPPORTED_AUDIO_CODECS = "mp3,vorbis,aac,flac,pcm,ac3,dsd,alac,dts,truehd";
-    private static final String SUPPORTED_SUBTITLE_CODECS = "srt,subrip,webvtt,dvb,dvd,pgs";
-    private static final String LOSSLESS_AUDIO_CODECS = "flac,alac,pcm,dsd";
+    private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
+    public static final String SUPPORTED_VIDEO_CONTAINER_FORMATS = "3gp,mov,wmv,mpg,avi,webm,mkv,m4v,mp4,ts";
+    public static final String SUPPORTED_AUDIO_CONTAINER_FORMATS = "ogg,oga,opus,wma,mp2,mp3,flac,mka,m4a,aac,dsf,wav";
+    public static final String SUPPORTED_VIDEO_CODECS = "h263,h264,vc1,vp8,mpeg2";
+    public static final String SUPPORTED_AUDIO_CODECS = "mp2,mp3,vorbis,aac,flac,pcm,ac3,dsd,alac,dts,truehd";
+    public static final String LOSSLESS_AUDIO_CODECS = "flac,alac,pcm,dsd,truehd";
+    public static final String SUPPORTED_SUBTITLE_CODECS = "srt,subrip,webvtt,dvb,dvd,pgs";
+        
     private static final String[][] VIDEO_FORMATS = {
         {"h264", "matroska"},
-        {"h264", "hls"},
         {"vp8", "webm"}};
     
     private static final String[][] AUDIO_FORMATS = {
-        {"aac", "hls"},
-        {"mp3", "hls"},
-        {"ac3", "hls"},
-        {"vorbis", "webm"},
         {"mp3", "mp3"},
         {"vorbis", "ogg"},
         {"opus", "ogg"},
@@ -697,15 +697,65 @@ public class TranscodeService {
         return null;
     }
     
+    public static class AudioQuality {
+        public static final int LOW = 0;
+        public static final int MEDIUM = 1;
+        public static final int HIGH = 2;
+        public static final int LOSSLESS = 3;
+    }
+    
+    //
+    // Transcode Profile
+    //
+    
+    public void addTranscodeProfile(TranscodeProfile profile) {
+        transcodeProfiles.add(profile);
+    }
+    
+    public TranscodeProfile getTranscodeProfile(long id) {
+        for(TranscodeProfile profile : transcodeProfiles) {
+            if(profile.getID() != null) {
+                if(profile.getID().compareTo(id) == 0) {
+                    return profile;
+                }
+            }
+        }
+        
+        return null;
+    }
+    
+    public void removeTranscodeProfile(long id) {
+        int index = 0;
+        
+        for(TranscodeProfile profile : transcodeProfiles) {
+            if(profile.getID() != null) {
+                if(profile.getID().compareTo(id) == 0) {
+                    transcodeProfiles.remove(index);
+                    break;
+                }
+            }
+            
+            index ++;
+        }
+    }
+    
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public static class TranscodeProfile {
-        
+        private Long id;
         private String videoCodec, audioCodec, format, mimeType;
         private Integer videoQuality, audioQuality, audioBitrate, audioTrack, subtitleTrack, maxSampleRate, maxChannelCount;
         private Integer offset = 0;
         private Boolean directPlay = false;
         private Boolean videoTranscodeRequired = false;
         private Boolean audioTranscodeRequired = false;
+        
+        public Long getID() {
+            return id;
+        }
+        
+        public void setID(long id) {
+            this.id = id;
+        }
         
         public String getVideoCodec()
         {
@@ -865,12 +915,5 @@ public class TranscodeService {
         {
             this.audioTranscodeRequired = transcodeRequired;
         }
-    }
-    
-    public static class AudioQuality {
-        public static final int LOW = 0;
-        public static final int MEDIUM = 1;
-        public static final int HIGH = 2;
-        public static final int LOSSLESS = 3;
     }
 }

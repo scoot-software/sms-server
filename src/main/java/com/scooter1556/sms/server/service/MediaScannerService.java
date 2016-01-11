@@ -55,8 +55,6 @@ public class MediaScannerService {
     @Autowired
     private NFOParser nfoParser;
 
-    private static final String AUDIO_FILE_TYPES = "ac3,mp3,ogg,oga,aac,m4a,flac,wav,dsf";
-    private static final String VIDEO_FILE_TYPES = "avi,mpg,mpeg,mp4,m4v,mkv,mov,wmv,ogv,m2ts";
     private static final String INFO_FILE_TYPES = "nfo";
     private static final String EXCLUDED_FILE_NAMES = "Extras,extras";
 
@@ -404,7 +402,7 @@ public class MediaScannerService {
         //
 
         private boolean isAudioFile(Path path) {
-            for (String type : AUDIO_FILE_TYPES.split(",")) {
+            for (String type : TranscodeService.SUPPORTED_AUDIO_CONTAINER_FORMATS.split(",")) {
                 if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
                     return true;
                 }
@@ -414,7 +412,7 @@ public class MediaScannerService {
         }
 
         private boolean isVideoFile(Path path) {
-            for (String type : VIDEO_FILE_TYPES.split(",")) {
+            for (String type : TranscodeService.SUPPORTED_VIDEO_CONTAINER_FORMATS.split(",")) {
                 if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
                     return true;
                 }

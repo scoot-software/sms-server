@@ -364,21 +364,17 @@ public class AdaptiveStreamingService {
         return null;
     }
     
-    public void removeProcessByID(long id)
-    {
+    public void removeProcessByID(long id) {
         int index = 0;
         
-        for (AdaptiveStreamingProcess process : processes)
-        {
-            if(process.getID().compareTo(id) == 0)
-            {
+        for (AdaptiveStreamingProcess process : processes) {
+            if(process.getID().compareTo(id) == 0) {
+                processes.remove(index);
                 break;
             }
             
             index ++;
         }
-        
-        processes.remove(index);
     }
     
     public void endProcess(long jobID)
