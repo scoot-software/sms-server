@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
+import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -148,6 +149,9 @@ public class ImageService {
         command.add("mjpeg");
         command.add("-");
 
+        // Set status code
+        response.setStatus(SC_PARTIAL_CONTENT);
+        
         // Process image
         process = new ImageProcess(command, response);
         process.start();
