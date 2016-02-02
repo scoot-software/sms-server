@@ -733,7 +733,7 @@ public class TranscodeService {
             if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
                 int bitrate = (getAudioChannelCount(stream.getConfiguration()) * AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
 
-                if(profile.getMediaElement().getBitrate() > bitrate) {
+                if(bitrate > 0 && profile.getMediaElement().getBitrate() > bitrate) {
                     return true;
                 }
             }
@@ -875,15 +875,18 @@ public class TranscodeService {
 
         for(AudioStream stream : profile.getMediaElement().getAudioStreams()) {
             String codec = null;
-            String encoder = null;
             Integer quality = null;
             Integer sampleRate = null;
             boolean downmix = false;
             boolean transcodeRequired = isTranscodeRequired(profile, stream);
             
-            // Check the format supports this codec if specified
-            if(profile.getFormat() != null && !transcodeRequired) {
-                transcodeRequired = !isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec());
+            // Check the format supports this codec for video or that we can stream this codec for audio
+            if(!transcodeRequired) {
+                if(profile.getFormat() != null) {
+                    transcodeRequired = !isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec());
+                } else {
+                    transcodeRequired = !isSupported(TRANSCODE_AUDIO_CODECS, stream.getCodec());
+                }
             }
             
             if(!transcodeRequired) {

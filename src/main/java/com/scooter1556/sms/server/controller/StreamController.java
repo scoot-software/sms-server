@@ -273,7 +273,7 @@ public class StreamController {
         }
         
         // Add profile to transcode service
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, profile.toString(), null);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
         return new ResponseEntity<>(job.getID(), HttpStatus.OK);
     }
