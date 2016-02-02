@@ -25,13 +25,13 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
-import com.scooter1556.sms.server.io.NullStream;
+import com.scooter1556.sms.server.io.ImageProcess;
+import com.scooter1556.sms.server.io.SMSProcess;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.io.IOUtils;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +48,7 @@ public class ImageService {
     @Autowired
     private TranscodeService transcodeService;
     
-    public byte[] getCoverArt(MediaElement element, Integer scale) {
+    public File getCoverArt(MediaElement element) {
         File imageFile;
         
         // Get directory or file parent directory
@@ -63,10 +63,10 @@ public class ImageService {
             return null;
         }
         
-        return processImage(imageFile, scale);
+        return imageFile;
     }
     
-    public byte[] getFanArt(MediaElement element, Integer scale) {
+    public File getFanArt(MediaElement element) {
         File imageFile;
         
         // Get directory or file parent directory
@@ -81,7 +81,7 @@ public class ImageService {
             imageFile = findFanArt(new File(element.getParentPath()));
         }
         
-        return processImage(imageFile, scale);
+        return imageFile;
     }
     
     private File findCoverArt(File directory) {
@@ -126,47 +126,30 @@ public class ImageService {
         return false;
     }
     
-    private byte[] processImage(File imageFile, Integer scale) {
-        byte[] image;
-        Process process = null;
-        
-        // Check required variables
-        if(imageFile == null || scale == null) {
-            return null;
-        }
+    public void sendImage(File imageFile, int scale, HttpServletResponse response) throws IOException {
+        SMSProcess process;
         
         // Check transcoder exists
         File transcoder = transcodeService.getTranscoder();
-        
+
         if(transcoder == null) {
-            return null;
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
+            return;
         }
-        
+
         // Build image scaling command
         List<String> command = new ArrayList<>();
         command.add(transcoder.getPath());
         command.add("-i");
         command.add(imageFile.getPath());
         command.add("-vf");
-        command.add("scale=-1:" + scale.toString());
+        command.add("scale=-1:" + scale);
         command.add("-f");
         command.add("mjpeg");
         command.add("-");
-        
+
         // Process image
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            process = processBuilder.start();
-            InputStream input = process.getInputStream();
-            new NullStream(process.getErrorStream()).start();
-            image = IOUtils.toByteArray(input);
-            return image;
-        } catch (IOException ex) {
-            if(process != null) {
-                process.destroy();
-            }
-            
-            return null;
-        }
+        process = new ImageProcess(command, response);
+        process.start();
     }
 }

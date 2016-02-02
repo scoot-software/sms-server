@@ -26,9 +26,10 @@ package com.scooter1556.sms.server.controller;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.service.ImageService;
+import java.io.File;
+import java.io.IOException;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -49,56 +50,64 @@ public class ImageController {
     
     @RequestMapping(value="/{id}/cover/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
-    public ResponseEntity getCoverArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale)
+    public void getCoverArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale, HttpServletResponse response)
     {
         MediaElement mediaElement;
-        byte[] image;
+        File image;
         
-        // Get corresponding media element
-        mediaElement = mediaDao.getMediaElementByID(id);
-        
-        if(mediaElement == null)
-        {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            // Get corresponding media element
+            mediaElement = mediaDao.getMediaElementByID(id);
+
+            if(mediaElement == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
+                return;
+            }
+
+            // Get cover art
+            image = imageService.getCoverArt(mediaElement);
+
+            // Check if we were able to retrieve cover art
+            if(image == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find cover art.");
+                return;
+            }
+            
+            // Send image if found
+            imageService.sendImage(image, scale, response);
+        } catch (IOException ex) {
+            // Do nothing...
         }
-        
-        // Get scaled cover art
-        image = imageService.getCoverArt(mediaElement, scale);
-        
-        // Check if we were able to retrieve a cover
-        if(image == null)
-        {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        
-        return new ResponseEntity(image, HttpStatus.OK);
     }
     
     @RequestMapping(value="/{id}/fanart/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
-    public ResponseEntity getFanArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale)
-    {
+    public void getFanArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale, HttpServletResponse response) {
         MediaElement mediaElement;
-        byte[] image;
+        File image;
         
-        // Get corresponding media element
-        mediaElement = mediaDao.getMediaElementByID(id);
-        
-        if(mediaElement == null)
-        {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try {
+            // Get corresponding media element
+            mediaElement = mediaDao.getMediaElementByID(id);
+
+            if(mediaElement == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
+                return;
+            }
+
+            // Get fan art
+            image = imageService.getFanArt(mediaElement);
+
+            // Check if we were able to retrieve fan art
+            if(image == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find fan art.");
+                return;
+            }
+            
+            // Send image if found
+            imageService.sendImage(image, scale, response);
+        } catch (IOException ex) {
+            // Do nothing...
         }
-        
-        // Get scaled fan art
-        image = imageService.getFanArt(mediaElement, scale);
-        
-        // Check if we were able to retrieve fan art
-        if(image == null)
-        {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        
-        // Return fan art if found
-        return new ResponseEntity(image, HttpStatus.OK);
     }
 }
