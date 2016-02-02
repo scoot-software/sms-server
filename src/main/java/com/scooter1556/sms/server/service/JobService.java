@@ -1,7 +1,25 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Author: Scott Ware <scoot.software@gmail.com>
+ * Copyright (c) 2015 Scott Ware
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.scooter1556.sms.server.service;
 
@@ -22,11 +40,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/**
- *
- * @author scott2ware
- */
-
 @Service
 @EnableScheduling
 public class JobService implements DisposableBean {
@@ -41,6 +54,9 @@ public class JobService implements DisposableBean {
     
     @Autowired
     private UserDao userDao;
+    
+    @Autowired
+    private TranscodeService transcodeService;
     
     @Autowired
     private AdaptiveStreamingService adaptiveStreamingService;
@@ -78,25 +94,24 @@ public class JobService implements DisposableBean {
     }
     
     // End a job and update user stats
-    public void endJob(long id)
-    {
+    public void endJob(long id) {
         // Retrieve job from database
         Job job = jobDao.getJobByID(id);
         
         // Don't continue if the job cannot be found
-        if(job == null) { return; }
+        if(job == null) {
+            return;
+        }
         
-        // Update end time
-        jobDao.updateEndTime(job.getID());
+        // Do initial cleanup process
+        endJob(job);
         
         // Update User Stats
         UserStats userStats = userDao.getUserStatsByUsername(job.getUsername());
         
-        if(userStats != null)
-        {
-            switch(job.getType())
-            {
-                case JobType.ADAPTIVE_STREAM: case JobType.AUDIO_STREAM: case JobType.VIDEO_STREAM:
+        if(userStats != null) {
+            switch(job.getType()) {
+                case JobType.VIDEO_STREAM:
                     userStats.setStreamed(userStats.getStreamed() + job.getBytesTransferred());
                     break;
                     
@@ -113,14 +128,20 @@ public class JobService implements DisposableBean {
         }
     }
     
+    public void endJob(Job job) {
+        if(job.getType() == JobType.AUDIO_STREAM || job.getType() == JobType.VIDEO_STREAM) {
+            transcodeService.removeTranscodeProfile(job.getID());
+        }
+
+        jobDao.updateEndTime(job.getID());
+    }
+    
     // Check for and end inactive jobs
-    private void cleanupJobs()
-    {
+    private void cleanupJobs() {
         List<Job> jobs = jobDao.getActiveJobs();
         
         // If there are no jobs to process don't bother going any further
-        if(jobs == null)
-        {
+        if(jobs == null) {
             return;
         }
         
@@ -132,16 +153,9 @@ public class JobService implements DisposableBean {
         Timestamp inactivePeriod = new java.sql.Timestamp(calendar.getTime().getTime());
             
         // Check for inactive jobs which have not been ended
-        for(Job job : jobs)
-        {   
-            if(job.getLastActivity().before(inactivePeriod))
-            {
-                if(job.getType() == JobType.ADAPTIVE_STREAM)
-                {
-                    adaptiveStreamingService.endProcess(job.getID());
-                }
-                
-                jobDao.updateEndTime(job.getID());
+        for(Job job : jobs) {   
+            if(job.getLastActivity().before(inactivePeriod)) {
+                endJob(job);
             }
         }
     }
@@ -158,20 +172,13 @@ public class JobService implements DisposableBean {
         List<Job> jobs = jobDao.getActiveJobs();
         
         // If there are no jobs to process don't bother going any further
-        if(jobs == null)
-        {
+        if(jobs == null) {
             return;
         }
             
         // End all active jobs
-        for(Job job : jobs)
-        {   
-            if(job.getType() == JobType.ADAPTIVE_STREAM)
-            {
-                adaptiveStreamingService.endProcess(job.getID());
-            }
-
-            jobDao.updateEndTime(job.getID());
+        for(Job job : jobs) {   
+            endJob(job);
         }
     }
     
@@ -193,7 +200,7 @@ public class JobService implements DisposableBean {
         
         switch(type) {
             
-            case JobType.ADAPTIVE_STREAM: case JobType.AUDIO_STREAM: case JobType.VIDEO_STREAM:
+            case JobType.AUDIO_STREAM: case JobType.VIDEO_STREAM:
                 message.append("streaming ");
                 break;
                 

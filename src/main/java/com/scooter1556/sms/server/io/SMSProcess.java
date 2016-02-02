@@ -21,15 +21,46 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.scooter1556.sms.server.utilities;
+package com.scooter1556.sms.server.io;
 
-import java.nio.file.Path;
+import java.io.IOException;
+import java.util.List;
 
-public class FileUtils {
+public class SMSProcess {
+
+    Long id;
+    Process process;
+    List<String> command;
+    static long bytesTransferred = 0;
+    boolean ended = false;
     
-    public static String getFileExtension(Path path) {
-        int extensionIndex = path.getFileName().toString().lastIndexOf(".");
-        return extensionIndex == -1 ? null : path.getFileName().toString().substring(extensionIndex + 1).toLowerCase().trim();
+    public SMSProcess() {};
+    
+    public void start() throws IOException {}
+
+    public void end()
+    {
+        if(process != null) {
+            process.destroy();
+        }
+        
+        ended = true;
     }
     
+    public Long getID()  {
+        return id;
+    }
+    
+    public void setID(Long id) {
+        this.id = id;
+    }
+    
+    public long getBytesTransferred() {
+        return bytesTransferred;
+    }
+    
+    public boolean hasEnded()
+    {
+        return ended;
+    }
 }

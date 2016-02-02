@@ -21,15 +21,33 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.scooter1556.sms.server.utilities;
+package com.scooter1556.sms.server.io;
 
-import java.nio.file.Path;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
-public class FileUtils {
+public class NullStream extends Thread
+{
+    InputStream stream;
     
-    public static String getFileExtension(Path path) {
-        int extensionIndex = path.getFileName().toString().lastIndexOf(".");
-        return extensionIndex == -1 ? null : path.getFileName().toString().substring(extensionIndex + 1).toLowerCase().trim();
+    public NullStream(InputStream stream)
+    {
+        this.stream = stream;
     }
     
+    @Override
+    public void run()
+    {
+        try
+        {
+            InputStreamReader streamReader = new InputStreamReader(stream);
+            BufferedReader buffer = new BufferedReader(streamReader);
+            String line;
+            
+            while ((line = buffer.readLine()) != null) { /*System.out.println(line);*/ }
+        }
+        catch (IOException ex) {}
+    }
 }

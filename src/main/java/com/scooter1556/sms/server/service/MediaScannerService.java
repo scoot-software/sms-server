@@ -1,3 +1,26 @@
+/*
+ * Author: Scott Ware <scoot.software@gmail.com>
+ * Copyright (c) 2015 Scott Ware
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.dao.MediaDao;
@@ -33,11 +56,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
 
-/**
- * Provides services for scanning media folders.
- *
- * @author Scott Ware
- */
 @Service
 public class MediaScannerService {
 
@@ -220,7 +238,7 @@ public class MediaScannerService {
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
             // Determine type of file and how to process it
-            if(isAudioFile(file) || isVideoFile(file)) {
+            if(isMediaFile(file)) {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing file " + file.toString(), null);
                 
                 // Update statistics
@@ -233,7 +251,6 @@ public class MediaScannerService {
 
                 if (mediaElement == null) {
                     mediaElement = getMediaElementFromPath(file);
-                    mediaElement.setType(getMediaType(file));
                     mediaElement.setFormat(FileUtils.getFileExtension(file.getFileName()));
                 }
                 
@@ -246,7 +263,6 @@ public class MediaScannerService {
                     
                     // Parse file name for media element attributes
                     mediaElement = parseFileName(file.getFileName(), mediaElement);
-                    
                     mediaElement.setSize(attr.size());
 
                     // Parse Metadata
@@ -400,19 +416,9 @@ public class MediaScannerService {
         //
         // Helper Functions
         //
-
-        private boolean isAudioFile(Path path) {
-            for (String type : TranscodeService.SUPPORTED_AUDIO_CONTAINER_FORMATS.split(",")) {
-                if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private boolean isVideoFile(Path path) {
-            for (String type : TranscodeService.SUPPORTED_VIDEO_CONTAINER_FORMATS.split(",")) {
+        
+        private boolean isMediaFile(Path path) {
+            for (String type : TranscodeService.SUPPORTED_FILE_EXTENSIONS) {
                 if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
                     return true;
                 }
@@ -474,21 +480,10 @@ public class MediaScannerService {
             return mediaElement;
         }
 
-        // Returns media type for a given file
-        private Byte getMediaType(Path path) {
-            if (isAudioFile(path)) {
-                return MediaElementType.AUDIO;
-            } else if (isVideoFile(path)) {
-                return MediaElementType.VIDEO;
-            }
-
-            return null;
-        }
-
         // Determines if a directory should be scanned
         private boolean containsMedia(File directory) {
             for (File file : directory.listFiles()) {
-                if (!file.isHidden() && (file.isDirectory() || isAudioFile(file.toPath()) || isVideoFile(file.toPath()))) {
+                if (!file.isHidden() && (file.isDirectory() || isMediaFile(file.toPath()))) {
                     return true;
                 }
             }

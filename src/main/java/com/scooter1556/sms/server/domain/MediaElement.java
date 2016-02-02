@@ -1,7 +1,25 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Author: Scott Ware <scoot.software@gmail.com>
+ * Copyright (c) 2015 Scott Ware
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.scooter1556.sms.server.domain;
 
@@ -11,11 +29,6 @@ import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-
-/**
- *
- * @author scott2ware
- */
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class MediaElement implements Serializable {
@@ -489,26 +502,45 @@ public class MediaElement implements Serializable {
     }
     
     @JsonIgnore
-    public List<AudioStream> getAudioStreams()
-    {
+    public VideoStream getVideoStream() {
         // Check parameters are available
-        if(audioLanguage == null || audioCodec == null || audioSampleRate == null || audioConfiguration == null)
-        { 
+        if(videoCodec == null || videoWidth == null || videoHeight == null) { 
             return null;
         }
         
+        return new VideoStream(videoCodec, videoWidth, videoHeight);
+    }
+    
+    @JsonIgnore
+    public List<AudioStream> getAudioStreams() {
+        // Check parameters are available
+        if(audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
+            return null;
+        }
+        
+        String[] audioLanguages = null;
+        String[] audioCodecs;
+        String[] audioSampleRates;
+        String[] audioConfigurations;
+        
         // Retrieve parameters as arrays
-        String[] audioLanguages = getAudioLanguage().split(",");
-        String[] audioCodecs = getAudioCodec().split(",");
-        String[] audioSampleRates = getAudioSampleRate().split(",");
-        String[] audioConfigurations = getAudioConfiguration().split(",");
+        if(audioLanguage != null) {
+             audioLanguages = getAudioLanguage().split(",");
+        }
+        
+        audioCodecs = getAudioCodec().split(",");
+        audioSampleRates = getAudioSampleRate().split(",");
+        audioConfigurations = getAudioConfiguration().split(",");
         
         // Get the number of audio streams
-        Integer streams = audioLanguages.length;
+        Integer streams = audioCodecs.length;
         
         // Check parameters are present for all streams
-        if(audioCodecs.length != streams || audioSampleRates.length != streams || audioConfigurations.length != streams)
-        {
+        if(audioSampleRates.length != streams || audioConfigurations.length != streams) {
+            return null;
+        }
+        
+        if(audioLanguages != null && audioLanguages.length != streams) {
             return null;
         }
         
@@ -516,9 +548,8 @@ public class MediaElement implements Serializable {
         int count = 0;
         List<AudioStream> audioStreams = new ArrayList<>();
         
-        while(count < streams)
-        {
-            audioStreams.add(new AudioStream(count, audioLanguages[count], audioCodecs[count], Integer.parseInt(audioSampleRates[count]), audioConfigurations[count]));
+        while(count < streams) {
+            audioStreams.add(new AudioStream(count, audioLanguages == null ? "null" : audioLanguages[count], audioCodecs[count], Integer.parseInt(audioSampleRates[count]), audioConfigurations[count]));
             count ++;
         }
         
@@ -526,11 +557,9 @@ public class MediaElement implements Serializable {
     }
     
     @JsonIgnore
-    public List<SubtitleStream> getSubtitleStreams()
-    {
+    public List<SubtitleStream> getSubtitleStreams() {
         // Check parameters are available
-        if(subtitleLanguage == null || subtitleFormat == null || subtitleForced == null)
-        { 
+        if(subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
             return null;
         }
         
@@ -543,8 +572,7 @@ public class MediaElement implements Serializable {
         Integer streams = subtitleLanguages.length;
         
         // Check parameters are present for all streams
-        if(subtitleFormats.length != streams || subtitleForcedFlags.length != streams)
-        {
+        if(subtitleFormats.length != streams || subtitleForcedFlags.length != streams) {
             return null;
         }
         
@@ -552,8 +580,7 @@ public class MediaElement implements Serializable {
         int count = 0;
         List<SubtitleStream> subtitleStreams = new ArrayList<>();
         
-        while(count < streams)
-        {
+        while(count < streams) {
             subtitleStreams.add(new SubtitleStream(count, subtitleLanguages[count], subtitleFormats[count], Boolean.parseBoolean(subtitleForcedFlags[count])));
             count ++;
         }
@@ -561,16 +588,37 @@ public class MediaElement implements Serializable {
         return subtitleStreams;
     }
     
-    public static class AudioStream
-    {
-        private final Integer stream;
+    public static class VideoStream {
+        private final String codec;
+        private final short width, height;
+        
+        public VideoStream(String codec, short width, short height) {
+            this.codec = codec;
+            this.width = width;
+            this.height = height;
+        }
+
+        public String getCodec() {
+            return codec;
+        }
+        
+        public short getWidth() {
+            return width;
+        }
+        
+        public short getHeight() {
+            return height;
+        }
+    }
+    
+    public static class AudioStream {
+        private final int stream;
         private final String language;
         private final String codec;
-        private final Integer sampleRate;
+        private final int sampleRate;
         private final String configuration;
         
-        public AudioStream(Integer stream, String language, String codec, Integer sampleRate, String configuration)
-        {
+        public AudioStream(int stream, String language, String codec, int sampleRate, String configuration) {
             this.stream = stream;
             this.language = language;
             this.codec = codec;
@@ -578,7 +626,7 @@ public class MediaElement implements Serializable {
             this.configuration = configuration;
         }
 
-        public Integer getStream() {
+        public int getStream() {
             return stream;
         }
         
@@ -590,7 +638,7 @@ public class MediaElement implements Serializable {
             return codec;
         }
         
-        public Integer getSampleRate() {
+        public int getSampleRate() {
             return sampleRate;
         }
         
@@ -599,22 +647,20 @@ public class MediaElement implements Serializable {
         }      
     }
     
-    public static class SubtitleStream
-    {
-        private final Integer stream;
+    public static class SubtitleStream {
+        private final int stream;
         private final String language;
         private final String format;
-        private final Boolean forced;
+        private final boolean forced;
         
-        public SubtitleStream(Integer stream, String language, String format, Boolean forced)
-        {
+        public SubtitleStream(int stream, String language, String format, boolean forced) {
             this.stream = stream;
             this.language = language;
             this.format = format;
             this.forced = forced;
         }
 
-        public Integer getStream() {
+        public int getStream() {
             return stream;
         }
         
@@ -626,7 +672,7 @@ public class MediaElement implements Serializable {
             return format;
         }
         
-        public Boolean isForced() {
+        public boolean isForced() {
             return forced;
         }       
     }

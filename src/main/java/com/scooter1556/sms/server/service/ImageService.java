@@ -1,13 +1,31 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Author: Scott Ware <scoot.software@gmail.com>
+ * Copyright (c) 2015 Scott Ware
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
-import com.scooter1556.sms.server.io.StreamGobbler;
+import com.scooter1556.sms.server.io.NullStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,12 +34,6 @@ import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-/**
- * Provides services for resizing and manipulating images.
- * 
- * @author scott2ware
- */
 
 @Service
 public class ImageService {
@@ -146,12 +158,14 @@ public class ImageService {
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             process = processBuilder.start();
             InputStream input = process.getInputStream();
-            new StreamGobbler(process.getErrorStream()).start();
+            new NullStream(process.getErrorStream()).start();
             image = IOUtils.toByteArray(input);
             return image;
         } catch (IOException ex) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to scale image file " + imageFile.getPath(), ex);
-            if(process != null) { process.destroy(); }
+            if(process != null) {
+                process.destroy();
+            }
+            
             return null;
         }
     }
