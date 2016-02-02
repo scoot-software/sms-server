@@ -82,6 +82,7 @@ public class TranscodeService {
     
     private static final String[][] AUDIO_MIME_TYPES = {
         {"aac", "audio/aac"},
+        {"adts", "audio/aac"},
         {"dsf", "audio/dsf"},
         {"flac", "audio/flac"},
         {"m4a", "audio/mp4"},
@@ -212,11 +213,19 @@ public class TranscodeService {
         
         // Seek
         command.add("-ss");
-        command.add(profile.getOffset().toString());
-        
+        if(profile.getType() == StreamType.ADAPTIVE) {
+            command.add(String.valueOf(profile.getOffset() * ADAPTIVE_STREAMING_SEGMENT_DURATION));
+        } else {
+            command.add(profile.getOffset().toString());
+        }
+       
         // Input media file
         command.add("-i");
         command.add(profile.getMediaElement().getPath());
+        
+        // Enable experimental codecs
+        command.add("-strict");
+        command.add("-2");
         
         // Video
         if(profile.getVideoTranscode() != null) {
@@ -243,8 +252,6 @@ public class TranscodeService {
         
         // Format
         command.addAll(getFormatCommands(profile));
-        
-        
         
         return command;
     }
@@ -286,7 +293,8 @@ public class TranscodeService {
                     commands.add("-initial_offset");
                     commands.add(Integer.toString(profile.getOffset() * ADAPTIVE_STREAMING_SEGMENT_DURATION));
                     
-                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "stream%05d.ts");
+                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/%05d.ts");
+                    break;
                 default:
                     commands.add("-f");
                     commands.add(profile.getFormat());
@@ -345,7 +353,7 @@ public class TranscodeService {
         
         if(transcode.getResolution() != null) {
             commands.add("-s");
-            commands.add(transcode.getResolution().getWidth() + "x" + transcode.getResolution().getHeight());
+            commands.add(transcode.getResolution().width + "x" + transcode.getResolution().height);
         }
         
         return commands;
@@ -1067,7 +1075,7 @@ public class TranscodeService {
         
         @Override
         public String toString() {
-            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Supported Files=%s, Supported Codecs=%s, Support Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
+            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
                     id == null ? "null" : id.toString(),
                     String.valueOf(type),
                     element == null ? "null" : element.getID().toString(),

@@ -64,10 +64,7 @@ public class AdaptiveStreamingProcess extends SMSProcess {
             // Remove any existing segments
             for(File file : streamDirectory.listFiles())
             {
-                if(file.getName().startsWith("stream"))
-                {
-                    file.delete();
-                }
+                file.delete();
             }
         }
         

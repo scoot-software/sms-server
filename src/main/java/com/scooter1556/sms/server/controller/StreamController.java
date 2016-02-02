@@ -208,9 +208,7 @@ public class StreamController {
         }
         
         profile.setDirectPlayEnabled(directPlay);
-        
-        System.out.println(profile);
-        
+                
         // Test if we can stream the file directly without transcoding
         if(profile.getFiles() != null) {
             // If the file type is supported and all codecs are supported without transcoding stream the file directly
@@ -222,14 +220,12 @@ public class StreamController {
                 } else if(!transcodeRequired) {
                     profile.setType(StreamType.FILE);
                     profile.setMimeType(TranscodeService.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
-                    System.out.println(profile);
                 }
             }
         }
         
         // If necessary process all streams ready for streaming and/or transcoding
         if(transcodeRequired) {
-            System.out.println(profile);
             if(mediaElement.getType() == MediaElementType.VIDEO) {
                 // If a suitable format was not given we can't continue
                 if(profile.getFormat() == null) {
@@ -261,9 +257,11 @@ public class StreamController {
             switch(profile.getFormat()) {
                 case "hls":
                     profile.setType(StreamType.ADAPTIVE);
+                    break;
                     
                 default:
                     profile.setType(StreamType.TRANSCODE);
+                    break;
             }
         }
         
@@ -275,6 +273,7 @@ public class StreamController {
         }
         
         // Add profile to transcode service
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
         return new ResponseEntity<>(job.getID(), HttpStatus.OK);
     }
@@ -386,6 +385,7 @@ public class StreamController {
                         return;
                     }
                     
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
                     process = new StreamProcess(id, command, profile.getMimeType(), request, response);
                     process.start();
                     break;
@@ -430,9 +430,9 @@ public class StreamController {
             }
 
             // Segment Files
-            File segment = new File(SettingsService.getHomeDirectory().getPath() + "/stream" + String.format("%05d", segmentNumber) + ".ts");
-            File nextSegment = new File(SettingsService.getHomeDirectory().getPath() + "/stream" + String.format("%05d", segmentNumber + 1) + ".ts");
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Segment Requested: " + segmentNumber, null);
+            File segment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + String.format("%05d", segmentNumber) + ".ts");
+            File nextSegment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + String.format("%05d", segmentNumber + 1) + ".ts");
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Segment Requested: " + segmentNumber + " Path: " + segment.getPath(), null);
 
             // Flags
             boolean isLastSegment = segmentNumber.equals(mediaElement.getDuration() / TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
