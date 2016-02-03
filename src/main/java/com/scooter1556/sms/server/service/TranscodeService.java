@@ -262,11 +262,11 @@ public class TranscodeService {
         if(profile.getFormat() != null) {
             switch(profile.getFormat()) {
                 case "hls":
+                    // Fixes some issues with mpegts
+                    commands.add("-bsf");
+                    commands.add("h264_mp4toannexb");
+                        
                     if(!profile.getVideoTranscode().getCodec().equals("copy")) {
-                        // Fixes some issues with mpegts
-                        commands.add("-bsf");
-                        commands.add("h264_mp4toannexb");
-
                         // Force Key Frames
                         commands.add("-force_key_frames");
                         commands.add("expr:gte(t,n_forced*" + ADAPTIVE_STREAMING_SEGMENT_DURATION + ")");
@@ -657,6 +657,26 @@ public class TranscodeService {
         return -1;
     }
     
+    public static String[] sortStringList(String[] listToSort, String[] priorityList) {
+        List<String> list = new ArrayList<>();
+        
+        // First parse
+        for(String item : listToSort) {
+            if(isSupported(priorityList, item)) {
+                list.add(item);
+            }
+        }
+        
+        // Second parse
+        for(String item : listToSort) {
+            if(!isSupported(priorityList, item)) {
+                list.add(item);
+            }
+        }
+        
+        return list.toArray(new String[list.size()]);
+    }
+    
     public static Boolean isTranscodeRequired(TranscodeProfile profile) {
         // Make sure we have the information we require
         if(profile.getMediaElement() == null || profile.getQuality() == null || profile.getCodecs() == null) {
@@ -903,6 +923,15 @@ public class TranscodeService {
             if(!transcodeRequired) {
                 codec = "copy";
             } else {
+                // Test if lossless codecs should be prioritised
+                if(profile.getMediaElement().getType() == MediaElementType.AUDIO && (profile.getQuality() == AudioQuality.LOSSLESS || profile.isDirectPlayEnabled()) && isSupported(LOSSLESS_CODECS, stream.getCodec())) {
+                    profile.setCodecs(sortStringList(profile.getCodecs(), LOSSLESS_CODECS));
+                    
+                    if(profile.mchCodecs != null) {
+                        profile.setMchCodecs(sortStringList(profile.getMchCodecs(), LOSSLESS_CODECS));
+                    }
+                }
+                
                 // Check for multichannel codecs if this is a multichannel stream
                 if(getAudioChannelCount(stream.getConfiguration()) > 2) {
                     // Try to get a suitable multichannel codec
@@ -925,16 +954,6 @@ public class TranscodeService {
                     // If a codec couldn't be found we need to downmix to stereo
                     if(codec == null) {
                         downmix = true;
-                    }
-                }
-                
-                // Test if lossless transcoding is requested and possible
-                if(codec == null && profile.getMediaElement().getType() == MediaElementType.AUDIO && profile.getQuality() == AudioQuality.LOSSLESS && isSupported(LOSSLESS_CODECS, stream.getCodec())) {
-                    for(String test : profile.getCodecs()) {
-                        if(isSupported(TRANSCODE_AUDIO_CODECS, test) && isSupported(LOSSLESS_CODECS, test)) {
-                            codec = test;
-                            break;
-                        }
                     }
                 }
                 
