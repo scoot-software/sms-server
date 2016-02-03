@@ -385,7 +385,7 @@ public class StreamController {
                         return;
                     }
                     
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+                    LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, command.toString(), null);
                     process = new StreamProcess(id, command, profile.getMimeType(), request, response);
                     process.start();
                     break;
@@ -456,6 +456,7 @@ public class StreamController {
 
                 // Wait for the segment to become available
                 while(!isAvailable && !transcodeProcess.hasEnded()) {
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcoding is taking too long...", null);
                     isAvailable = isLastSegment ? segment.exists() : nextSegment.exists();
                     Thread.sleep(500);
                 }

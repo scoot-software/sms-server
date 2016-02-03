@@ -70,7 +70,7 @@ public class AdaptiveStreamingService {
         
         // Start transcoding
         AdaptiveStreamingProcess process = new AdaptiveStreamingProcess(profile.getID(), command, 0);
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, command.toString(), null);
         
         process.initialise();
         processes.add(process);

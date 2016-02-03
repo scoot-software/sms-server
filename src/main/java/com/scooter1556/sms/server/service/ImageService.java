@@ -148,6 +148,9 @@ public class ImageService {
         command.add("-f");
         command.add("mjpeg");
         command.add("-");
+        
+        // Set content type
+        response.setContentType("image/jpeg");
 
         // Set status code
         response.setStatus(SC_PARTIAL_CONTENT);

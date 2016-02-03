@@ -231,7 +231,7 @@ public class TranscodeService {
         if(profile.getVideoTranscode() != null) {
             // Subtitle commands
             if(profile.getSubtitleTrack() != null && profile.getSubtitleTranscodes() != null) {
-                getSubtitleCommands(profile);
+                command.addAll(getSubtitleCommands(profile));
             } else {
                 command.add("-map");
                 command.add("0:v");
@@ -262,13 +262,15 @@ public class TranscodeService {
         if(profile.getFormat() != null) {
             switch(profile.getFormat()) {
                 case "hls":
-                    // Fixes some issues with mpegts
-                    commands.add("-bsf");
-                    commands.add("h264_mp4toannexb");
+                    if(!profile.getVideoTranscode().getCodec().equals("copy")) {
+                        // Fixes some issues with mpegts
+                        commands.add("-bsf");
+                        commands.add("h264_mp4toannexb");
 
-                    // Force Key Frames
-                    commands.add("-force_key_frames");
-                    commands.add("expr:gte(t,n_forced*" + ADAPTIVE_STREAMING_SEGMENT_DURATION + ")");
+                        // Force Key Frames
+                        commands.add("-force_key_frames");
+                        commands.add("expr:gte(t,n_forced*" + ADAPTIVE_STREAMING_SEGMENT_DURATION + ")");
+                    }
                     
                     // Reduce overhead with global header
                     commands.add("-flags");
@@ -815,8 +817,13 @@ public class TranscodeService {
         }
         
         // Test if transcoding is necessary
-        if(!transcodeRequired && isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec())) {
+        if(!transcodeRequired) {
             transcodeRequired = isTranscodeRequired(profile, stream);
+        }
+        
+        // Test that the codec is supported by the given format
+        if(!transcodeRequired) {
+            transcodeRequired = !isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec());
         }
         
         if(transcodeRequired) {
@@ -833,8 +840,10 @@ public class TranscodeService {
                 return false;
             }
             
-            // Get suitable resolution
-            resolution = getVideoResolution(profile);            
+            // Get suitable resolution (use native resolution if direct play is enabled)
+            if(!profile.isDirectPlayEnabled()) {
+                resolution = getVideoResolution(profile);      
+            }
         } else {
             codec = "copy";
         }
@@ -878,6 +887,8 @@ public class TranscodeService {
             Integer quality = null;
             Integer sampleRate = null;
             boolean downmix = false;
+            
+            // Check if transcoding is required
             boolean transcodeRequired = isTranscodeRequired(profile, stream);
             
             // Check the format supports this codec for video or that we can stream this codec for audio
@@ -1259,7 +1270,7 @@ public class TranscodeService {
         public String toString() {
             return String.format("{Codec=%s, Resolution=%s}",
                     codec == null ? "null" : codec,
-                    resolution == null ? "null" : resolution.toString());
+                    resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height));
         }
         
         public String getCodec() {

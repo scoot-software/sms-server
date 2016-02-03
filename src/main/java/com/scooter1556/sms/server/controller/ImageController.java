@@ -80,7 +80,7 @@ public class ImageController {
         }
     }
     
-    @RequestMapping(value="/{id}/fanart/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
+    @RequestMapping(value="/{id}/fanart/{scale}", method=RequestMethod.GET)
     @ResponseBody
     public void getFanArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale, HttpServletResponse response) {
         MediaElement mediaElement;
