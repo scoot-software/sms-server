@@ -460,7 +460,7 @@ public class StreamController {
                 while(!isAvailable && !transcodeProcess.hasEnded()) {
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcoding is taking too long...", null);
                     isAvailable = isLastSegment ? segment.exists() : nextSegment.exists();
-                    Thread.sleep(500);
+                    Thread.sleep(1000);
                 }
             }
 

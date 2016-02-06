@@ -121,9 +121,6 @@ public class AdaptiveStreamingService {
         playlist.add("#EXTM3U");
         playlist.add("#EXT-X-VERSION:3");
         playlist.add("#EXT-X-TARGETDURATION:" + TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
-        playlist.add("#EXT-X-ALLOW-CACHE:YES");
-        playlist.add("#EXT-X-MEDIA-SEQUENCE:0");
-        playlist.add("#EXT-X-PLAYLIST-TYPE:VOD");
 
         // Get Video Segments
         for (int i = 0; i < (mediaElement.getDuration() / TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION); i++) {
