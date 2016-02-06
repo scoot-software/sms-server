@@ -101,7 +101,7 @@ public class StreamController {
         Job job;
         Byte jobType;
         TranscodeProfile profile;
-        Boolean transcodeRequired = false;
+        Boolean transcodeRequired = true;
 
         // Check media element
         mediaElement = mediaDao.getMediaElementByID(id);
@@ -151,6 +151,8 @@ public class StreamController {
                 InetAddress local = InetAddress.getByName(request.getLocalAddr());
                 InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
                 NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
+                
+                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
 
                 for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
                     if(address.getAddress().equals(local)) {
@@ -159,7 +161,7 @@ public class StreamController {
                     }
                 }
             } catch (UnknownHostException | SocketException ex) {
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Failed to check IP adress of client", ex);
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client", ex);
             }
         }
         
@@ -385,7 +387,7 @@ public class StreamController {
                         return;
                     }
                     
-                    LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, command.toString(), null);
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
                     process = new StreamProcess(id, command, profile.getMimeType(), request, response);
                     process.start();
                     break;

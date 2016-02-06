@@ -278,7 +278,7 @@ public class TranscodeService {
                     
                     // Segments
                     commands.add("-f");
-                    commands.add("segment");
+                    commands.add("ssegment");
 
                     commands.add("-segment_time");
                     commands.add(ADAPTIVE_STREAMING_SEGMENT_DURATION.toString());
