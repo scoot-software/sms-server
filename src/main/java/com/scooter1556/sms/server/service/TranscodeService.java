@@ -70,7 +70,7 @@ public class TranscodeService {
         {"ac3", "ac3"},
         {"flac", "flac"},
         {"mp3", "mp3"},
-        {"vorbis", "ogg"},
+        {"vorbis", "oga"},
         {"pcm", "wav"}
     };
     
@@ -424,7 +424,7 @@ public class TranscodeService {
         // Hardcoded subtitles
         if(transcode.isHardcoded()) {
             switch(transcode.getCodec()) {
-                // Text Based
+                // Text Basedtimestamp
                 case "subrip": case "srt": case "webvtt":
                     commands.add("-map");
                     commands.add("0:v");
@@ -921,7 +921,17 @@ public class TranscodeService {
             }
             
             if(!transcodeRequired) {
-                codec = "copy";
+                // Work around transcoder bug where flac files have the wrong duration if the stream is copied
+                if(stream.getCodec().equals("flac")) {
+                    codec = "flac";
+                } else {
+                    codec = "copy";
+                }
+                
+                // Get format if required
+                if(profile.getFormat() == null) {
+                    profile.setFormat(getFormatForAudioCodec(stream.getCodec()));
+                }
             } else {
                 // Test if lossless codecs should be prioritised
                 if(profile.getMediaElement().getType() == MediaElementType.AUDIO && (profile.getQuality() == AudioQuality.LOSSLESS || profile.isDirectPlayEnabled()) && isSupported(LOSSLESS_CODECS, stream.getCodec())) {
