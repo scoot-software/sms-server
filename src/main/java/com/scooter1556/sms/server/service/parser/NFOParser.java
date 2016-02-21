@@ -55,7 +55,7 @@ public class NFOParser {
         NFOData data = new NFOData();
         
         // Set path
-        data.setPath(path.getParent());
+        data.setPath(path);
 
         try {
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();

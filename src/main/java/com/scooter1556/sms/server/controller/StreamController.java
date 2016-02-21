@@ -93,6 +93,7 @@ public class StreamController {
                                                  @RequestParam(value = "format", required = false) String format,
                                                  @RequestParam(value = "quality", required = true) Integer quality,
                                                  @RequestParam(value = "samplerate", required = false) Integer maxSampleRate,
+                                                 @RequestParam(value = "bitrate", required = false) Integer maxBitRate,
                                                  @RequestParam(value = "atrack", required = false) Integer audioTrack,
                                                  @RequestParam(value = "strack", required = false) Integer subtitleTrack,
                                                  @RequestParam(value = "direct", required = false) Boolean directPlay,
@@ -192,6 +193,10 @@ public class StreamController {
         
         if(maxSampleRate != null) {
             profile.setMaxSampleRate(maxSampleRate);
+        }
+        
+        if(maxBitRate != null) {
+            profile.setMaxBitRate(maxBitRate);
         }
         
         if(mchCodecs != null) {

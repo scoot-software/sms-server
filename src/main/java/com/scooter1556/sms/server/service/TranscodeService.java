@@ -715,6 +715,13 @@ public class TranscodeService {
         if(!isSupported(profile.getCodecs(), stream.getCodec())) {
             return true;
         }
+        
+        // Check bitrate
+        if(profile.getMaxBitRate() != null) {
+            if(profile.getMediaElement().getBitrate() > profile.getMaxBitRate()) {
+                return true;
+            }
+        }
 
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
@@ -1101,7 +1108,7 @@ public class TranscodeService {
         private byte type;
         private MediaElement element;
         private String[] files, codecs, mchCodecs;
-        private Integer quality, maxSampleRate = 48000;
+        private Integer quality, maxBitRate, maxSampleRate = 48000;
         private String format, mimeType;
         private VideoTranscode videoTranscode;
         private AudioTranscode[] audioTranscodes;
@@ -1118,7 +1125,7 @@ public class TranscodeService {
         
         @Override
         public String toString() {
-            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
+            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
                     id == null ? "null" : id.toString(),
                     String.valueOf(type),
                     element == null ? "null" : element.getID().toString(),
@@ -1127,6 +1134,7 @@ public class TranscodeService {
                     mchCodecs == null ? "null" : Arrays.toString(mchCodecs),
                     quality == null ? "null" : quality.toString(),
                     maxSampleRate == null ? "null" : maxSampleRate.toString(),
+                    maxBitRate == null ? "null" : maxBitRate.toString(),
                     format == null ? "null" : format,
                     mimeType == null ? "null" : mimeType,
                     videoTranscode == null ? "null" : videoTranscode.toString(),
@@ -1273,6 +1281,15 @@ public class TranscodeService {
         
         public void setMaxSampleRate(int maxSampleRate) {
             this.maxSampleRate = maxSampleRate;
+        }
+        
+        @JsonIgnore
+        public Integer getMaxBitRate() {
+            return maxBitRate;
+        }
+        
+        public void setMaxBitRate(int maxBitRate) {
+            this.maxBitRate = maxBitRate;
         }
         
         @JsonIgnore

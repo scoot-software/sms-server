@@ -274,13 +274,12 @@ public class MediaScannerService {
                 mediaElement.setLastScanned(scanTime);
                 
                 // Add media element to list
-                directoryElements.getLast().add(mediaElement);
+                directoryElements.peekLast().add(mediaElement);
                 
             } else if(isInfoFile(file)) {
                 // Determine if we need to parse this file
                 if(directoryChanged || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
                     LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing file " + file.toString(), null);
-                    
                     nfoData.add(nfoParser.parse(file));
                 }
             }
@@ -297,7 +296,7 @@ public class MediaScannerService {
             
             MediaElement directory = null;
             Deque<MediaElement> dirElements;
-            NFOData dirData = null;
+            Deque<NFOData> dirData = new ArrayDeque<>();
             
             // Retrieve directory from list
             if(!directories.isEmpty()) {
@@ -309,15 +308,30 @@ public class MediaScannerService {
             
             // Get NFO data for directory
             if(!nfoData.isEmpty()) {
-                if(nfoData.getLast().getPath().equals(dir)) {
-                    dirData = nfoData.removeLast();
+                while(nfoData.peekLast() != null && nfoData.peekLast().getPath().getParent().equals(dir)) {
+                    dirData.add(nfoData.removeLast());
                 }
             }
             
             // Process child media elements
             for(MediaElement element : dirElements) {
-                if(dirData != null) {
-                    nfoParser.updateMediaElement(element, dirData);
+                if(!dirData.isEmpty()) {
+                    boolean dataFound = false;
+                    
+                    // Test for file specific data
+                    for(NFOData test : dirData) {
+                        if(test.getPath().getFileName().toString().contains(element.getTitle())) {
+                            nfoParser.updateMediaElement(element, test);
+                            dirData.remove(test);
+                            dataFound = true;
+                            break;  
+                        }
+                    }
+                    
+                    // Use generic data for directory
+                    if(!dataFound) {
+                        nfoParser.updateMediaElement(element, dirData.getFirst());
+                    }
                 }
                 
                 if(element.getID() == null) {
@@ -331,8 +345,8 @@ public class MediaScannerService {
             if(directory != null && directoriesToUpdate.contains(dir)) {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing directory " + dir.toString(), null);
                 
-                if(dirData != null) {
-                    nfoParser.updateMediaElement(directory, dirData);
+                if(!dirData.isEmpty()) {
+                    nfoParser.updateMediaElement(directory, dirData.removeFirst());
                 }
                 
                 // Determine directory media type
