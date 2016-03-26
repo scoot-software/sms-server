@@ -404,6 +404,50 @@ public class MediaDao {
         }
     }
     
+    public List<MediaElement> getRecentlyPlayedVideoDirectoryElements(int limit) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO, limit});
+            return mediaElements;
+        }
+        catch (DataAccessException e)
+        {
+            return null;
+        }
+    }
+    
+    public List<MediaElement> getRecentlyAddedVideoDirectoryElements(int limit) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO, limit});
+            return mediaElements;
+        }
+        catch (DataAccessException e)
+        {
+            return null;
+        }
+    }
+    
+    public List<MediaElement> getRecentlyPlayedAudioDirectoryElements(int limit) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO, limit});
+            return mediaElements;
+        }
+        catch (DataAccessException e)
+        {
+            return null;
+        }
+    }
+    
+    public List<MediaElement> getRecentlyAddedAudioDirectoryElements(int limit) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO, limit});
+            return mediaElements;
+        }
+        catch (DataAccessException e)
+        {
+            return null;
+        }
+    }
+    
     public List<String> getArtists() {
         try {
             List<String> artists = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Artist FROM MediaElement WHERE Artist IS NOT NULL ORDER BY Artist", String.class);

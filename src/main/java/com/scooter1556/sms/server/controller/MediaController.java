@@ -35,6 +35,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -141,9 +142,23 @@ public class MediaController {
     }
 
     @RequestMapping(value="/recentlyadded/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(@PathVariable("limit") Integer limit)
+    public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(@PathVariable("limit") Integer limit,
+                                                                                     @RequestParam(value = "type", required = false) Integer type)
     {
-        List<MediaElement> mediaElements = mediaDao.getRecentlyAddedDirectoryElements(limit);
+        // Check type parameter
+        if(type != null && type > 1) {
+            type = null;
+        }
+        
+        List<MediaElement> mediaElements = null;
+        
+        if(type == null) {
+            mediaElements = mediaDao.getRecentlyAddedDirectoryElements(limit);
+        } else if(type == MediaElement.DirectoryMediaType.AUDIO) {
+            mediaElements = mediaDao.getRecentlyAddedAudioDirectoryElements(limit);
+        } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
+            mediaElements = mediaDao.getRecentlyAddedVideoDirectoryElements(limit);
+        }
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -153,9 +168,23 @@ public class MediaController {
     }
     
     @RequestMapping(value="/recentlyplayed/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(@PathVariable("limit") Integer limit)
+    public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(@PathVariable("limit") Integer limit,
+                                                                                      @RequestParam(value = "type", required = false) Integer type)
     {
-        List<MediaElement> mediaElements = mediaDao.getRecentlyPlayedDirectoryElements(limit);
+        // Check type parameter
+        if(type != null && type > 1) {
+            type = null;
+        }
+        
+        List<MediaElement> mediaElements = null;
+        
+        if(type == null) {
+            mediaElements = mediaDao.getRecentlyPlayedDirectoryElements(limit);
+        } else if(type == MediaElement.DirectoryMediaType.AUDIO) {
+            mediaElements = mediaDao.getRecentlyPlayedAudioDirectoryElements(limit);
+        } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
+            mediaElements = mediaDao.getRecentlyPlayedVideoDirectoryElements(limit);
+        }
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
