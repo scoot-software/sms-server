@@ -38,16 +38,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TranscodeService {
     
     private static final String CLASS_NAME = "TranscodeService";
-    
-    @Autowired
-    private AdaptiveStreamingService adaptiveStreamingService;
     
     private static final String TRANSCODER = "ffmpeg";
     
@@ -62,8 +58,6 @@ public class TranscodeService {
     public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","ac3","flac","mp3","pcm","vorbis"};
     
     public static final String[] LOSSLESS_CODECS= {"flac","pcm","alac","dsd"};
-    
-    public static final Integer ADAPTIVE_STREAMING_SEGMENT_DURATION = 10;
         
     private static final String[][] AUDIO_CODEC_FORMAT = {
         {"aac", "adts"},
@@ -75,7 +69,7 @@ public class TranscodeService {
     };
     
     private static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,aac,ac3"},
+        {"hls", "h264,aac,mp3,ac3"},
         {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
     };
@@ -213,11 +207,7 @@ public class TranscodeService {
         
         // Seek
         command.add("-ss");
-        if(profile.getType() == StreamType.ADAPTIVE) {
-            command.add(String.valueOf(profile.getOffset() * ADAPTIVE_STREAMING_SEGMENT_DURATION));
-        } else {
-            command.add(profile.getOffset().toString());
-        }
+        command.add(profile.getOffset().toString());
        
         // Input media file
         command.add("-i");
@@ -265,38 +255,22 @@ public class TranscodeService {
                     // Fixes some issues with mpegts
                     commands.add("-bsf");
                     commands.add("h264_mp4toannexb");
-                        
-                    if(!profile.getVideoTranscode().getCodec().equals("copy")) {
-                        // Force Key Frames
-                        commands.add("-force_key_frames");
-                        commands.add("expr:gte(t,n_forced*" + ADAPTIVE_STREAMING_SEGMENT_DURATION + ")");
-                    }
                     
                     // Reduce overhead with global header
                     commands.add("-flags");
                     commands.add("-global_header");
                     
-                    // Segments
+                    commands.add("-copyts");
+                    
+                    commands.add("-mpegts_copyts");
+                    commands.add("1");
+                    
                     commands.add("-f");
-                    commands.add("ssegment");
-
-                    commands.add("-segment_time");
-                    commands.add(ADAPTIVE_STREAMING_SEGMENT_DURATION.toString());
-
-                    commands.add("-segment_time_delta");
-                    commands.add("0.05");
-
-                    commands.add("-segment_format");
                     commands.add("mpegts");
                     
-                    commands.add("-segment_start_number");
-                    commands.add(profile.getOffset().toString());
-                    
-                    commands.add("-initial_offset");
-                    commands.add(Integer.toString(profile.getOffset() * ADAPTIVE_STREAMING_SEGMENT_DURATION));
-                    
-                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/%05d.ts");
+                    commands.add("-");
                     break;
+                    
                 default:
                     commands.add("-f");
                     commands.add(profile.getFormat());
@@ -424,7 +398,7 @@ public class TranscodeService {
         // Hardcoded subtitles
         if(transcode.isHardcoded()) {
             switch(transcode.getCodec()) {
-                // Text Basedtimestamp
+                // Text Based
                 case "subrip": case "srt": case "webvtt":
                     commands.add("-map");
                     commands.add("0:v");
@@ -1088,11 +1062,6 @@ public class TranscodeService {
         for(TranscodeProfile profile : transcodeProfiles) {
             if(profile.getID() != null) {
                 if(profile.getID().compareTo(id) == 0) {
-                    // Stop transcode process
-                    if(profile.getType() == StreamType.ADAPTIVE) {
-                        adaptiveStreamingService.endProcess(id);
-                    }
-                    
                     transcodeProfiles.remove(index);
                     break;
                 }
@@ -1116,6 +1085,7 @@ public class TranscodeService {
         private Integer audioTrack, subtitleTrack;
         private Integer offset = 0;
         private boolean directPlay = false;
+        private boolean active = true;
         
         public TranscodeProfile() {}
         
@@ -1299,6 +1269,15 @@ public class TranscodeService {
         
         public void setOffset(int offset) {
             this.offset = offset;
+        }
+        
+        @JsonIgnore
+        public boolean isActive() {
+            return active;
+        }
+        
+        public void setActive(boolean active) {
+            this.active = active;
         }
     }
     

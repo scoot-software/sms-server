@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.utilities;
 
+import java.io.IOException;
 import java.net.InetAddress;
 
 public class NetworkUtils {
@@ -55,5 +56,17 @@ public class NetworkUtils {
         final int shift = 8 - bits;
         
         return !(bits != 0 && x[bytes]>>>shift != y[bytes]>>>shift);
+    }
+    
+    public static int ping(final InetAddress address) {
+        Long start = System.currentTimeMillis();
+        
+        try {
+            if (!address.isReachable(2000)) return -1;
+            return (int) (System.currentTimeMillis() - start);
+        } catch (IOException ex) {
+            return -1;
+        }
+            
     }
 }

@@ -27,9 +27,6 @@ import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
-import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
-import com.scooter1556.sms.server.service.TranscodeService.StreamType;
-import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -43,66 +40,15 @@ import org.springframework.stereotype.Service;
 public class AdaptiveStreamingService {
     
     private static final String CLASS_NAME = "AdaptiveStreamingService";
+    
+    public static final Integer ADAPTIVE_STREAMING_SEGMENT_DURATION = 10;
         
     @Autowired
     private JobDao jobDao;
     
     @Autowired
     private MediaDao mediaDao;
-    
-    @Autowired
-    private TranscodeService transcodeService;
         
-    private final ArrayList<AdaptiveStreamingProcess> processes = new ArrayList<>();
-    
-    public AdaptiveStreamingProcess initialise(TranscodeProfile profile) {
-        // Check that this is an adaptive streaming job
-        if(profile.getType() != StreamType.ADAPTIVE) {
-            return null;
-        }
-        
-        // Get transcode command
-        List<String> command = transcodeService.getTranscodeCommand(profile);
-        
-        if(command == null) {
-            return null;
-        }
-        
-        // Start transcoding
-        AdaptiveStreamingProcess process = new AdaptiveStreamingProcess(profile.getID(), command, 0);
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
-        
-        process.initialise();
-        processes.add(process);
-        
-        return process;
-    }
-    
-    public AdaptiveStreamingProcess startProcessWithOffset(long jobID, int segment) {
-        // End existing process if found
-        endProcess(jobID);
-        
-        // Get existing job
-        Job job = jobDao.getJobByID(jobID);
-        
-        if(job == null) {
-            return null;
-        }
-        
-        // Retrieve original adaptive streaming profile so it can be reused
-        TranscodeProfile profile = transcodeService.getTranscodeProfile(jobID);
-        
-        if(profile == null) {
-            return null;
-        }
-        
-        // Set offset
-        profile.setOffset(segment);
-        
-        // Start a new transcoding process
-        return initialise(profile);
-    }
-    
     public List<String> generateHLSPlaylist(long id, String baseUrl) {
         List<String> playlist = new ArrayList<>();
         
@@ -120,19 +66,19 @@ public class AdaptiveStreamingService {
         
         playlist.add("#EXTM3U");
         playlist.add("#EXT-X-VERSION:3");
-        playlist.add("#EXT-X-TARGETDURATION:" + TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
+        playlist.add("#EXT-X-TARGETDURATION:" + ADAPTIVE_STREAMING_SEGMENT_DURATION);
 
         // Get Video Segments
-        for (int i = 0; i < (mediaElement.getDuration() / TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION); i++) {
-            playlist.add("#EXTINF:" + TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION.floatValue() + ",");
+        for (int i = 0; i < (mediaElement.getDuration() / ADAPTIVE_STREAMING_SEGMENT_DURATION); i++) {
+            playlist.add("#EXTINF:" + ADAPTIVE_STREAMING_SEGMENT_DURATION.floatValue() + ",");
             playlist.add(createSegmentUrl(baseUrl, job.getID(), i));
         }   
 
         // Determine the duration of the final segment.
-        Integer remainder = mediaElement.getDuration() % TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION;
+        Integer remainder = mediaElement.getDuration() % ADAPTIVE_STREAMING_SEGMENT_DURATION;
         if (remainder > 0) {
             playlist.add("#EXTINF:" + remainder.floatValue() + ",");
-            playlist.add(createSegmentUrl(baseUrl, job.getID(), mediaElement.getDuration() / TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION));
+            playlist.add(createSegmentUrl(baseUrl, job.getID(), mediaElement.getDuration() / ADAPTIVE_STREAMING_SEGMENT_DURATION));
         }
 
         playlist.add("#EXT-X-ENDLIST");
@@ -169,43 +115,5 @@ public class AdaptiveStreamingService {
         builder.append(baseUrl).append("/stream/segment?id=").append(id).append("&num=").append(segment);
         
         return builder.toString();
-    }
-    
-    public void addProcess(AdaptiveStreamingProcess process) {
-        if(process != null) {
-            processes.add(process);
-        }
-    }
-    
-    public AdaptiveStreamingProcess getProcessByID(long id) {
-        for(AdaptiveStreamingProcess process : processes) {
-            if(process.getID().compareTo(id) == 0) {
-                return process;
-            }
-        }
-        
-        return null;
-    }
-    
-    public void removeProcessByID(long id) {
-        int index = 0;
-        
-        for (AdaptiveStreamingProcess process : processes) {
-            if(process.getID().compareTo(id) == 0) {
-                processes.remove(index);
-                break;
-            }
-            
-            index ++;
-        }
-    }
-    
-    public void endProcess(long jobID) {   
-        AdaptiveStreamingProcess process = getProcessByID(jobID);
-
-        if(process != null) {
-            process.end();
-            removeProcessByID(jobID);
-        }        
     }
 }

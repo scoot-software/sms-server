@@ -29,19 +29,16 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
-import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.io.FileDownloadProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
 import com.scooter1556.sms.server.io.StreamProcess;
 import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
-import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
 import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -68,7 +65,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public class StreamController {
 
     private static final String CLASS_NAME = "StreamController";
-    
+        
     @Autowired
     private MediaDao mediaDao;
     
@@ -284,14 +281,6 @@ public class StreamController {
             }
         }
         
-        // If this is an adaptive streaming job start the transcode process
-        if(profile.getType() == StreamType.ADAPTIVE) {
-            if(adaptiveStreamingService.initialise(profile) == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to intialise adaptive streaming process for job " + job.getID() + ".", null);
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-        }
-        
         // Add profile to transcode service
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
@@ -439,78 +428,62 @@ public class StreamController {
                            @RequestParam(value = "num", required = true) final Integer segmentNumber,
                            HttpServletRequest request, 
                            HttpServletResponse response) {
+        TranscodeProfile profile;
         Job job = null;
-        FileDownloadProcess downloadProcess = null;
-        AdaptiveStreamingProcess transcodeProcess;
+        SMSProcess process = null;
         
         try {
-            // Get associated job
+            // Retrieve Job
             job = jobDao.getJobByID(id);
-
-            // Get associated process
-            transcodeProcess = adaptiveStreamingService.getProcessByID(id);
-
-            // Check media element
-            MediaElement mediaElement = mediaDao.getMediaElementByID(job.getMediaElement());
-
-            if(transcodeProcess == null || mediaElement == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to find adaptive streaming process for job " + job.getID() + ".", null);
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve transcode process.");
-                return;
-            }
-
-            // Segment Files
-            File segment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + String.format("%05d", segmentNumber) + ".ts");
-            File nextSegment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + String.format("%05d", segmentNumber + 1) + ".ts");
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Segment Requested: " + segmentNumber + " Path: " + segment.getPath(), null);
-
-            // Flags
-            boolean isLastSegment = segmentNumber.equals(mediaElement.getDuration() / TranscodeService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
-
-            // Check if the segment already exists.
-            // We check the next segment is available (if not the last segment) to make sure the requested segment is fully transcoded.
-            boolean isAvailable = isLastSegment ? segment.exists() : segment.exists() && nextSegment.exists();
-
-            if(!isAvailable) {            
-                // Check if the user has seeked to an un-transcoded segment
-                if(!(segmentNumber.equals(transcodeProcess.getSegmentNumber()) || segmentNumber.equals(transcodeProcess.getSegmentNumber() + 1))) {              
-                    // Start a new transcode process starting with the requested segment
-                    transcodeProcess = adaptiveStreamingService.startProcessWithOffset(id, segmentNumber);
-
-                    // Check the new process started successfully
-                    if(transcodeProcess == null) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to start new adaptive streaming process for job " + job.getID() + ".", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to start new transcode process.");
-                        return;
-                    }
-                }
-
-                // Wait for the segment to become available
-                while(!isAvailable && !transcodeProcess.hasEnded()) {
-                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcoding is taking too long...", null);
-                    isAvailable = isLastSegment ? segment.exists() : nextSegment.exists();
-                    Thread.sleep(1000);
-                }
-            }
-
-            // Check that the segment is available
-            if(!isAvailable) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Could not return segment " + segmentNumber + " for job " + job.getID() + ".", null);
-                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
+            
+            if(job == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve job with id " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
                 return;
             }
             
-            // Update process segment tracking
-            transcodeProcess.setSegmentNumber(segmentNumber);
+            // Retrieve transcode profile
+            profile = transcodeService.getTranscodeProfile(id);
             
-            // Return segment
-            downloadProcess = new FileDownloadProcess(segment.toPath(), "video/MP2T", request, response);
-            downloadProcess.start();
-        } catch (IOException|InterruptedException ex) {
+            if(profile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve transcode profile for job " + job.getID() + ".", null);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve transcode profile for job " + id + ".");
+                return;
+            }
+            
+            // If profile is inactive do not return any data
+            if(!profile.isActive()) {
+                response.sendError(HttpServletResponse.SC_OK, "Segment not required.");
+                return;
+            }
+            
+            // Update segment offset
+            profile.setOffset(segmentNumber * AdaptiveStreamingService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
+            
+            // Get transcode command
+            List<String> command = transcodeService.getTranscodeCommand(profile);
+
+            if(command == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process transcode command for job " + job.getID() + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process transcode command.");
+                return;
+            }
+
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+            process = new StreamProcess(id, command, profile.getMimeType(), request, response);
+            process.start();
+            
+            // If a segment finished transcoding gracefully we can assume we don't need to return future requested segments
+            profile.setActive(false);
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deactivated transcode profile for job " + job.getID() + ".", null);
+        } catch (IOException ex) {
             // Called if client closes the connection early.
+            if(process != null) {
+                process.end();
+            }
         } finally {
-            if(job != null && downloadProcess != null) {
-                jobDao.updateBytesTransferred(id, downloadProcess.getBytesTransferred());
+            if(job != null && process != null) {
+                jobDao.updateBytesTransferred(id, process.getBytesTransferred());
             }
         }
     }
