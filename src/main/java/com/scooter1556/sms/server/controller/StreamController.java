@@ -83,7 +83,7 @@ public class StreamController {
 
     @RequestMapping(value="/initialise/{id}", method=RequestMethod.GET)
     @ResponseBody
-    public ResponseEntity<Long> initialiseStream(@PathVariable("id") Long id,
+    public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("id") Long id,
                                                  @RequestParam(value = "files", required = false) String files,
                                                  @RequestParam(value = "codecs", required = true) String codecs,
                                                  @RequestParam(value = "mchcodecs", required = false) String mchCodecs,
@@ -284,7 +284,7 @@ public class StreamController {
         // Add profile to transcode service
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
-        return new ResponseEntity<>(job.getID(), HttpStatus.OK);
+        return new ResponseEntity<>(profile, HttpStatus.OK);
     }
     
     @RequestMapping(value="/{id}", method=RequestMethod.GET)

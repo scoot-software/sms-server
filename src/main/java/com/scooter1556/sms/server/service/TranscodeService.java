@@ -81,6 +81,7 @@ public class TranscodeService {
         {"flac", "audio/flac"},
         {"m4a", "audio/mp4"},
         {"mka", "audio/x-matroska"},
+        {"matroska", "audio/x-matroska"},
         {"mp3", "audio/mpeg"},
         {"mp4", "audio/mp4"},
         {"oga", "audio/ogg"},
@@ -235,7 +236,7 @@ public class TranscodeService {
         if(profile.getAudioTrack() != null && profile.getAudioTranscodes() != null) {
             command.addAll(getAudioCommands(profile));
         }
-        
+                
         // Use all CPU cores
         command.add("-threads");
         command.add("0");
@@ -902,12 +903,7 @@ public class TranscodeService {
             }
             
             if(!transcodeRequired) {
-                // Work around transcoder bug where flac files have the wrong duration if the stream is copied
-                if(stream.getCodec().equals("flac")) {
-                    codec = "flac";
-                } else {
-                    codec = "copy";
-                }
+                codec = "copy";
                 
                 // Get format if required
                 if(profile.getFormat() == null) {
@@ -1177,6 +1173,7 @@ public class TranscodeService {
             this.mchCodecs = mchCodecs;
         }
         
+        @JsonIgnore
         public String getFormat() {
             return format;
         }
@@ -1193,6 +1190,7 @@ public class TranscodeService {
             this.mimeType = mimeType;
         }
         
+        @JsonIgnore
         public VideoTranscode getVideoTranscode() {
             return videoTranscode;
         }
@@ -1201,6 +1199,7 @@ public class TranscodeService {
             this.videoTranscode = videoTranscode;
         }
         
+        @JsonIgnore
         public AudioTranscode[] getAudioTranscodes() {
             return audioTranscodes;
         }
@@ -1209,6 +1208,7 @@ public class TranscodeService {
             this.audioTranscodes = audioTranscodes;
         }
         
+        @JsonIgnore
         public SubtitleTranscode[] getSubtitleTranscodes() {
             return subtitleTranscodes;
         }
@@ -1380,3 +1380,4 @@ public class TranscodeService {
         public static final byte FILE = 2;
     }
 }
+flac
