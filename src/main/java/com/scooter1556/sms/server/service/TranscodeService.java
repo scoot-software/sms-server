@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.service;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import org.apache.commons.lang3.SystemUtils;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
@@ -44,9 +45,7 @@ import org.springframework.stereotype.Service;
 public class TranscodeService {
     
     private static final String CLASS_NAME = "TranscodeService";
-    
-    private static final String TRANSCODER = "ffmpeg";
-    
+        
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
     public static final String[] FORMATS = {"hls","matroska","webm"};
@@ -184,12 +183,22 @@ public class TranscodeService {
      * Returns a file reference to the transcoder.
      */
     public File getTranscoder() 
-    {       
-        File transcoder = new File(getClass().getResource(TRANSCODER).getPath());
+    {
+        File transcoder = null;
         
-        // Check if the transcoder binary exists.
-        if(!transcoder.exists())
-        {
+        if(SystemUtils.IS_OS_WINDOWS) {
+            transcoder = new File(getClass().getResource("ffmpeg.exe").getPath());
+        } else if(SystemUtils.IS_OS_LINUX) {
+            transcoder = new File(getClass().getResource("ffmpeg").getPath());
+        }
+         
+        if(transcoder == null) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
+            return null;
+        }
+        
+        // Check if the transcoder binary exists
+        if(!transcoder.exists()) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
             return null;
         }
@@ -903,6 +912,7 @@ public class TranscodeService {
             }
             
             if(!transcodeRequired) {
+                // Work around transcoder bug where flac files have the wrong duration if the stream is copied
                 codec = "copy";
                 
                 // Get format if required
@@ -1380,4 +1390,3 @@ public class TranscodeService {
         public static final byte FILE = 2;
     }
 }
-flac
