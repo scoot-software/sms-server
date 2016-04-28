@@ -34,6 +34,10 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.service.LogService.Level;
 import java.awt.Dimension;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,6 +49,8 @@ import org.springframework.stereotype.Service;
 public class TranscodeService {
     
     private static final String CLASS_NAME = "TranscodeService";
+    
+    private final String TRANSCODER_FILE = SettingsService.getHomeDirectory() + "/transcoder";
         
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
@@ -164,6 +170,55 @@ public class TranscodeService {
         {"7.1", "8"}
     };
     
+    // Extract transcoder to data directory
+    public TranscodeService() {
+        InputStream inputStream = null;
+        OutputStream outputStream;
+                
+        // Get transcoder
+        if(SystemUtils.IS_OS_WINDOWS) {
+            inputStream = getClass().getResourceAsStream("ffmpeg.exe");
+        } else if(SystemUtils.IS_OS_LINUX) {
+            inputStream = getClass().getResourceAsStream("ffmpeg");
+        }
+
+        // Check we found the transcoder
+        if(inputStream == null) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
+            return;
+        }
+            
+        // Copy transcoder to filesystem
+        try {
+            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Preparing transcoder.", null);
+            File file = new File(TRANSCODER_FILE);
+
+            int readBytes;
+            byte[] buffer = new byte[4096];
+
+            outputStream = new FileOutputStream(file);
+            
+            while ((readBytes = inputStream.read(buffer)) > 0) {
+                outputStream.write(buffer, 0, readBytes);
+            }
+            
+            // Close streams
+            inputStream.close();
+            outputStream.close();
+
+            // Check file copied successfully
+            if(!file.exists()) {
+                LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to extract transcoder!", null);
+                return;
+            }
+            
+            // Make sure file is executable
+            file.setExecutable(true);
+        } catch (IOException ex) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to extract transcoder!", ex);
+        }
+    }
+    
     public static String[] getSupportedCodecs() {
         List<String> codecs = new ArrayList<>();
         codecs.addAll(Arrays.asList(SUPPORTED_VIDEO_CODECS));
@@ -184,27 +239,13 @@ public class TranscodeService {
      */
     public File getTranscoder() 
     {
-        File transcoder = null;
-        
-        if(SystemUtils.IS_OS_WINDOWS) {
-            transcoder = new File(getClass().getResource("ffmpeg.exe").getPath());
-        } else if(SystemUtils.IS_OS_LINUX) {
-            transcoder = new File(getClass().getResource("ffmpeg").getPath());
-        }
-         
-        if(transcoder == null) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
-            return null;
-        }
+        File transcoder = new File(TRANSCODER_FILE);
         
         // Check if the transcoder binary exists
         if(!transcoder.exists()) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
             return null;
         }
-        
-        // Make sure transcoder is executable.
-        if(!transcoder.canExecute()) { transcoder.setExecutable(true); }
         
         return transcoder;
     }
