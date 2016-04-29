@@ -25,10 +25,15 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
+import com.scooter1556.sms.server.domain.Directory;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import java.io.File;
+import java.io.FileFilter;
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -323,5 +328,51 @@ public class MediaController {
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/files", method=RequestMethod.GET)
+    public ResponseEntity<List<Directory>> getDirectoryList(@RequestParam(value = "path", required = false) String path) {
+        List<Directory> directories = new ArrayList<>();
+        File[] files = null;
+        
+        // If no path is specified return roots
+        if (path == null) {
+            if(SystemUtils.IS_OS_WINDOWS) {
+                files = File.listRoots();
+            } else if(SystemUtils.IS_OS_LINUX) {
+                files = new File("/").listFiles(new FileFilter() {
+                    @Override
+                    public boolean accept(File file) {
+                        return file.isDirectory();
+                    }
+                });
+            }
+        } else {
+            // Return directory list for given path
+            File file = new File(path);
+            
+            if(!file.isDirectory()) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            
+            files = file.listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    return file.isDirectory();
+                }
+            });
+        }
+        
+        // Check if there is anything to return
+        if(files == null || files.length == 0) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Convert files to directory list
+        for(File file : files) {
+            directories.add(new Directory(file.getName(), file.getAbsolutePath()));
+        }
+        
+        return new ResponseEntity<>(directories, HttpStatus.OK);
     }
 }
