@@ -224,17 +224,23 @@ public class AdminController {
             return new ResponseEntity<>("Missing required parameter.", HttpStatus.BAD_REQUEST);
         }
         
+        // Create file for testing
+        File file = new File(mediaFolder.getPath());
+        
         // Check unique fields
-        if(settingsDao.getMediaFolderByPath(mediaFolder.getPath()) != null)
+        if(settingsDao.getMediaFolderByPath(file.getPath()) != null)
         {
             return new ResponseEntity<>("Media folder path already exists.", HttpStatus.NOT_ACCEPTABLE);
         }
         
         // Check path is readable
-        if(!new File(mediaFolder.getPath()).isDirectory())
+        if(!file.isDirectory())
         {
             return new ResponseEntity<>("Media folder path does not exist or is not readable.", HttpStatus.FAILED_DEPENDENCY);
         }
+        
+        // Ensure path is formatted correctly
+        mediaFolder.setPath(file.getPath());
         
         // Add Media Folder to the database.
         if(!settingsDao.createMediaFolder(mediaFolder))
@@ -277,19 +283,22 @@ public class AdminController {
         
         if(update.getPath() != null)
         {
+            // Create file for testing
+            File file = new File(update.getPath());
+            
             // Check unique fields
-            if(settingsDao.getMediaFolderByPath(update.getPath()) != null)
+            if(settingsDao.getMediaFolderByPath(file.getPath()) != null)
             {
                 return new ResponseEntity<>("New media folder path already exists.", HttpStatus.NOT_ACCEPTABLE);
             }
 
             // Check path is readable
-            if(!new File(update.getPath()).isDirectory())
+            if(!file.isDirectory())
             {
                 return new ResponseEntity<>("New media folder path does not exist or is not readable.", HttpStatus.FAILED_DEPENDENCY);
             }
             
-            mediaFolder.setPath(update.getPath());
+            mediaFolder.setPath(file.getPath());
         }
         
         if(update.getEnabled() != null)
