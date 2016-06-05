@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.service.ImageService;
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +35,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
@@ -106,6 +108,52 @@ public class ImageController {
             
             // Send image if found
             imageService.sendImage(image, scale, response);
+        } catch (IOException ex) {
+            // Do nothing...
+        }
+    }
+    
+    @RequestMapping(value="/{id}/thumbnail/{scale}", method=RequestMethod.GET)
+    @ResponseBody
+    public void getThumbnail(@PathVariable("id") Long id,
+                             @PathVariable("scale") Integer scale,
+                             @RequestParam(value = "offset", required = false) Integer offset,
+                             HttpServletResponse response) {
+        MediaElement mediaElement;
+        File file;
+        
+        try {
+            // Get corresponding media element
+            mediaElement = mediaDao.getMediaElementByID(id);
+
+            if(mediaElement == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
+                return;
+            }
+            
+            // Check this is a video element. We can't get thumbnails from any other type of file.
+            if(!mediaElement.getType().equals(MediaElementType.VIDEO)) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Media element with id " + id + " is not a video element.");
+                return;
+            }
+            
+            // Check offset
+            if(offset != null) {
+                if(offset > mediaElement.getDuration()) {
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Offset " + offset + " is out of range for the given media element.");
+                    return;
+                }
+            } else {
+                // Calculate default offset
+                offset = (int) (mediaElement.getDuration() * 0.2);
+            }
+
+            // Get file
+            file = new File(mediaElement.getPath());
+            
+            // Send thumbnail
+            imageService.sendThumbnail(file, offset, scale, response);
+            
         } catch (IOException ex) {
             // Do nothing...
         }

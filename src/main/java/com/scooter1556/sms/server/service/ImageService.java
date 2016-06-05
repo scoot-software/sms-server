@@ -159,4 +159,41 @@ public class ImageService {
         process = new ImageProcess(command, response);
         process.start();
     }
+    
+    public void sendThumbnail(File file, int offset, int scale, HttpServletResponse response) throws IOException {
+        SMSProcess process;
+        
+        // Check transcoder exists
+        File transcoder = transcodeService.getTranscoder();
+
+        if(transcoder == null) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
+            return;
+        }
+
+        // Build image scaling command
+        List<String> command = new ArrayList<>();
+        command.add(transcoder.getPath());
+        command.add("-ss");
+        command.add(String.valueOf(offset));
+        command.add("-i");
+        command.add(file.getPath());
+        command.add("-vframes");
+        command.add("1");
+        command.add("-vf");
+        command.add("scale=-1:" + scale);
+        command.add("-f");
+        command.add("mjpeg");
+        command.add("-");
+        
+        // Set content type
+        response.setContentType("image/jpeg");
+
+        // Set status code
+        response.setStatus(SC_PARTIAL_CONTENT);
+        
+        // Process image
+        process = new ImageProcess(command, response);
+        process.start();
+    }
 }

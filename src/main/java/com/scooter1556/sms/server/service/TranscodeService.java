@@ -82,6 +82,7 @@ public class TranscodeService {
     private static final String[][] AUDIO_MIME_TYPES = {
         {"aac", "audio/aac"},
         {"adts", "audio/aac"},
+        {"aiff", "audio/aiff"},
         {"dsf", "audio/dsf"},
         {"flac", "audio/flac"},
         {"m4a", "audio/mp4"},
