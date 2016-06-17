@@ -35,6 +35,7 @@ import com.scooter1556.sms.server.io.StreamProcess;
 import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.NetworkService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
 import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
@@ -74,6 +75,9 @@ public class StreamController {
     
     @Autowired
     private JobService jobService;
+    
+    @Autowired
+    private NetworkService networkService;
     
     @Autowired
     private TranscodeService transcodeService;
@@ -157,10 +161,20 @@ public class StreamController {
                 
                 LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
 
+                // Check if the remote device is on the same subnet as the server
                 for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
                     if(address.getAddress().equals(local)) {
                         int mask = address.getNetworkPrefixLength();
                         directPlay = NetworkUtils.isLocalIP(local, remote, mask);
+                    }
+                }
+                
+                // Check if request came from public IP if subnet check was false
+                if(!directPlay) {
+                    String ip = networkService.getPublicIP();
+                    
+                    if(ip != null) {
+                        directPlay = remote.toString().contains(ip);
                     }
                 }
             } catch (UnknownHostException | SocketException ex) {
