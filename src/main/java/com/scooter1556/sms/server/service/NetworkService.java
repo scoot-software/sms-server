@@ -39,10 +39,15 @@ public class NetworkService {
     // Check public IP every 60 minutes
     @Scheduled(fixedDelay=3600000)
     private void monitorPublicIP() {
-        String newIP = NetworkUtils.getPublicIP();
+        String ip = NetworkUtils.getPublicIP();
         
-        if(newIP != null) {
-            publicIP = newIP;            
+        if(ip == null) {
+            return;
+        }
+        
+        if(publicIP == null || !ip.equals(publicIP)) {
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Public IP address is " + ip, null);
+            publicIP = ip;            
         }
     }
     
