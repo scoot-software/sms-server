@@ -187,7 +187,7 @@ public class MediaScannerService {
         @Override
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {            
             // Check if we need to scan this directory
-            if(!containsMedia(dir.toFile())) {
+            if(!containsMedia(dir.toFile(), true)) {
                 return SKIP_SIBLINGS;
             }
             
@@ -390,7 +390,7 @@ public class MediaScannerService {
                     if (directory.getDirectoryType().equals(DirectoryMediaType.VIDEO)) {
                         // Get directory collection/series if possible.
                         String collection = getDirectoryCollection(dirElements);
-
+                        
                         // Try root directory name
                         if (collection == null) {
                             collection = getDirectoryRoot(dir, folder.getPath());
@@ -494,12 +494,18 @@ public class MediaScannerService {
             return mediaElement;
         }
 
-        // Determines if a directory should be scanned
-        private boolean containsMedia(File directory) {
+        // Determines if a directory contains media
+        private boolean containsMedia(File directory, boolean includeDir) {
             for (File file : directory.listFiles()) {
-                if (!file.isHidden() && (file.isDirectory() || isMediaFile(file.toPath()))) {
-                    return true;
-                }
+                if(!file.isHidden()) {
+                    if(includeDir && file.isDirectory()) {
+                        return true;
+                    }
+                
+                    if(isMediaFile(file.toPath())) {
+                        return true;
+                    }
+                }                    
             }
 
             return false;
@@ -585,7 +591,7 @@ public class MediaScannerService {
         // Get directory collection from child media elements
         private String getDirectoryCollection(Deque<MediaElement> mediaElements) {
             String collection = null;
-
+            
             for (MediaElement child : mediaElements) {
                 if (child.getType() == MediaElementType.VIDEO) {
                     if (child.getCollection() != null) {
@@ -625,7 +631,7 @@ public class MediaScannerService {
         // Depending on directory structure this could return artist, series or collection based on the parent directory name.
         private String getDirectoryRoot(Path path, String mediaFolderPath) {
             File dir = path.toFile();
-
+            
             // Check variables
             if (!dir.isDirectory()) {
                 return null;
@@ -637,10 +643,10 @@ public class MediaScannerService {
             }
 
             // Check if the root directory contains media, if so forget it
-            if (containsMedia(dir.getParentFile())) {
+            if (containsMedia(dir.getParentFile(), false)) {
                 return null;
             }
-
+            
             return dir.getParentFile().getName();
         }
 
