@@ -64,7 +64,7 @@ public final class UserDatabase {
     {   
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/user;" + "MV_STORE=FALSE;MVCC=FALSE");
+        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/user;" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
         
         return ds;
     }

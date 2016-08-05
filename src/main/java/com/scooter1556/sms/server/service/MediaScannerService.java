@@ -151,6 +151,15 @@ public class MediaScannerService {
                 folder.setFiles(files);
                 folder.setLastScanned(fileParser.getScanTime());
                 settingsDao.updateMediaFolder(folder);
+                
+                // Update database
+                if(!fileParser.getNewMediaElements().isEmpty()) {
+                    mediaDao.createMediaElements(fileParser.getNewMediaElements());
+                }
+
+                if(!fileParser.getUpdatedMediaElements().isEmpty()) {
+                    mediaDao.updateMediaElementsByPath(fileParser.getUpdatedMediaElements());
+                }
 
                 // Remove files which no longer exist
                 mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
@@ -175,6 +184,9 @@ public class MediaScannerService {
         private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
         private final Deque<NFOData> nfoData = new ArrayDeque<>();
         private final HashSet<Path> directoriesToUpdate = new HashSet<>();
+        
+        List<MediaElement> newElements = new ArrayList<>();
+        List<MediaElement> updatedElements = new ArrayList<>();
         
         public ParseFiles(MediaFolder folder) {
             this.folder = folder;
@@ -334,10 +346,11 @@ public class MediaScannerService {
                     }
                 }
                 
+                // Set media elements to add or update
                 if(element.getID() == null) {
-                    mediaDao.createMediaElement(element);
+                    newElements.add(element);
                 } else {
-                    mediaDao.updateMediaElementByPath(element);
+                    updatedElements.add(element);
                 }
             }
             
@@ -407,15 +420,15 @@ public class MediaScannerService {
                 }
             }
             
-            // Update database
+            // Set media elements to add or update
             if(directory != null) {
                 if(directory.getID() == null) {
-                    mediaDao.createMediaElement(directory);
+                    newElements.add(directory);
                 } else {
-                    mediaDao.updateMediaElementByPath(directory);
+                    updatedElements.add(directory);
                 }
             }
-                    
+            
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Finished parsing directory " + dir.toString(), null);
             
             return CONTINUE;
@@ -664,6 +677,14 @@ public class MediaScannerService {
 
         public Timestamp getScanTime() {
             return scanTime;
+        }
+        
+        public List<MediaElement> getNewMediaElements() {
+            return newElements;
+        }
+        
+        public List<MediaElement> getUpdatedMediaElements() {
+            return updatedElements;
         }
     }
 }
