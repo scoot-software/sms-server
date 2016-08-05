@@ -79,7 +79,7 @@ public class MediaScannerService {
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
     private boolean scanning = false;
-    private long tCount = 0, count = 0, files = 0, folders = 0;
+    private long total = 0;
     private List<MediaFolder> mediaFolders;
 
     //
@@ -93,7 +93,7 @@ public class MediaScannerService {
     // Returns the number of files scanned so far.
     //
     public long getScanCount() {
-        return tCount;
+        return total;
     }
 
     //
@@ -133,7 +133,7 @@ public class MediaScannerService {
     }
     
     private void scanMedia() {
-        tCount = 0;
+        total = 0;
         scanning = true;
 
         for (MediaFolder folder : mediaFolders) {
@@ -147,24 +147,25 @@ public class MediaScannerService {
                 Files.walkFileTree(path, fileParser);
                 
                 // Update folder statistics
-                folder.setFolders(folders);
-                folder.setFiles(files);
+                folder.setFolders(fileParser.getFolders());
+                folder.setFiles(fileParser.getFiles());
                 folder.setLastScanned(fileParser.getScanTime());
                 settingsDao.updateMediaFolder(folder);
                 
-                // Update database
+                // Update new media elements in database
                 if(!fileParser.getNewMediaElements().isEmpty()) {
                     mediaDao.createMediaElements(fileParser.getNewMediaElements());
                 }
 
+                // Update existing media elements in database
                 if(!fileParser.getUpdatedMediaElements().isEmpty()) {
-                    mediaDao.updateMediaElementsByPath(fileParser.getUpdatedMediaElements());
+                    mediaDao.updateMediaElementsByID(fileParser.getUpdatedMediaElements());
                 }
 
                 // Remove files which no longer exist
                 mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
                 
-                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + count + " Folders Processed: " + folders + " Files Processed: " + files + ")", null);
+                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + " Folders Processed: " + fileParser.getFolders() + " Files Processed: " + fileParser.getFiles() + ")", null);
             } catch (IOException ex) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
             }
@@ -175,23 +176,22 @@ public class MediaScannerService {
     }
 
     private class ParseFiles extends SimpleFileVisitor<Path> {
-        
-        boolean directoryChanged = false;
-
         Timestamp scanTime = new Timestamp(new Date().getTime());
         private final MediaFolder folder;
         private final Deque<MediaElement> directories = new ArrayDeque<>();
         private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
         private final Deque<NFOData> nfoData = new ArrayDeque<>();
         private final HashSet<Path> directoriesToUpdate = new HashSet<>();
+        boolean directoryChanged = false;
+
         
-        List<MediaElement> newElements = new ArrayList<>();
-        List<MediaElement> updatedElements = new ArrayList<>();
+        private final List<MediaElement> newElements = new ArrayList<>();
+        private final List<MediaElement> updatedElements = new ArrayList<>();
+        
+        private long files = 0, folders = 0;
         
         public ParseFiles(MediaFolder folder) {
             this.folder = folder;
-            
-            count = 0;
             folders = 0;
             files = 0;
         }
@@ -254,8 +254,7 @@ public class MediaScannerService {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing file " + file.toString(), null);
                 
                 // Update statistics
-                count++;
-                tCount++;
+                total++;
                 files++;
                 
                 // Check if media file already has an associated media element
@@ -302,8 +301,7 @@ public class MediaScannerService {
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
             // Update statistics
-            count++;
-            tCount++;
+            total++;
             folders++;
             
             MediaElement directory = null;
@@ -662,6 +660,10 @@ public class MediaScannerService {
             
             return dir.getParentFile().getName();
         }
+        
+        public long getTotal() {
+            return files + folders;
+        }
 
         public long getFiles() {
             return files;
@@ -669,10 +671,6 @@ public class MediaScannerService {
 
         public long getFolders() {
             return folders;
-        }
-
-        public long getCount() {
-            return count;
         }
 
         public Timestamp getScanTime() {
