@@ -50,6 +50,8 @@ import java.util.Date;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,15 +80,32 @@ public class MediaScannerService {
 
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
-    private boolean scanning = false;
     private long total = 0;
     private List<MediaFolder> mediaFolders;
+    
+    // Media scanning thread pool
+    ExecutorService scanningThreads = null;
 
     //
     // Returns whether media folders are currently being scanned.
     //
     public synchronized boolean isScanning() {
-        return scanning;
+        // Check if we have any scanning threads
+        if(scanningThreads == null) {
+            return false;
+        }
+        
+        // Check if scanning threads have terminated
+        return !scanningThreads.isTerminated();
+    }
+    
+    //
+    // Terminates any scanning threads currently running
+    //
+    public void stopScanning() {
+        if(isScanning()) {
+            scanningThreads.shutdownNow();
+        }
     }
 
     //
@@ -100,7 +119,6 @@ public class MediaScannerService {
     // Scans media in a separate thread.
     //
     public synchronized void startScanning(Long id) {
-
         // Check if media is already being scanned
         if (isScanning()) {
             return;
@@ -120,59 +138,58 @@ public class MediaScannerService {
             mediaFolders.add(folder);
         }
         
-        // Start scanning media folders in a new thread
-        Thread thread = new Thread("MediaScanner") {
-            @Override
-            public void run() {
-                scanMedia();
-            }
-        };
+        // Reset scan count
+        total = 0;
+        
+        // Create media scanning threads
+        scanningThreads = Executors.newFixedThreadPool(mediaFolders.size());
 
-        thread.setPriority(Thread.MIN_PRIORITY);
-        thread.start();
+        // Submit scanning jobs for each media folder
+        for (final MediaFolder folder : mediaFolders) {
+           scanningThreads.submit(new Runnable() {
+                @Override
+                public void run() {
+                    scanMediaFolder(folder);
+                }
+            });
+        }
+
+        // Shutdown thread pool so no further threads can be added
+        scanningThreads.shutdown();
     }
     
-    private void scanMedia() {
-        total = 0;
-        scanning = true;
+    private void scanMediaFolder(MediaFolder folder) {
+        Path path = FileSystems.getDefault().getPath(folder.getPath());
+        ParseFiles fileParser = new ParseFiles(folder);
 
-        for (MediaFolder folder : mediaFolders) {
+        try {
+            // Start Scan directory
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
+            Files.walkFileTree(path, fileParser);
 
-            Path path = FileSystems.getDefault().getPath(folder.getPath());
-            ParseFiles fileParser = new ParseFiles(folder);
+            // Update folder statistics
+            folder.setFolders(fileParser.getFolders());
+            folder.setFiles(fileParser.getFiles());
+            folder.setLastScanned(fileParser.getScanTime());
+            settingsDao.updateMediaFolder(folder);
 
-            try {
-                // Start Scan directory
-                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
-                Files.walkFileTree(path, fileParser);
-                
-                // Update folder statistics
-                folder.setFolders(fileParser.getFolders());
-                folder.setFiles(fileParser.getFiles());
-                folder.setLastScanned(fileParser.getScanTime());
-                settingsDao.updateMediaFolder(folder);
-                
-                // Update new media elements in database
-                if(!fileParser.getNewMediaElements().isEmpty()) {
-                    mediaDao.createMediaElements(fileParser.getNewMediaElements());
-                }
-
-                // Update existing media elements in database
-                if(!fileParser.getUpdatedMediaElements().isEmpty()) {
-                    mediaDao.updateMediaElementsByID(fileParser.getUpdatedMediaElements());
-                }
-
-                // Remove files which no longer exist
-                mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
-                
-                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + " Folders Processed: " + fileParser.getFolders() + " Files Processed: " + fileParser.getFiles() + ")", null);
-            } catch (IOException ex) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
+            // Update new media elements in database
+            if(!fileParser.getNewMediaElements().isEmpty()) {
+                mediaDao.createMediaElements(fileParser.getNewMediaElements());
             }
-        }
-        
-        // Scanning finished
-        scanning = false;        
+
+            // Update existing media elements in database
+            if(!fileParser.getUpdatedMediaElements().isEmpty()) {
+                mediaDao.updateMediaElementsByID(fileParser.getUpdatedMediaElements());
+            }
+
+            // Remove files which no longer exist
+            mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
+
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + " Folders Processed: " + fileParser.getFolders() + " Files Processed: " + fileParser.getFiles() + ")", null);
+        } catch (IOException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
+        }       
     }
 
     private class ParseFiles extends SimpleFileVisitor<Path> {
