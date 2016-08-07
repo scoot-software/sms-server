@@ -30,8 +30,8 @@ public class SettingsService {
     private static final String CLASS_NAME = "SettingsService";
     
     // SMS Version
-    private static final String VERSION = "0.3.9";
-    private static final Integer VERSION_INT = 39;
+    private static final String VERSION = "0.3.10";
+    private static final Integer VERSION_INT = 40;
     
     // SMS home directory
     private static final File HOME_DIRECTORY = new File(System.getProperty( "user.home" ) + "/.sms/server");
