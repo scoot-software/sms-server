@@ -98,15 +98,6 @@ public class MediaScannerService {
         // Check if scanning threads have terminated
         return !scanningThreads.isTerminated();
     }
-    
-    //
-    // Terminates any scanning threads currently running
-    //
-    public void stopScanning() {
-        if(isScanning()) {
-            scanningThreads.shutdownNow();
-        }
-    }
 
     //
     // Returns the number of files scanned so far.
