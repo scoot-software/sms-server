@@ -34,6 +34,7 @@ import com.scooter1556.sms.server.domain.UserStats;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -64,18 +65,15 @@ public class JobService implements DisposableBean {
     private static final Integer INACTIVE_PERIOD_IN_MINUTES = 60;
     
     // Creates a new job in the database and updates media statistics
-    public Job createJob(byte type, String username, MediaElement mediaElement)
-    {
+    public Job createJob(byte type, String username, MediaElement mediaElement) {
         // Check parameters
-        if(username == null || mediaElement == null)
-        {
+        if(username == null || mediaElement == null) {
             return null;
         }
         
-        // Create new job in database
-        Job job = new Job(null, type, username, mediaElement.getID(), null, null, null, null);
+        // Create new job and add it to database
+        Job job = new Job(UUID.randomUUID(), type, username, mediaElement.getID(), null, null, null, null);
         jobDao.createJob(job);
-        job = jobDao.getLatestJobByUsername(username);
         
         // Update media element and parent media element if necessary
         mediaDao.updateLastPlayed(mediaElement.getID());
@@ -94,7 +92,7 @@ public class JobService implements DisposableBean {
     }
     
     // End a job and update user stats
-    public void endJob(long id) {
+    public void endJob(UUID id) {
         // Retrieve job from database
         Job job = jobDao.getJobByID(id);
         

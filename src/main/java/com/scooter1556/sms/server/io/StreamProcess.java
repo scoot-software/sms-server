@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
@@ -43,7 +44,7 @@ public class StreamProcess extends SMSProcess {
             
     public StreamProcess() {};
     
-    public StreamProcess(Long id, List<String> command, String contentType, HttpServletRequest request, HttpServletResponse response) {
+    public StreamProcess(UUID id, List<String> command, String contentType, HttpServletRequest request, HttpServletResponse response) {
         this.id = id;
         this.command = command;
         this.contentType = contentType;
@@ -56,7 +57,7 @@ public class StreamProcess extends SMSProcess {
         // Set response headers
         response.setContentType(contentType);
         response.setHeader("Accept-Ranges", "bytes");
-        response.setHeader("ETag", Long.toString(id));
+        response.setHeader("ETag", id.toString());
 
         // Start transcoding
         ProcessBuilder processBuilder = new ProcessBuilder(command);

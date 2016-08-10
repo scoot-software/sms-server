@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +50,7 @@ public class AdaptiveStreamingService {
     @Autowired
     private MediaDao mediaDao;
         
-    public List<String> generateHLSPlaylist(long id, String baseUrl) {
+    public List<String> generateHLSPlaylist(UUID id, String baseUrl) {
         List<String> playlist = new ArrayList<>();
         
         Job job = jobDao.getJobByID(id);
@@ -86,7 +87,7 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public void sendHLSPlaylist(Long id, HttpServletRequest request, HttpServletResponse response) throws IOException {
+    public void sendHLSPlaylist(UUID id, HttpServletRequest request, HttpServletResponse response) throws IOException {
         // Get the request base URL so we can use it in our HLS playlist
         String baseUrl = request.getRequestURL().toString().replaceFirst("/stream(.*)", "");
 
@@ -110,7 +111,7 @@ public class AdaptiveStreamingService {
         response.getWriter().write(playlistWriter.toString());
     }
     
-    private String createSegmentUrl(String baseUrl, Long id, Integer segment) {
+    private String createSegmentUrl(String baseUrl, UUID id, Integer segment) {
         StringBuilder builder = new StringBuilder();
         builder.append(baseUrl).append("/stream/segment?id=").append(id).append("&num=").append(segment);
         

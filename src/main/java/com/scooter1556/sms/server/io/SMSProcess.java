@@ -25,10 +25,11 @@ package com.scooter1556.sms.server.io;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 public class SMSProcess {
 
-    Long id;
+    UUID id;
     Process process;
     List<String> command;
     static long bytesTransferred = 0;
@@ -47,11 +48,11 @@ public class SMSProcess {
         ended = true;
     }
     
-    public Long getID()  {
+    public UUID getID()  {
         return id;
     }
     
-    public void setID(Long id) {
+    public void setID(UUID id) {
         this.id = id;
     }
     

@@ -28,6 +28,7 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -64,7 +65,7 @@ public class JobController {
     }
     
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
-    public ResponseEntity<Job> getJobByID(@PathVariable("id") Long id)
+    public ResponseEntity<Job> getJobByID(@PathVariable("id") UUID id)
     {
         Job job = jobDao.getJobByID(id);
         
@@ -88,7 +89,7 @@ public class JobController {
     }
     
     @RequestMapping(value="/{id}/end", method=RequestMethod.GET)
-    public ResponseEntity<String> endJob(@PathVariable("id") Long id)
+    public ResponseEntity<String> endJob(@PathVariable("id") UUID id)
     {
         Job job = jobDao.getJobByID(id);
         

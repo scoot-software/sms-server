@@ -43,6 +43,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -1092,7 +1093,7 @@ public class TranscodeService {
         transcodeProfiles.add(profile);
     }
     
-    public TranscodeProfile getTranscodeProfile(long id) {
+    public TranscodeProfile getTranscodeProfile(UUID id) {
         for(TranscodeProfile profile : transcodeProfiles) {
             if(profile.getID() != null) {
                 if(profile.getID().compareTo(id) == 0) {
@@ -1104,7 +1105,7 @@ public class TranscodeService {
         return null;
     }
     
-    public void removeTranscodeProfile(long id) {
+    public void removeTranscodeProfile(UUID id) {
         int index = 0;
         
         for(TranscodeProfile profile : transcodeProfiles) {
@@ -1121,7 +1122,7 @@ public class TranscodeService {
     
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public static class TranscodeProfile {
-        private Long id;
+        private UUID id;
         private byte type;
         private MediaElement element;
         private String[] files, codecs, mchCodecs;
@@ -1137,7 +1138,7 @@ public class TranscodeService {
         
         public TranscodeProfile() {}
         
-        public TranscodeProfile(long id) {
+        public TranscodeProfile(UUID id) {
             this.id = id;
         }
         
@@ -1164,11 +1165,11 @@ public class TranscodeService {
                     String.valueOf(directPlay));
         }
         
-        public Long getID() {
+        public UUID getID() {
             return id;
         }
         
-        public void setID(long id) {
+        public void setID(UUID id) {
             this.id = id;
         }
         

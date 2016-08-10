@@ -49,6 +49,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -303,7 +304,7 @@ public class StreamController {
     
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
     @ResponseBody
-    public void getStream(@PathVariable("id") Long id,
+    public void getStream(@PathVariable("id") UUID id,
                           @RequestParam(value = "atrack", required = false) Integer audioTrack,
                           @RequestParam(value = "strack", required = false) Integer subtitleTrack,
                           @RequestParam(value = "offset", required = false) Integer offset,
@@ -438,7 +439,7 @@ public class StreamController {
     }
     
     @RequestMapping(value="/segment", method=RequestMethod.GET)
-    public void getSegment(@RequestParam(value = "id", required = true) final Long id,
+    public void getSegment(@RequestParam(value = "id", required = true) final UUID id,
                            @RequestParam(value = "num", required = true) final Integer segmentNumber,
                            HttpServletRequest request, 
                            HttpServletResponse response) {
