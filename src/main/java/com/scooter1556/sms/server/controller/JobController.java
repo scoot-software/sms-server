@@ -88,7 +88,7 @@ public class JobController {
         return new ResponseEntity<>(jobs, HttpStatus.OK);
     }
     
-    @RequestMapping(value="/{id}/end", method=RequestMethod.GET)
+    @RequestMapping(value="/end/{id}", method=RequestMethod.GET)
     public ResponseEntity<String> endJob(@PathVariable("id") UUID id)
     {
         Job job = jobDao.getJobByID(id);

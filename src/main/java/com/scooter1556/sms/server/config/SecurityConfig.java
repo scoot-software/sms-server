@@ -49,6 +49,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .antMatchers("/media/**").hasRole("USER")
                     .antMatchers("/media/files").hasRole("ADMIN")
                     .antMatchers("/settings/**").hasRole("USER")
+                    .antMatchers("/job/end/**").permitAll()
                     .antMatchers("/job/**").hasRole("USER")
                     .antMatchers("/stream/initialise/**").hasRole("USER")
                     .antMatchers("/stream/**").permitAll()
