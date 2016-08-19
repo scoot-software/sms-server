@@ -89,18 +89,6 @@ public class Database {
         // To be overridden
     }
     
-    public static DataSource getDataSource(String db, int version) throws DatabaseException {
-        if(SettingsService.getHomeDirectory() == null) {
-            throw new DatabaseException("Home directory is unreachable!");
-        }
-        
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        dataSource.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/" + db.toLowerCase() + "." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
-        
-        return dataSource;
-    }
-    
     /**
      * Returns a JDBC template for performing database operations.
      *
