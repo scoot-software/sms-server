@@ -23,58 +23,36 @@
  */
 package com.scooter1556.sms.server.database;
 
+import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
-import com.scooter1556.sms.server.service.SettingsService;
-import javax.sql.DataSource;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Component;
 
 @Component
-public final class SettingsDatabase {
-    
-    DataSource dataSource = null;
-    
+public final class SettingsDatabase extends Database {
     private static final String CLASS_NAME = "SettingsDatabase";
     
-    JdbcTemplate jdbcTemplate;
+    public static final String DB_NAME = "Settings";
+    public static final int DB_VERSION = 1;
     
-    public SettingsDatabase()
-    {
-        if(SettingsService.getHomeDirectory() != null)
-        {
-            dataSource = getDataSource();
-            createSchema();
-            updateSchema();
-        }
-    }
-    
-    /**
-     * Returns a JDBC template for performing database operations.
-     *
-     * @return A JDBC template.
-     */
-    public JdbcTemplate getJdbcTemplate() {
-        return new JdbcTemplate(dataSource);
-    }
-    
-    public static DataSource getDataSource()
-    {   
-        DriverManagerDataSource ds = new DriverManagerDataSource();
-        ds.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/settings;" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
+    public SettingsDatabase() {
+        super(DB_NAME, DB_VERSION);   
         
-        return ds;
+        // Initialise database
+        try {
+            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Initialising database.", null);
+            super.initialise();
+        } catch (DatabaseException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error initialising database.", ex);
+        } 
     }
     
-    private void createSchema()
-    {
-        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Initialising database.", null);
+    @Override
+    public void create() {
+        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Creating database.", null);
         
-        try
-        {
+        try {
             // Media Folders
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS MediaFolder ("
                     + "ID IDENTITY NOT NULL,"
@@ -87,22 +65,23 @@ public final class SettingsDatabase {
                     + "Enabled BOOLEAN DEFAULT 1 NOT NULL,"
                     + "PRIMARY KEY (ID))");
             
-        }
-        catch (DataAccessException x)
-        {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error initialising database.", x);
+        } catch (DataAccessException x) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating database.", x);
         }
     }
     
-    private void updateSchema()
-    {
-        // Any updates to the database structure go here.
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Updating database.", null);
+    @Override
+    public void upgrade(int oldVersion, int newVersion) {
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+    }
+    
+    @Override
+    public void downgrade(int oldVersion, int newVersion) {
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Downgrading database from version " + oldVersion + " to " + newVersion, null);
         
-        // 0.3.6
-        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS Folders BIGINT AFTER Path");
-        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS Files BIGINT AFTER Folders");
-        getJdbcTemplate().update("ALTER TABLE MediaFolder ADD IF NOT EXISTS LastScanned TIMESTAMP AFTER Files");
+        // Delete table and re-create
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaFolder");
+        create();
     }
 }
 

@@ -24,6 +24,7 @@
 package com.scooter1556.sms.server.config;
 
 import com.scooter1556.sms.server.database.UserDatabase;
+import com.scooter1556.sms.server.utilities.DatabaseUtils;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configurers.GlobalAuthenticationConfigurerAdapter;
@@ -73,7 +74,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         @Override
         public void init(AuthenticationManagerBuilder auth) throws Exception {
             auth
-                .jdbcAuthentication().dataSource(UserDatabase.getDataSource())
+                .jdbcAuthentication().dataSource(DatabaseUtils.getDataSource(UserDatabase.DB_NAME, UserDatabase.DB_VERSION))
 		.usersByUsernameQuery(
 			"select Username,Password,Enabled from User where Username=?")
 		.authoritiesByUsernameQuery(

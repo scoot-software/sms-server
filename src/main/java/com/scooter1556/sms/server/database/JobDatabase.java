@@ -23,52 +23,34 @@
  */
 package com.scooter1556.sms.server.database;
 
+import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
-import com.scooter1556.sms.server.service.SettingsService;
-import javax.sql.DataSource;
 import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Component;
 
 @Component
-public final class JobDatabase {
+public final class JobDatabase extends Database {
     private static final String CLASS_NAME = "JobDatabase";
     
-    private static final int DB_VERSION = 1;
-    
-    DataSource dataSource = null;
+    public static final String DB_NAME = "Job";
+    public static final int DB_VERSION = 1;
         
-    JdbcTemplate jdbcTemplate;
-    
     public JobDatabase() {
-        if(SettingsService.getHomeDirectory() != null) {
-            dataSource = getDataSource(DB_VERSION);
-            createSchema();
-            updateSchema();
-        }
-    }
-    
-    /**
-     * Returns a JDBC template for performing database operations.
-     *
-     * @return A JDBC template.
-     */
-    public JdbcTemplate getJdbcTemplate() {
-        return new JdbcTemplate(dataSource);
-    }
-    
-    public static DataSource getDataSource(int version) {   
-        DriverManagerDataSource ds = new DriverManagerDataSource();
-        ds.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        ds.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/job." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
+        super(DB_NAME, DB_VERSION);   
         
-        return ds;
+        // Initialise database
+        try {
+            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Initialising database.", null);
+            super.initialise();
+        } catch (DatabaseException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error initialising database.", ex);
+        }     
     }
     
-    private void createSchema() {
-        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Initialising database.", null);
+    @Override
+    public void create() {
+        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Creating database.", null);
         
         try {
             // Jobs
@@ -84,13 +66,22 @@ public final class JobDatabase {
                     + "PRIMARY KEY (ID))");
             
         } catch (DataAccessException x) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error initialising database.", x);
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating database.", x);
         }
     }
     
-    private void updateSchema() {
-        // Any updates to the database structure go here.
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Updating database.", null);
+    @Override
+    public void upgrade(int oldVersion, int newVersion) {
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+    }
+    
+    @Override
+    public void downgrade(int oldVersion, int newVersion) {
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Downgrading database from version " + oldVersion + " to " + newVersion, null);
+        
+        // Delete table and re-create
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME);
+        create();
     }
 }
 
