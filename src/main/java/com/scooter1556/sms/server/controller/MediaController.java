@@ -148,7 +148,7 @@ public class MediaController {
 
     @RequestMapping(value="/recentlyadded/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(@PathVariable("limit") Integer limit,
-                                                                                     @RequestParam(value = "type", required = false) Integer type)
+                                                                                     @RequestParam(value = "type", required = false) Byte type)
     {
         // Check type parameter
         if(type != null && type > 1) {
@@ -174,7 +174,7 @@ public class MediaController {
     
     @RequestMapping(value="/recentlyplayed/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(@PathVariable("limit") Integer limit,
-                                                                                      @RequestParam(value = "type", required = false) Integer type)
+                                                                                      @RequestParam(value = "type", required = false) Byte type)
     {
         // Check type parameter
         if(type != null && type > 1) {

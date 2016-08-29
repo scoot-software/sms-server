@@ -32,7 +32,7 @@ public class SMSProcess {
     UUID id;
     Process process;
     List<String> command;
-    static long bytesTransferred = 0;
+    long bytesTransferred = 0;
     boolean ended = false;
     
     public SMSProcess() {};

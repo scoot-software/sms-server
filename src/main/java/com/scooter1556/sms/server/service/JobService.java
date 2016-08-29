@@ -58,10 +58,7 @@ public class JobService implements DisposableBean {
     
     @Autowired
     private TranscodeService transcodeService;
-    
-    @Autowired
-    private AdaptiveStreamingService adaptiveStreamingService;
-    
+        
     private static final Integer INACTIVE_PERIOD_IN_MINUTES = 60;
     
     // Creates a new job in the database and updates media statistics

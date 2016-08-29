@@ -433,7 +433,7 @@ public class StreamController {
             }
         } finally {
             if(job != null && process != null) {
-                jobDao.updateBytesTransferred(id, process.getBytesTransferred());
+                jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
             }
         }
     }
@@ -498,7 +498,7 @@ public class StreamController {
             }
         } finally {
             if(job != null && process != null) {
-                jobDao.updateBytesTransferred(id, process.getBytesTransferred());
+                jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
             }
         }
     }

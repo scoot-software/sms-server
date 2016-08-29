@@ -24,6 +24,7 @@
 package com.scooter1556.sms.server.io;
 
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.utilities.HttpUtils;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -33,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
@@ -51,23 +51,12 @@ public class FileDownloadProcess extends SMSProcess {
     String contentType;
     HttpServletRequest request;
     HttpServletResponse response;
-    
-    public FileDownloadProcess() {}
-    
+        
     public FileDownloadProcess(Path path, String contentType, HttpServletRequest request, HttpServletResponse response) {
         this.filepath = path;
         this.contentType = contentType;
         this.request = request;
         this.response = response;
-    }
-
-    public static FileDownloadProcess path(Path path) {
-        return new FileDownloadProcess().setFilepath(path);
-    }
-
-    private FileDownloadProcess setFilepath(Path filepath) {
-        this.filepath = filepath;
-        return this;
     }
     
     public FileDownloadProcess contentType(String contentType) {
@@ -242,7 +231,7 @@ public class FileDownloadProcess extends SMSProcess {
                 response.setHeader("Content-Length", String.valueOf(full.length));
                 response.setHeader("Content-Range", "bytes " + full.start + "-" + full.end + "/" + full.total);
                 
-                Range.copy(input, output, length, full.start, full.length);
+                bytesTransferred += Range.copy(input, output, length, full.start, full.length);
 
             } else if (ranges.size() == 1) {
 
@@ -255,7 +244,7 @@ public class FileDownloadProcess extends SMSProcess {
                 response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT); // 206.
 
                 // Copy single part range.
-                Range.copy(input, output, length, r.start, r.length);
+                bytesTransferred += Range.copy(input, output, length, r.start, r.length);
 
             } else {
 
@@ -277,7 +266,7 @@ public class FileDownloadProcess extends SMSProcess {
                     sos.println("Content-Range: bytes " + r.start + "-" + r.end + "/" + r.total);
 
                     // Copy single part range of multi part range.
-                    Range.copy(input, output, length, r.start, r.length);
+                    bytesTransferred += Range.copy(input, output, length, r.start, r.length);
                 }
 
                 // End with multipart boundary.
@@ -311,64 +300,42 @@ public class FileDownloadProcess extends SMSProcess {
             return (substring.length() > 0) ? Long.parseLong(substring) : -1;
         }
 
-        private static void copy(InputStream input, OutputStream output, long inputSize, long start, long length) throws IOException {
+        private static long copy(InputStream input, OutputStream output, long inputSize, long start, long length) {
             byte[] buffer = new byte[DEFAULT_BUFFER_SIZE];
             int read;
+            long bytes = 0;
 
-            if (inputSize == length) {
-                // Write requested range.
-                while ((read = input.read(buffer)) > 0) {
-                    output.write(buffer, 0, read);
-                    output.flush();
-                    bytesTransferred += read;
-                }
-            } else {
-                input.skip(start);
-                long toRead = length;
-
-                while ((read = input.read(buffer)) > 0) {
-                    if ((toRead -= read) > 0) {
+            try {
+                if (inputSize == length) {
+                    // Write requested range.
+                    while ((read = input.read(buffer)) > 0) {
                         output.write(buffer, 0, read);
                         output.flush();
-                        bytesTransferred += read;
-                    } else {
-                        output.write(buffer, 0, (int) toRead + read);
-                        output.flush();
-                        bytesTransferred += (read + toRead);
-                        break;
+                        bytes += read;
                     }
-                }                
+                } else {
+                    input.skip(start);
+                    long toRead = length;
+
+                    while ((read = input.read(buffer)) > 0) {
+                        if ((toRead -= read) > 0) {
+                            output.write(buffer, 0, read);
+                            output.flush();
+                            bytes += read;
+                        } else {
+                            output.write(buffer, 0, (int) toRead + read);
+                            output.flush();
+                            bytes += (read + toRead);
+                            break;
+                        }
+                    }                
+                }
+            } catch (IOException e) {
+                // If copying is interrupted for any reason return the number of bytes sent up to that point
+                return bytes;
             }
-        }
-    }
-    private static class HttpUtils {
-
-        /**
-         * Returns true if the given accept header accepts the given value.
-         * @param acceptHeader The accept header.
-         * @param toAccept The value to be accepted.
-         * @return True if the given accept header accepts the given value.
-         */
-        public static boolean accepts(String acceptHeader, String toAccept) {
-            String[] acceptValues = acceptHeader.split("\\s*(,|;)\\s*");
-            Arrays.sort(acceptValues);
-
-            return Arrays.binarySearch(acceptValues, toAccept) > -1
-                    || Arrays.binarySearch(acceptValues, toAccept.replaceAll("/.*$", "/*")) > -1
-                    || Arrays.binarySearch(acceptValues, "*/*") > -1;
-        }
-
-        /**
-         * Returns true if the given match header matches the given value.
-         * @param matchHeader The match header.
-         * @param toMatch The value to be matched.
-         * @return True if the given match header matches the given value.
-         */
-        public static boolean matches(String matchHeader, String toMatch) {
-            String[] matchValues = matchHeader.split("\\s*,\\s*");
-            Arrays.sort(matchValues);
-            return Arrays.binarySearch(matchValues, toMatch) > -1
-                    || Arrays.binarySearch(matchValues, "*") > -1;
-        }
+            
+            return bytes;
+        }     
     }
 }
