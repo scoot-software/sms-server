@@ -29,6 +29,7 @@ import com.scooter1556.sms.server.domain.Directory;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.service.LogService;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
@@ -261,6 +262,8 @@ public class MediaController {
     @RequestMapping(value="/artist/{artist}/album/{album}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(@PathVariable("artist") String artist, @PathVariable("album") String album)
     {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "' and album '" + album + "'", null);
+        
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtistAndAlbum(artist, album);
         
         if (mediaElements == null) {
@@ -273,18 +276,22 @@ public class MediaController {
     @RequestMapping(value="/albumartist/{albumartist}/album/{album}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(@PathVariable("albumartist") String albumArtist, @PathVariable("album") String album)
     {
-        List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtistAndAlbum(albumArtist, album);
+       LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "' and album '" + album + "'", null);
         
-        if (mediaElements == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
+       List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtistAndAlbum(albumArtist, album);
         
-        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
+       if (mediaElements == null) {
+           return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+       }
+        
+       return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/artist/{artist}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(@PathVariable("artist") String artist)
     {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "'", null);
+        
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtist(artist);
         
         if (mediaElements == null) {
@@ -297,6 +304,8 @@ public class MediaController {
     @RequestMapping(value="/albumartist/{albumartist}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(@PathVariable("albumartist") String albumArtist)
     {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "'", null);
+        
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtist(albumArtist);
         
         if (mediaElements == null) {
