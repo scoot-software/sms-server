@@ -24,11 +24,14 @@
 package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.MediaDao;
+import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.ImageService;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -46,6 +49,9 @@ public class ImageController {
     
     @Autowired
     private MediaDao mediaDao;
+    
+    @Autowired
+    private SettingsDao settingsDao;
     
     @Autowired
     private ImageService imageService;
@@ -68,6 +74,73 @@ public class ImageController {
 
             // Get cover art
             image = imageService.getCoverArt(mediaElement);
+
+            // Check if we were able to retrieve cover art
+            if(image == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find cover art.");
+                return;
+            }
+            
+            // Send image if found
+            imageService.sendImage(image, scale, response);
+        } catch (IOException ex) {
+            // Do nothing...
+        }
+    }
+    
+    @RequestMapping(value="/{id}/random/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
+    @ResponseBody
+    public void getRandomCoverArt(@PathVariable("id") Long id,
+                                  @PathVariable("scale") Integer scale,
+                                  @RequestParam(value = "folder", required = false) Boolean isFolder,
+                                  HttpServletResponse response) {
+        MediaFolder folder = null;
+        MediaElement element = null;
+        String path = null;
+        File image = null;
+        
+        try {
+            // Ensure folder flag is set
+            if(isFolder == null) {
+                isFolder = false;
+            }
+            
+            // Get corresponding media item
+            if(isFolder) {
+                folder = settingsDao.getMediaFolderByID(id);
+            } else {
+                element = mediaDao.getMediaElementByID(id);
+            }
+            
+            // Check we have retrieved media
+            if(folder == null && element == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media " + (isFolder ? "folder" : "element") + " with id " + id + ".");
+                return;
+            }
+            
+            // Get media path
+            if(folder != null) {
+                path = folder.getPath();
+            } else if(element != null) {
+                path = element.getPath();
+            }
+            
+            // Loop through media elements for cover art
+            List<MediaElement> mediaElements = mediaDao.getRandomMediaElementsByParentPath(path);
+
+            if(mediaElements == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve child media elements for " + (isFolder ? "folder" : "media element") + " with id " + id + ".");
+                return;
+            }
+            
+            for(MediaElement mediaElement : mediaElements) {
+                // Get cover art
+                image = imageService.getCoverArt(mediaElement);
+                
+                if(image != null) {
+                    break;
+                }
+            }
 
             // Check if we were able to retrieve cover art
             if(image == null) {

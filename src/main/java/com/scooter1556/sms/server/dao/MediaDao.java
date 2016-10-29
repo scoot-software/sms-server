@@ -323,6 +323,15 @@ public class MediaDao {
         }
     }
     
+    public List<MediaElement> getRandomMediaElementsByParentPath(String path) {        
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? ORDER BY RAND()", new MediaElementMapper(), new Object[] {path});
+            return mediaElements;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
     public List<MediaElement> getAlphabeticalMediaElementsByParentPath(String path) {
         try {
             List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? ORDER BY Type,Album,DiscNumber,TrackNumber,Title", new MediaElementMapper(), new Object[] {path});
