@@ -34,7 +34,7 @@ public class SettingsService {
     private static final Integer VERSION_INT = 40;
     
     // SMS home directory
-    private static final File HOME_DIRECTORY = new File(System.getProperty( "user.home" ) + "/.sms/server");
+    private static final File HOME_DIRECTORY = new File(System.getProperty( "user.home" ) + "/.sms/server-dev");
     private static File homeDirectory;
     
     /**
