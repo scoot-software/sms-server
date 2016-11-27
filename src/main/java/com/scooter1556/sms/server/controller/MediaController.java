@@ -91,6 +91,18 @@ public class MediaController {
         
         return new ResponseEntity<>(mediaElement, HttpStatus.OK);
     }
+    
+    @RequestMapping(value="/audio/random", method=RequestMethod.GET)
+    public ResponseEntity<MediaElement> getRandomAudioElement()
+    {
+        MediaElement mediaElement = mediaDao.getRandomAudioElement();
+        
+        if (mediaElement == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        return new ResponseEntity<>(mediaElement, HttpStatus.OK);
+    }
 
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") Long id)
