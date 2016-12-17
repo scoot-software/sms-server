@@ -60,6 +60,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -327,6 +328,7 @@ public class StreamController {
         return new ResponseEntity<>(profile, HttpStatus.OK);
     }
     
+    @CrossOrigin
     @ResponseBody
     @RequestMapping(value="/playlist/{id}/{type}/{extra}", method=RequestMethod.GET)
     public void getPlaylist(@PathVariable("id") UUID id,
@@ -397,6 +399,7 @@ public class StreamController {
         }
     }
     
+    @CrossOrigin
     @ResponseBody
     @RequestMapping(value="/segment/{id}/{type}/{extra}/{file}", method=RequestMethod.GET)
     public void getSegment(@PathVariable("id") UUID id,
@@ -536,6 +539,7 @@ public class StreamController {
         }
     }
     
+    @CrossOrigin
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
     @ResponseBody
     public void getStream(@PathVariable("id") UUID id,
