@@ -61,16 +61,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .and()
                     .sessionManagement().sessionCreationPolicy(STATELESS);
     }
-    
+
     @Override
-    public void configure(WebSecurity web) throws Exception {
-
-    }
- 
+    public void configure(WebSecurity web) throws Exception {}
+    
     @Configuration
-    protected static class AuthenticationConfiguration extends
-            GlobalAuthenticationConfigurerAdapter {
-
+    protected static class AuthenticationConfiguration extends GlobalAuthenticationConfigurerAdapter {
         @Override
         public void init(AuthenticationManagerBuilder auth) throws Exception {
             auth
@@ -80,6 +76,5 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 		.authoritiesByUsernameQuery(
 			"select Username,Role from UserRole where Username=?");
         }
-
     }
 }

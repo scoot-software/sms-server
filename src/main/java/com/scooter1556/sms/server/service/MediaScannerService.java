@@ -32,7 +32,7 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import com.scooter1556.sms.server.service.parser.NFOParser.NFOData;
-import com.scooter1556.sms.server.utilities.FileUtils;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -270,7 +270,7 @@ public class MediaScannerService {
 
                 if (mediaElement == null) {
                     mediaElement = getMediaElementFromPath(file);
-                    mediaElement.setFormat(FileUtils.getFileExtension(file.getFileName()));
+                    mediaElement.setFormat(MediaUtils.getFileExtension(file.getFileName()));
                 }
                 
                 // Determine if we need to process the file

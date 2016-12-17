@@ -38,24 +38,29 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TranscodeService {
     
+    @Autowired
+    private AdaptiveStreamingService adaptiveStreamingService;
+ 
     private static final String CLASS_NAME = "TranscodeService";
     
     private final String TRANSCODER_FILE = SettingsService.getHomeDirectory() + "/transcoder";
         
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
-    public static final String[] FORMATS = {"hls","matroska","webm"};
+    public static final String[] FORMATS = {"hls","dash","matroska","webm"};
     public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
     public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","mpeg2video","vc1","vp8"};
     public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
@@ -75,7 +80,8 @@ public class TranscodeService {
     };
     
     private static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,aac,mp3,ac3"},
+        {"hls", "h264,mp3,aac,ac3"},
+        {"dash", "h264,aac"},
         {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
     };
@@ -84,8 +90,10 @@ public class TranscodeService {
         {"aac", "audio/aac"},
         {"adts", "audio/aac"},
         {"aiff", "audio/aiff"},
+        {"dash", "application/dash+xml"},
         {"dsf", "audio/dsf"},
         {"flac", "audio/flac"},
+        {"hls", "application/x-mpegurl"},
         {"m4a", "audio/mp4"},
         {"mka", "audio/x-matroska"},
         {"matroska", "audio/x-matroska"},
@@ -101,6 +109,7 @@ public class TranscodeService {
     private static final String[][] VIDEO_MIME_TYPES = {
         {"3gp", "video/3gpp"},
         {"avi", "video/avi"},
+        {"dash", "application/dash+xml"},
         {"hls", "application/x-mpegurl"},
         {"m4v", "video/mp4"},
         {"matroska", "video/x-matroska"},
@@ -110,6 +119,7 @@ public class TranscodeService {
         {"mpg", "video/mpeg"},
         {"ogg", "video/ogg"},
         {"ogv", "video/ogg"},
+        {"ts", "video/MP2T"},
         {"webm", "video/webm"}
     };
     
@@ -122,28 +132,38 @@ public class TranscodeService {
         {"ac3", "ac3"}
     };
     
+    public static final String[][] AUDIO_CODEC_ISO_SPEC = {
+        {"mp3", "mp4a.40.34"},
+        {"aac", "mp4a.40.2"},
+        {"ac3", "ac-3"},
+    };
+    
     private static final String[][] AUDIO_CODEC_QUALITY = {
         {"mp3", "6", "4", "0", "0"},
         {"vorbis", "2", "5", "8", "10"},
         {"aac", "1", "2", "3", "10"}
     };
     
-    private static final int[] AUDIO_QUALITY_MAX_BITRATE = {64,96,160,-1};
+    public static final int[] AUDIO_QUALITY_MAX_BITRATE = {64,96,160,-1};
     
-    private static final int[] VIDEO_QUALITY_MAX_BITRATE = {500,1000,1500,3000,5000};
+    public static final int[] VIDEO_QUALITY_MAX_BITRATE = {250,375,600,1000,1500,2500,4500};
     
-    private static final int[] VIDEO_QUALITY_AUDIO_QUALITY = {AudioQuality.LOW,
-                                                              AudioQuality.LOW,
-                                                              AudioQuality.MEDIUM,
-                                                              AudioQuality.MEDIUM,
-                                                              AudioQuality.HIGH
+    public static final int[] VIDEO_QUALITY_AUDIO_QUALITY = {AudioQuality.LOW,
+                                                             AudioQuality.LOW,
+                                                             AudioQuality.LOW,
+                                                             AudioQuality.LOW,
+                                                             AudioQuality.MEDIUM,
+                                                             AudioQuality.MEDIUM,
+                                                             AudioQuality.HIGH
     };
     
-    private static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(426,240),
-                                                                 new Dimension(640,360),
-                                                                 new Dimension(854,480),
-                                                                 new Dimension(1280,720),
-                                                                 new Dimension(1920,1080)
+    public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(320,240),
+                                                                new Dimension(384,288),
+                                                                new Dimension(512,384),
+                                                                new Dimension(640,480),
+                                                                new Dimension(720,480),
+                                                                new Dimension(1280,720),
+                                                                new Dimension(1920,1080)
     };
     
     private static final String[][] AUDIO_CODEC_MAX_SAMPLE_RATE = {
@@ -261,6 +281,13 @@ public class TranscodeService {
         // Seek
         command.add("-ss");
         command.add(profile.getOffset().toString());
+        
+        // Ensure PTS is set
+        if(profile.getFormat().equals("hls")) {
+            command.add("-fflags");
+            command.add("+genpts");
+            command.add("-y");
+        }
        
         // Input media file
         command.add("-i");
@@ -268,25 +295,54 @@ public class TranscodeService {
         
         // Enable experimental codecs
         command.add("-strict");
-        command.add("-2");
+        command.add("experimental");
         
         // Video
         if(profile.getVideoTranscode() != null) {
             // Subtitle commands
-            if(profile.getSubtitleTrack() != null && profile.getSubtitleTranscodes() != null) {
-                command.addAll(getSubtitleCommands(profile));
+            if(profile.getSubtitleTranscodes() != null) {
+                if(profile.getType() == StreamType.ADAPTIVE) {
+                    for(int i = 0; i < profile.getSubtitleTranscodes().length; i++) {
+                        command.add("-map");
+                        command.add("0:s:" + i);
+                        command.add("-c:s");
+                        command.add("copy");
+                    }
+                    
+                    command.add("-map");
+                    command.add("0:v");
+                    
+                    
+                } else if(profile.getSubtitleTrack() != null) {
+                    command.addAll(getSubtitleCommands(profile));
+                }
             } else {
-                command.add("-map");
-                command.add("0:v");
+                    command.add("-map");
+                    command.add("0:v");
             }
             
-            // Video commands
-            command.addAll(getVideoCommands(profile));
+            if(profile.getType() == StreamType.ADAPTIVE) {
+                command.add("-c:v");
+                command.add("copy");
+                
+                if(profile.getMediaElement().getVideoCodec().equals("h264")) {
+                    command.add("-bsf:v");
+                    command.add("h264_mp4toannexb");
+                }
+            } else {
+                command.addAll(getVideoCommands(profile));
+            }
         }
         
         // Audio
-        if(profile.getAudioTrack() != null && profile.getAudioTranscodes() != null) {
-            command.addAll(getAudioCommands(profile));
+        if(profile.getAudioTranscodes() != null) {
+            if(profile.getType() == StreamType.ADAPTIVE) {
+                for(int i = 0; i < profile.getAudioTranscodes().length; i++) {
+                    command.addAll(getAudioCommands(i, profile.getAudioTranscodes()[i]));
+                }
+            } else if(profile.getAudioTrack() != null) {
+                command.addAll(getAudioCommands(profile.getAudioTrack(), profile.getAudioTranscodes()[profile.getAudioTrack()]));
+            }
         }
                 
         // Use all CPU cores
@@ -299,29 +355,105 @@ public class TranscodeService {
         return command;
     }
     
+    public List<String> getAdaptiveSegmentTranscodeCommand(Path segment, TranscodeProfile profile, String type, Integer extra) {
+        // Check variables
+        if(segment == null || profile == null || type == null || extra == null) {
+            return null;
+        }
+        
+        List<String> command = new ArrayList<>();
+        
+        // Transcoder path
+        command.add(getTranscoder().getPath());
+       
+        // Input media file
+        command.add("-i");
+        command.add(segment.toString());
+        
+        if(type.equals("video")) {
+            // Check profile
+            if(!extra.equals(profile.getQuality())) {
+                profile.setQuality(extra);
+                processVideo(profile);
+            }
+            
+            if(profile.getVideoTranscode() != null) {
+                command.add("-map");
+                command.add("0:v");
+
+                command.addAll(getVideoCommands(profile));
+            }
+        } else if(type.equals("audio")) {
+            // Audio
+            if(profile.getAudioTranscodes() != null) {
+                if(profile.getAudioTranscodes().length > extra) {
+                    // Mapping
+                    command.add("-map");
+                    command.add("0:a:" + extra);
+
+                    // Codec
+                    command.add("-c:a");
+                    command.add("copy");
+                }
+            }
+        }
+                
+        // Use all CPU cores
+        command.add("-threads");
+        command.add("0");
+        
+        // Maintain timestamps
+        command.add("-copyts");
+        
+        // Format
+        command.add("-f");
+        command.add("mpegts");
+        
+        command.add("-mpegts_copyts");
+        command.add("1");
+        
+        command.add("-");
+        
+        return command;
+    }
+    
     private Collection<String> getFormatCommands(TranscodeProfile profile) {
         Collection<String> commands = new LinkedList<>();
         
         if(profile.getFormat() != null) {
             switch(profile.getFormat()) {
-                case "hls":
-                    // Fixes some issues with mpegts
-                    commands.add("-bsf");
-                    commands.add("h264_mp4toannexb");
-                    
-                    // Reduce overhead with global header
-                    commands.add("-flags");
-                    commands.add("-global_header");
-                    
-                    commands.add("-copyts");
-                    
-                    commands.add("-mpegts_copyts");
-                    commands.add("1");
-                    
+                case "hls":                 
+                    // Segments
                     commands.add("-f");
-                    commands.add("mpegts");
+                    commands.add("segment");
                     
-                    commands.add("-");
+                    commands.add("-segment_time");
+                    commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
+                    
+                    if(profile.getOffset() > 0) {
+                        commands.add("-segment_start_number");
+                        commands.add(String.valueOf(profile.getOffset() / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
+                        
+                        commands.add("-initial_offset");
+                        commands.add(profile.getOffset().toString());
+                    }
+                    
+                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/%d.ts");
+                    
+                    break;
+                    
+                case "dash":
+                    if(profile.getVideoTranscode() != null) {
+                        // Reduce overhead with global header
+                        commands.add("-flags");
+                        commands.add("-global_header");                        
+                    }
+                    
+                    // Segments
+                    commands.add("-f");
+                    commands.add("dash");
+                                        
+                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/playlist.mpd");
                     break;
                     
                 default:
@@ -366,13 +498,19 @@ public class TranscodeService {
                 case "h264":
                     commands.add("libx264");
                     commands.add("-crf");
-                    commands.add("25");
+                    commands.add("23");
                     commands.add("-preset");
-                    commands.add("superfast");
-                    commands.add("-tune");
-                    commands.add("zerolatency");
+                    commands.add("veryfast");
+                    commands.add("-pix_fmt");
+                    commands.add("yuv420p");
                     commands.add("-profile:v");
-                    commands.add("baseline");
+                    
+                    if(profile.getQuality() < 4) {
+                        commands.add("baseline");
+                    } else {
+                        commands.add("high");
+                    }
+                    
                     break;
 
                 default:
@@ -391,16 +529,13 @@ public class TranscodeService {
     /*
      * Returns a list of commands for an audio stream.
      */
-    private Collection<String> getAudioCommands(TranscodeProfile profile) {
+    private Collection<String> getAudioCommands(int track, AudioTranscode transcode) {
         Collection<String> commands = new LinkedList<>();
-        
-        // Get audio transcode properties
-        AudioTranscode transcode = profile.getAudioTranscodes()[profile.getAudioTrack()];
         
         if(transcode.getCodec() != null) {
             // Mapping
             commands.add("-map");
-            commands.add("0:a:" + profile.getAudioTrack());
+            commands.add("0:a:" + track);
         
             // Codec
             commands.add("-c:a");
@@ -489,27 +624,27 @@ public class TranscodeService {
     /*
      * Returns a suitable video resolution based on the video quality requested.
      */
-    public static Dimension getVideoResolution(TranscodeProfile profile) {
+    public static Dimension getVideoResolution(MediaElement element, int quality) {
         // Check variables
-        if(profile.getQuality() == null || profile.getMediaElement() == null) {
+        if(element == null || !VideoQuality.isValid(quality)) {
             return null;
         }
         
         // Check this is a video element
-        if(profile.getMediaElement().getType() != MediaElementType.VIDEO) {
+        if(element.getType() != MediaElementType.VIDEO) {
             return null;
         }
         
         // Determine resolution based on the requested quality.
-        Dimension requested = VIDEO_QUALITY_RESOLUTION[profile.getQuality()];
+        Dimension requested = VIDEO_QUALITY_RESOLUTION[quality];
 
         // Make sure we managed to set a resolution based on the requested quality
-        if(requested == null || profile.getMediaElement().getVideoHeight() == null || profile.getMediaElement().getVideoWidth() == null) {
+        if(requested == null || element.getVideoHeight() == null || element.getVideoWidth() == null) {
             return null;
         }
         
         // If the original resolution is less than the requested we don't need to continue
-        Dimension original = new Dimension(profile.getMediaElement().getVideoWidth(), profile.getMediaElement().getVideoHeight());
+        Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
         
         if (original.width < requested.width || original.height < requested.height) {
             return null;
@@ -522,11 +657,31 @@ public class TranscodeService {
         return new Dimension(even(requested.width), even(requested.height));
     }
     
+    
     /*
      * Make sure width and height are multiples of two for the transcoder.
      */
     private static int even(int size) {
         return size + (size % 2);
+    }
+    
+    /*
+     * Returns the highest possible transcode quality for a given video element
+     */
+    public static int getHighestVideoQuality(MediaElement element) {
+        // Check variables
+        if(element == null || element.getType() != MediaElementType.VIDEO) {
+            return -1;
+        }
+        
+        // Loop through possible qualities until we find the highest
+        for(int i = VideoQuality.getMax(); i >= 0; i--) {
+            if(getVideoResolution(element, i) != null) {
+                return i;
+            }
+        }
+
+        return -1;
     }
     
     public static boolean isAudioStreamAvailable(int streamNum, MediaElement element) {        
@@ -652,6 +807,16 @@ public class TranscodeService {
     public static String getEncoderForAudioCodec(String codec) {
         for (String[] map : AUDIO_CODEC_ENCODER) {
             if (map[0].contains(codec)) {
+                return map[1];
+            }
+        }
+        
+        return null;
+    }
+    
+    public static String getIsoSpecForAudioCodec(String codec) {
+        for (String[] map : AUDIO_CODEC_ISO_SPEC) {
+            if (codec.contains(map[0])) {
                 return map[1];
             }
         }
@@ -896,7 +1061,7 @@ public class TranscodeService {
             
             // Get suitable resolution (use native resolution if direct play is enabled)
             if(!profile.isDirectPlayEnabled()) {
-                resolution = getVideoResolution(profile);      
+                resolution = getVideoResolution(profile.getMediaElement(), profile.getQuality());      
             }
         } else {
             codec = "copy";
@@ -1074,14 +1239,20 @@ public class TranscodeService {
     }
     
     public static class VideoQuality {
-        public static final int LOW = 0;
-        public static final int MEDIUM = 1;
-        public static final int HIGH = 2;
-        public static final int HD = 3;
-        public static final int FULLHD = 4;
+        public static final int VERY_LOW = 0;
+        public static final int LOW = 1;
+        public static final int MEDIUM = 2;
+        public static final int HIGH = 3;
+        public static final int VERY_HIGH = 4;
+        public static final int HD = 5;
+        public static final int FULLHD = 6;
         
         public static boolean isValid(int quality) {
-            return !(quality > 4 || quality < 0);
+            return !(quality > 6 || quality < 0);
+        }
+        
+        public static int getMax() {
+            return 6;
         }
     }
     
@@ -1111,6 +1282,11 @@ public class TranscodeService {
         for(TranscodeProfile profile : transcodeProfiles) {
             if(profile.getID() != null) {
                 if(profile.getID().compareTo(id) == 0) {
+                    // Stop transcode process
+                    if(profile.getType() == StreamType.ADAPTIVE) {
+                        adaptiveStreamingService.endProcess(id);
+                    }
+                    
                     transcodeProfiles.remove(index);
                     break;
                 }
@@ -1127,7 +1303,7 @@ public class TranscodeService {
         private MediaElement element;
         private String[] files, codecs, mchCodecs;
         private Integer quality, maxBitRate, maxSampleRate = 48000;
-        private String format, mimeType;
+        private String url, format, mimeType, client;
         private VideoTranscode videoTranscode;
         private AudioTranscode[] audioTranscodes;
         private SubtitleTranscode[] subtitleTranscodes;
@@ -1144,10 +1320,11 @@ public class TranscodeService {
         
         @Override
         public String toString() {
-            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
+            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
                     id == null ? "null" : id.toString(),
                     String.valueOf(type),
                     element == null ? "null" : element.getID().toString(),
+                    client == null ? "null" : client,
                     files == null ? "null" : Arrays.toString(files),
                     codecs == null ? "null" : Arrays.toString(codecs),
                     mchCodecs == null ? "null" : Arrays.toString(mchCodecs),
@@ -1227,6 +1404,15 @@ public class TranscodeService {
         }
         
         @JsonIgnore
+        public String getUrl() {
+            return url;
+        }
+        
+        public void setUrl(String url) {
+            this.url = url;
+        }
+        
+        @JsonIgnore
         public String getFormat() {
             return format;
         }
@@ -1241,6 +1427,15 @@ public class TranscodeService {
         
         public void setMimeType(String mimeType) {
             this.mimeType = mimeType;
+        }
+        
+        @JsonIgnore
+        public String getClient() {
+            return client;
+        }
+        
+        public void setClient(String client) {
+            this.client = client;
         }
         
         @JsonIgnore
@@ -1341,6 +1536,7 @@ public class TranscodeService {
         
         public VideoTranscode(String codec, Dimension resolution) {
             this.codec = codec;
+            
             this.resolution = resolution;
         }
         

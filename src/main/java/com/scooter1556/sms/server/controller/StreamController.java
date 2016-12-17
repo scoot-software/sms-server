@@ -29,6 +29,7 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.io.FileDownloadProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
 import com.scooter1556.sms.server.io.StreamProcess;
@@ -36,10 +37,13 @@ import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.NetworkService;
+import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
 import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
+import com.scooter1556.sms.server.service.TranscodeService.VideoQuality;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
@@ -89,6 +93,7 @@ public class StreamController {
     @RequestMapping(value="/initialise/{id}", method=RequestMethod.GET)
     @ResponseBody
     public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("id") Long id,
+                                                 @RequestParam(value = "client", required = false) String client,
                                                  @RequestParam(value = "files", required = false) String files,
                                                  @RequestParam(value = "codecs", required = true) String codecs,
                                                  @RequestParam(value = "mchcodecs", required = false) String mchCodecs,
@@ -191,11 +196,17 @@ public class StreamController {
         
         profile.setMediaElement(mediaElement);
         
+        profile.setUrl(request.getRequestURL().toString().replaceFirst("/stream(.*)", ""));
+        
         if(files != null) {
             profile.setFiles(files.split(","));
         }
         
         profile.setCodecs(codecs.split(","));
+        
+        if(client != null) {
+            profile.setClient(client);
+        }
         
         if(format != null) {
             profile.setFormat(format);
@@ -285,7 +296,7 @@ public class StreamController {
                 
                 // Set stream type
                 switch(profile.getFormat()) {
-                    case "hls":
+                    case "hls": case "dash":
                         profile.setType(StreamType.ADAPTIVE);
                         break;
 
@@ -296,10 +307,227 @@ public class StreamController {
             }
         }
         
+        // If this is an adaptive streaming job start the transcode process
+        if(profile.getType() == StreamType.ADAPTIVE) {
+            if(adaptiveStreamingService.initialise(profile, 0) == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to intialise adaptive streaming process for job " + job.getID() + ".", null);
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+ 
         // Add profile to transcode service
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
         return new ResponseEntity<>(profile, HttpStatus.OK);
+    }
+    
+    @ResponseBody
+    @RequestMapping(value="/playlist/{id}/{type}/{extra}", method=RequestMethod.GET)
+    public void getPlaylist(@PathVariable("id") UUID id,
+                            @PathVariable("type") String type,
+                            @PathVariable("extra") Integer extra,
+                            HttpServletRequest request, 
+                            HttpServletResponse response) {
+        Job job;
+        TranscodeProfile profile;
+        
+        try {
+            // Retrieve Job
+            job = jobDao.getJobByID(id);
+            
+            if(job == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve job with id " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
+                return;
+            }
+            
+            // Get transcode profile
+            profile = transcodeService.getTranscodeProfile(id);
+            
+            if(profile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to retrieve transcode profile for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve transcode profile.");
+                return;
+            }
+            
+            // Check type and transcode profile
+            switch(type) {
+                case "audio":
+                    if(profile.getAudioTranscodes() == null || profile.getAudioTranscodes().length <= extra) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Audio stream is out of range.", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Audio stream is out of range.");
+                        return;
+                    }
+                    
+                    break;
+                    
+                case "video":
+                    if(profile.getVideoTranscode() == null && VideoQuality.isValid(extra)) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Audio stream is out of range.", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Audio stream is out of range.");
+                        return;
+                    }
+                    
+                    break;
+                    
+                default:
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Playlist type is not recognised.", null);
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Playlist type is not recognised.");
+                    return;
+            }
+            
+            // Return playlist
+            switch (profile.getFormat()) {
+                case "hls":
+                    adaptiveStreamingService.sendHLSPlaylist(id, type, extra, request, response);
+                    break;
+                    
+                default:
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format for job " + id + " is not compatible with adaptive streaming.", null);
+                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Format is not supported for adaptive streaming.");
+            }            
+        } catch (IOException ex) {
+            // Called if client closes the connection early.
+        }
+    }
+    
+    @ResponseBody
+    @RequestMapping(value="/segment/{id}/{type}/{extra}/{file}", method=RequestMethod.GET)
+    public void getSegment(@PathVariable("id") UUID id,
+                           @PathVariable("type") String type,
+                           @PathVariable("extra") Integer extra,
+                           @PathVariable("file") String file,
+                           HttpServletRequest request, 
+                           HttpServletResponse response) {
+        Job job = null;
+        TranscodeProfile profile;
+        AdaptiveStreamingProcess transcodeProcess;
+        SMSProcess process = null;
+        File segment;
+                
+        try {
+            // Retrieve Job
+            job = jobDao.getJobByID(id);
+            
+            if(job == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve job with id " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
+                return;
+            }
+            
+            // Get transcode profile
+            profile = transcodeService.getTranscodeProfile(id);
+            
+            if(profile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to retrieve transcode profile for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve transcode profile.");
+                return;
+            }
+            
+            // Get associated process
+            transcodeProcess = adaptiveStreamingService.getProcessById(id);
+
+            if(transcodeProcess == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to find adaptive streaming process for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve transcode process.");
+                return;
+            }
+            
+            String mimeType;
+            String extension;
+                    
+            switch (profile.getFormat()) {
+                case "hls":
+                    mimeType = "video/MP2T";
+                    extension = "ts";
+                    break;
+                    
+                case "dash":
+                    mimeType = "video/mp4";
+                    extension = "m4s";
+                    break;
+                    
+                default:
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format for job " + id + " is not compatible with adaptive streaming.", null);
+                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Format is not supported for adaptive streaming.");
+                    return;
+            }
+            
+            // Find Segment File
+            segment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + file + "." + extension);
+            
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Path: " + segment.getPath(), null);
+            
+            if(profile.getFormat().equals("hls")) {
+                // Update segment tracking
+                file = file.replaceAll("\\D+","");
+                int num = Integer.parseInt(file);
+                int oldNum = transcodeProcess.getSegmentNum();
+                transcodeProcess.setSegmentNum(num);
+                
+                // If segment requested is not the next chronologically check if we need to start a new transcode process
+                if(num != oldNum && num != (oldNum + 1) && !segment.exists()) {
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Starting new transcode process.", null);
+                    adaptiveStreamingService.initialise(profile, num);
+                }
+            }
+            
+            int count = 0;
+            
+            while(!segment.exists() && count < 10) {
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ex) {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
+                }
+
+                count++;
+            }
+            
+            // Check that the segment is available
+            if(!segment.exists()) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Could not return segment " + file + " for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
+                return;
+            }
+            
+            // Check file is complete
+            long length = -1;
+            
+            while(segment.length() != length) {
+                if(length != -1) {
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, file + "." + extension + " for job " + profile.getID() + " is still being written", null);
+                }
+                
+                length = segment.length();
+                
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ex) {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
+                }
+            }
+            
+            // Get transcode command
+            List<String> command = transcodeService.getAdaptiveSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
+
+            if(command == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
+                return;
+            }
+
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+            process = new StreamProcess(id, command, mimeType, request, response);
+            process.start();
+        } catch (IOException ex) {
+            // Called if client closes the connection early.
+        } finally {
+            // Return segment
+            if(process != null && job != null) {
+                jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
+            }
+        }
     }
     
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
@@ -352,7 +580,9 @@ public class StreamController {
             switch(profile.getType()) {
                 case StreamType.ADAPTIVE:
                     if(profile.getFormat().equals("hls")) {
-                        adaptiveStreamingService.sendHLSPlaylist(id, request, response);
+                        adaptiveStreamingService.sendHLSPlaylist(id, null, null, request, response);
+                    } else if(profile.getFormat().equals("dash")) {
+                        adaptiveStreamingService.sendDashPlaylist(id, request, response);
                     }
                 
                     break;
@@ -426,71 +656,6 @@ public class StreamController {
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to determine stream type for job " + job.getID() + ".", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Cannot determine stream type.");
             }
-        } catch (IOException ex) {
-            // Called if client closes the connection early.
-            if(process != null) {
-                process.end();
-            }
-        } finally {
-            if(job != null && process != null) {
-                jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
-            }
-        }
-    }
-    
-    @RequestMapping(value="/segment", method=RequestMethod.GET)
-    public void getSegment(@RequestParam(value = "id", required = true) final UUID id,
-                           @RequestParam(value = "num", required = true) final Integer segmentNumber,
-                           HttpServletRequest request, 
-                           HttpServletResponse response) {
-        TranscodeProfile profile;
-        Job job = null;
-        SMSProcess process = null;
-        
-        try {
-            // Retrieve Job
-            job = jobDao.getJobByID(id);
-            
-            if(job == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve job with id " + id + ".", null);
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
-                return;
-            }
-            
-            // Retrieve transcode profile
-            profile = transcodeService.getTranscodeProfile(id);
-            
-            if(profile == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve transcode profile for job " + job.getID() + ".", null);
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve transcode profile for job " + id + ".");
-                return;
-            }
-            
-            // If profile is inactive do not return any data
-            if(!profile.isActive()) {
-                response.sendError(HttpServletResponse.SC_OK, "Segment not required.");
-                return;
-            }
-            
-            // Update segment offset
-            profile.setOffset(segmentNumber * AdaptiveStreamingService.ADAPTIVE_STREAMING_SEGMENT_DURATION);
-            
-            // Get transcode command
-            List<String> command = transcodeService.getTranscodeCommand(profile);
-
-            if(command == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process transcode command for job " + job.getID() + ".", null);
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process transcode command.");
-                return;
-            }
-
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
-            process = new StreamProcess(id, command, profile.getMimeType(), request, response);
-            process.start();
-            
-            // If a segment finished transcoding gracefully we can assume we don't need to return future requested segments
-            profile.setActive(false);
-            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deactivated transcode profile for job " + job.getID() + ".", null);
         } catch (IOException ex) {
             // Called if client closes the connection early.
             if(process != null) {

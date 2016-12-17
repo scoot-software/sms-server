@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class SMSProcess {
-
     UUID id;
     Process process;
     List<String> command;
@@ -48,11 +47,11 @@ public class SMSProcess {
         ended = true;
     }
     
-    public UUID getID()  {
+    public UUID getId()  {
         return id;
     }
     
-    public void setID(UUID id) {
+    public void setId(UUID id) {
         this.id = id;
     }
     
@@ -60,8 +59,19 @@ public class SMSProcess {
         return bytesTransferred;
     }
     
-    public boolean hasEnded()
-    {
+    public void setBytesTransferred(long bytes) {
+        this.bytesTransferred = bytes;
+    }
+    
+    public List<String> getCommand() {
+        return this.command;
+    }
+    
+    public void setCommand(List<String> command) {
+        this.command = command;
+    }
+    
+    public boolean hasEnded() {
         return ended;
     }
 }
