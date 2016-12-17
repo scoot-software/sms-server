@@ -62,7 +62,7 @@ public class JobService implements DisposableBean {
     private static final Integer INACTIVE_PERIOD_IN_MINUTES = 60;
     
     // Creates a new job in the database and updates media statistics
-    public Job createJob(byte type, String username, MediaElement mediaElement) {
+    public Job createJob(byte type, String username, MediaElement mediaElement, boolean update) {
         // Check parameters
         if(username == null || mediaElement == null) {
             return null;
@@ -73,13 +73,14 @@ public class JobService implements DisposableBean {
         jobDao.createJob(job);
         
         // Update media element and parent media element if necessary
-        mediaDao.updateLastPlayed(mediaElement.getID());
-        
-        MediaElement parentElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
-        
-        if(parentElement != null)
-        {
-            mediaDao.updateLastPlayed(parentElement.getID());
+        if(update) {
+            mediaDao.updateLastPlayed(mediaElement.getID());
+
+            MediaElement parentElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
+
+            if(parentElement != null) {
+                mediaDao.updateLastPlayed(parentElement.getID());
+            }
         }
         
         // Log event

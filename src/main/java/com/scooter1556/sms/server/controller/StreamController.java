@@ -105,6 +105,7 @@ public class StreamController {
                                                  @RequestParam(value = "atrack", required = false) Integer audioTrack,
                                                  @RequestParam(value = "strack", required = false) Integer subtitleTrack,
                                                  @RequestParam(value = "direct", required = false) Boolean directPlay,
+                                                 @RequestParam(value = "update", required = false) Boolean update,
                                                  HttpServletRequest request) {
         MediaElement mediaElement;
         Job job;
@@ -152,8 +153,13 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
         
+        // Ensure our metadata update flag is set
+        if(update == null) {
+            update = true;
+        }
+        
         // Create a new job
-        job = jobService.createJob(jobType, request.getUserPrincipal().getName(), mediaElement);
+        job = jobService.createJob(jobType, request.getUserPrincipal().getName(), mediaElement, update);
         
         if(job == null) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create job for trancode request.", null);
@@ -517,18 +523,24 @@ public class StreamController {
                 }
             }
             
-            // Get transcode command
-            List<String> command = transcodeService.getAdaptiveSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
+            // Return file direct for audio and transcode as required for video
+            if(profile.getMediaElement().getType().equals(MediaElementType.AUDIO)) {
+                process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
+                process.start();
+            } else {
+                // Get transcode command
+                List<String> command = transcodeService.getAdaptiveSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
 
-            if(command == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
-                return;
+                if(command == null) {
+                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
+                    return;
+                }
+
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+                process = new StreamProcess(id, command, mimeType, request, response);
+                process.start();
             }
-
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
-            process = new StreamProcess(id, command, mimeType, request, response);
-            process.start();
         } catch (IOException ex) {
             // Called if client closes the connection early.
         } finally {
