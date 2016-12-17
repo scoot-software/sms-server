@@ -119,6 +119,12 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Check physical file is available
+        if(!new File(mediaElement.getPath()).exists()) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "File not found for media element with ID " + id + ".", null);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        
         // Validate codecs
         for(String codec : codecs.split(",")) {
             if(!TranscodeService.isSupported(TranscodeService.getSupportedCodecs(), codec)) {
