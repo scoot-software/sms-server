@@ -55,9 +55,15 @@ public class StreamProcess extends SMSProcess {
     @Override
     public void start() throws IOException {
         // Set response headers
+        response.reset();
         response.setContentType(contentType);
         response.setHeader("Accept-Ranges", "bytes");
         response.setHeader("ETag", id.toString());
+        
+        // Enable CORS
+        response.setHeader(("Access-Control-Allow-Origin"), "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setIntHeader("Access-Control-Max-Age", 3600);
 
         // Start transcoding
         ProcessBuilder processBuilder = new ProcessBuilder(command);

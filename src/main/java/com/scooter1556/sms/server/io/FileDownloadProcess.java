@@ -216,6 +216,11 @@ public class FileDownloadProcess extends SMSProcess {
         response.setHeader("ETag", fileName);
         response.setDateHeader("Last-Modified", lastModifiedObj.toMillis());
         response.setDateHeader("Expires", System.currentTimeMillis() + DEFAULT_EXPIRE_TIME);
+        
+        // Enable CORS
+        response.setHeader(("Access-Control-Allow-Origin"), "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setIntHeader("Access-Control-Max-Age", 3600);
 
         // Send requested file (part(s)) to client ------------------------------------------------
 

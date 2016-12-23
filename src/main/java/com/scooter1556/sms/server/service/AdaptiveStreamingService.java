@@ -310,9 +310,9 @@ public class AdaptiveStreamingService {
                 builder.append(",CODECS=\"");
                 
                 if(quality > VideoQuality.HIGH) {
-                    builder.append("avc1.64001f");
+                    builder.append("avc1.640028");
                 } else {
-                    builder.append("avc1.66.30");
+                    builder.append("avc1.42e01e");
                 }
                 
                 if(!audio.isEmpty()) {
@@ -402,8 +402,14 @@ public class AdaptiveStreamingService {
         }
 
         // Set Header Parameters
+        response.reset();
         response.setContentType("application/x-mpegurl");
         response.setContentLength(playlistWriter.toString().length());
+        
+        // Enable CORS
+        response.setHeader(("Access-Control-Allow-Origin"), "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setIntHeader("Access-Control-Max-Age", 3600);
 
         // Write playlist out to the client
         response.getWriter().write(playlistWriter.toString());
