@@ -314,9 +314,16 @@ public class MediaDao {
         return mediaElement;
     }
     
-    public List<MediaElement> getMediaElementsByParentPath(String path) {
+    public List<MediaElement> getMediaElementsByParentPath(String path, Byte type) {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? ORDER BY Type,Album,DiscNumber,TrackNumber,Year,Title", new MediaElementMapper(), new Object[] {path});
+            List<MediaElement> mediaElements;
+                    
+            if(type == null) {
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? ORDER BY Type,Album,DiscNumber,TrackNumber,Year,Title", new MediaElementMapper(), new Object[] {path});
+            } else {
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? AND Type=? ORDER BY Type,Album,DiscNumber,TrackNumber,Year,Title", new MediaElementMapper(), new Object[] {path, type});
+            }
+            
             return mediaElements;
         } catch (DataAccessException e) {
             return null;

@@ -32,6 +32,7 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.LogService;
 import java.io.File;
 import java.io.FileFilter;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.SystemUtils;
@@ -124,21 +125,31 @@ public class MediaController {
     }
     
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByParentID(@PathVariable("id") Long id)
-    {
-        MediaElement parentDirectory = mediaDao.getMediaElementByID(id);
+    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") Long id) {
+        MediaElement element = mediaDao.getMediaElementByID(id);
         
-        if(parentDirectory == null)
-        {
+        if(element == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        if(parentDirectory.getType() != MediaElementType.DIRECTORY)
-        {
-            return new ResponseEntity<>(HttpStatus.NOT_ACCEPTABLE);
+        String parentPath;
+        Byte type = element.getType();
+        
+        switch(element.getType()) {
+            case MediaElementType.DIRECTORY:
+                parentPath = element.getPath();
+                type = null;
+                break;
+                
+            case MediaElementType.AUDIO: case MediaElementType.VIDEO:
+                parentPath = element.getParentPath();
+                break;
+                
+            default:
+                return new ResponseEntity<>(HttpStatus.NOT_ACCEPTABLE);
         }
         
-        List<MediaElement> mediaElements = mediaDao.getMediaElementsByParentPath(parentDirectory.getPath());
+        List<MediaElement> mediaElements = mediaDao.getMediaElementsByParentPath(parentPath, type);
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
