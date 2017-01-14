@@ -37,6 +37,8 @@ import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.NetworkService;
+import com.scooter1556.sms.server.service.SessionService;
+import com.scooter1556.sms.server.service.SessionService.Session;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
@@ -89,29 +91,42 @@ public class StreamController {
     
     @Autowired
     private AdaptiveStreamingService adaptiveStreamingService;
+    
+    @Autowired
+    private SessionService sessionService;
 
-    @RequestMapping(value="/initialise/{id}", method=RequestMethod.GET)
+    @RequestMapping(value="/initialise/{session}/{id}", method=RequestMethod.GET)
     @ResponseBody
-    public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("id") Long id,
-                                                 @RequestParam(value = "client", required = false) String client,
-                                                 @RequestParam(value = "files", required = false) String files,
-                                                 @RequestParam(value = "codecs", required = true) String codecs,
-                                                 @RequestParam(value = "mchcodecs", required = false) String mchCodecs,
-                                                 @RequestParam(value = "format", required = false) String format,
-                                                 @RequestParam(value = "quality", required = true) Integer quality,
-                                                 @RequestParam(value = "samplerate", required = false) Integer maxSampleRate,
-                                                 @RequestParam(value = "bitrate", required = false) Integer maxBitRate,
-                                                 @RequestParam(value = "atrack", required = false) Integer audioTrack,
-                                                 @RequestParam(value = "strack", required = false) Integer subtitleTrack,
-                                                 @RequestParam(value = "direct", required = false) Boolean directPlay,
-                                                 @RequestParam(value = "update", required = false) Boolean update,
-                                                 HttpServletRequest request) {
+    public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("session") UUID sessionId,
+                                                             @PathVariable("id") Long id,
+                                                             @RequestParam(value = "client", required = false) String client,
+                                                             @RequestParam(value = "files", required = false) String files,
+                                                             @RequestParam(value = "codecs", required = true) String codecs,
+                                                             @RequestParam(value = "mchcodecs", required = false) String mchCodecs,
+                                                             @RequestParam(value = "format", required = false) String format,
+                                                             @RequestParam(value = "quality", required = true) Integer quality,
+                                                             @RequestParam(value = "samplerate", required = false) Integer maxSampleRate,
+                                                             @RequestParam(value = "bitrate", required = false) Integer maxBitRate,
+                                                             @RequestParam(value = "atrack", required = false) Integer audioTrack,
+                                                             @RequestParam(value = "strack", required = false) Integer subtitleTrack,
+                                                             @RequestParam(value = "direct", required = false) Boolean directPlay,
+                                                             @RequestParam(value = "update", required = false) Boolean update,
+                                                             HttpServletRequest request) {
         MediaElement mediaElement;
+        Session session;
         Job job;
         Byte jobType;
         TranscodeProfile profile;
         Boolean transcodeRequired = true;
 
+        // Check session is valid
+        session = sessionService.getSessionById(sessionId);
+        
+        if(session == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session invalid with ID: " + sessionId, null);
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+        }
+        
         // Check media element
         mediaElement = mediaDao.getMediaElementByID(id);
         
@@ -158,7 +173,7 @@ public class StreamController {
         }
         
         // Create a new job
-        job = jobService.createJob(jobType, request.getUserPrincipal().getName(), mediaElement, update);
+        job = jobService.createJob(jobType, session.getUsername(), mediaElement, update);
         
         if(job == null) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create job for trancode request.", null);
