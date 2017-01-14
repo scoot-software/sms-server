@@ -510,6 +510,15 @@ public class MediaDao {
         }
     }
     
+    public List<MediaElement> getMediaElementsByAlbum(String album) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND Album=? ORDER BY Year,DiscNumber,TrackNumber,Title", new MediaElementMapper(), new Object[] {MediaElementType.AUDIO, album});
+            return mediaElements;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
     public List<String> getCollections() {
         try {
             List<String> collections = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Collection FROM MediaElement WHERE Collection IS NOT NULL ORDER BY Collection", String.class);

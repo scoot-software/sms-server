@@ -337,6 +337,19 @@ public class MediaController {
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
+    
+    @RequestMapping(value="/album/{album}", method=RequestMethod.GET)
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(@PathVariable("album") String album) {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album '" + album + "'", null);
+        
+        List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbum(album);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
+    }
 
     @RequestMapping(value="/collection", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getCollections()
