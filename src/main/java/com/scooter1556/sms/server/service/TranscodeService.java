@@ -383,6 +383,13 @@ public class TranscodeService {
                 command.add("0:v");
 
                 command.addAll(getVideoCommands(profile));
+                
+                // Format
+                command.add("-f");
+                command.add("mpegts");
+                
+                command.add("-mpegts_copyts");
+                command.add("1");
             }
         } else if(type.equals("audio")) {
             // Audio
@@ -397,6 +404,10 @@ public class TranscodeService {
                     command.add("copy");
                 }
             }
+            
+            // Format
+            command.add("-f");
+            command.add(getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
         }
                 
         // Use all CPU cores
@@ -405,13 +416,6 @@ public class TranscodeService {
         
         // Maintain timestamps
         command.add("-copyts");
-        
-        // Format
-        command.add("-f");
-        command.add("mpegts");
-        
-        command.add("-mpegts_copyts");
-        command.add("1");
         
         command.add("-");
         

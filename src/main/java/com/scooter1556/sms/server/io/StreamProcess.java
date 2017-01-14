@@ -23,9 +23,11 @@
  */
 package com.scooter1556.sms.server.io;
 
+import com.scooter1556.sms.server.service.LogService;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
@@ -74,6 +76,21 @@ public class StreamProcess extends SMSProcess {
 
         // Set status code
         response.setStatus(SC_PARTIAL_CONTENT);
+        
+        /*********************** DEBUG: Response Headers *********************************/        
+        String requestHeader = "\n***************\nResponse Header:\n***************\n";
+	Collection<String> responseHeaderNames = response.getHeaderNames();
+        
+	for(int i = 0; i < responseHeaderNames.size(); i++) {
+            String header = (String) responseHeaderNames.toArray()[i];
+            String value = response.getHeader(header);
+            requestHeader += header + ": " + value + "\n";
+        }
+        
+        // Print Headers
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
+        
+        /********************************************************************************/
 
         // Start reading streams
         new NullStream(process.getErrorStream()).start();

@@ -38,6 +38,8 @@ import java.awt.Dimension;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -277,6 +279,7 @@ public class AdaptiveStreamingService {
                         }
                     }
 
+                    
                     playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getLanguage() + "\",AUTOSELECT=YES, DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8\"");
                 }                
             }
@@ -290,14 +293,19 @@ public class AdaptiveStreamingService {
             
             // If client doesn't support bitrate switching just give them one variant  
             int offset;
-            switch(profile.getClient()) {
-                case "kodi":
-                    offset = quality;
-                    break;
-                    
-                default:
-                    offset = 0;
-                    break;
+            
+            if(profile.getClient() == null) {
+                offset = 0;
+            } else {
+                switch(profile.getClient()) {
+                    case "kodi":
+                        offset = quality;
+                        break;
+
+                    default:
+                        offset = 0;
+                        break;
+                }
             }
             
             for(int i = offset; i <= quality; i++) {
@@ -360,7 +368,7 @@ public class AdaptiveStreamingService {
         // Get Video Segments
         for (int i = 0; i < (mediaElement.getDuration() / HLS_SEGMENT_DURATION); i++) {
             playlist.add("#EXTINF:" + HLS_SEGMENT_DURATION.floatValue() + ",");
-            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i + ".ts");
+            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
         }   
 
         // Determine the duration of the final segment.
@@ -369,7 +377,7 @@ public class AdaptiveStreamingService {
             int i = mediaElement.getDuration() / HLS_SEGMENT_DURATION;
             
             playlist.add("#EXTINF:" + remainder.floatValue() + ",");
-            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i + ".ts");
+            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
         }
 
         playlist.add("#EXT-X-ENDLIST");
@@ -391,6 +399,7 @@ public class AdaptiveStreamingService {
         }
 
         if(playlist == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Unable to generate HLS playlist.", null);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Unable to generate HLS playlist.");
             return;
         }
@@ -413,6 +422,21 @@ public class AdaptiveStreamingService {
 
         // Write playlist out to the client
         response.getWriter().write(playlistWriter.toString());
+        
+        /*********************** DEBUG: Response Headers *********************************/        
+        String requestHeader = "\n***************\nResponse Header:\n***************\n";
+	Collection<String> responseHeaderNames = response.getHeaderNames();
+        
+	for(int i = 0; i < responseHeaderNames.size(); i++) {
+            String header = (String) responseHeaderNames.toArray()[i];
+            String value = response.getHeader(header);
+            requestHeader += header + ": " + value + "\n";
+        }
+        
+        // Print Headers
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
+        
+        /********************************************************************************/
     }
     
     public void addProcess(AdaptiveStreamingProcess process) {

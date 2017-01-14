@@ -375,8 +375,8 @@ public class StreamController {
                     
                 case "video":
                     if(profile.getVideoTranscode() == null && VideoQuality.isValid(extra)) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Audio stream is out of range.", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Audio stream is out of range.");
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Video quality is not valid.", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Video quality is not valid.");
                         return;
                     }
                     
@@ -535,6 +535,12 @@ public class StreamController {
                 }
 
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
+                
+                // Determine proper mimetype for audio
+                if(type.equals("audio")) {
+                    mimeType = TranscodeService.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
+                }
+                
                 process = new StreamProcess(id, command, mimeType, request, response);
                 process.start();
             }
