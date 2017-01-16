@@ -530,7 +530,7 @@ public class MediaDao {
     
     public List<MediaElement> getMediaElementsByCollection(String collection) {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND Collection=? ORDER BY Year,Title", new MediaElementMapper(), new Object[] {MediaElementType.VIDEO, collection});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded AND Collection=? ORDER BY Year,Title", new MediaElementMapper(), new Object[] {MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO, collection});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
