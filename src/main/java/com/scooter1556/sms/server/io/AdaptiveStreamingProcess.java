@@ -52,6 +52,11 @@ public class AdaptiveStreamingProcess extends SMSProcess {
         
         try {
             if(streamDirectory.exists()) {
+                // Wait for process to finish
+                if(process != null) {
+                    process.waitFor();
+                }
+                
                 FileUtils.cleanDirectory(streamDirectory);
             } else {
                 boolean success = streamDirectory.mkdirs();
@@ -67,7 +72,7 @@ public class AdaptiveStreamingProcess extends SMSProcess {
         
             // Start transcoding
             start();
-        } catch(IOException ex) {
+        } catch(IOException | InterruptedException ex) {
             if(process != null) {
                 process.destroy();
             }
@@ -97,8 +102,13 @@ public class AdaptiveStreamingProcess extends SMSProcess {
         File streamDirectory = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id);
        
         try {
+            // Wait for process to finish
+            if(process != null) {
+                process.waitFor();
+            }
+            
             FileUtils.deleteDirectory(streamDirectory);
-        } catch (IOException ex) {
+        } catch (IOException | InterruptedException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
         }
         
