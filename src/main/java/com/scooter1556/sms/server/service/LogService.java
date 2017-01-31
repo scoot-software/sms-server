@@ -40,16 +40,15 @@ public final class LogService {
     private final String LOG_FILE = SettingsService.getHomeDirectory() + "/log";
     private static final int LOG_BUFFER_SIZE = 50;
     
-    private static final List<LogEntry> logEntries = new ArrayList<>();
+    private final List<LogEntry> logEntries = new ArrayList<>();
     
     private boolean enableDebug = false;
     
-    public LogService()
-    {
+    public LogService() {
         removeLog();
     }
     
-    public static final LogService instance = new LogService();
+    private static final LogService INSTANCE = new LogService();
     
     /**
      * Get the current log service.
@@ -57,7 +56,7 @@ public final class LogService {
      * @return The current instance of LogService.
      */
     public static LogService getInstance() {
-        return instance;
+        return INSTANCE;
     }
 
     /**
@@ -77,8 +76,7 @@ public final class LogService {
         LogEntry entry = new LogEntry(level, category, message);
         
         // If debugging is not enabled and this is a debug entry, ignore it.
-        if(entry.getLevel() == Level.DEBUG && !enableDebug)
-        {
+        if(entry.getLevel() == Level.DEBUG && !enableDebug) {
             return;
         }
         
@@ -86,8 +84,7 @@ public final class LogService {
         System.out.println(entry.toString());
         
         // Check log buffer size
-        if(logEntries.size() == LOG_BUFFER_SIZE)
-        {
+        if(logEntries.size() == LOG_BUFFER_SIZE) {
             logEntries.remove(0);
         }
         
@@ -96,12 +93,12 @@ public final class LogService {
         
         // Write to log file
         try {
-            PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(LOG_FILE, true)));
+            PrintWriter out;
+            out = new PrintWriter(new BufferedWriter(new FileWriter(LOG_FILE, true)));
             out.println(entry.toString());
             
             // Print stack trace if necessary
-            if(exception != null)
-            {
+            if(exception != null) {
                 StringWriter exceptionStackTrace = new StringWriter();
                 exception.printStackTrace(new PrintWriter(exceptionStackTrace));
                 out.println(exceptionStackTrace.toString());
@@ -117,8 +114,7 @@ public final class LogService {
     /**
      * Renames the old log file so a new one can be created.
      */
-    public void removeLog()
-    {
+    public void removeLog() {
         File log = new File(LOG_FILE);
         
         if(log.exists())
@@ -132,8 +128,7 @@ public final class LogService {
      *
      * @return The last few log entries.
      */
-    public List<LogEntry> getLatestLogEntries()
-    {
+    public List<LogEntry> getLatestLogEntries() {
         return logEntries;
     }
     
@@ -142,24 +137,21 @@ public final class LogService {
      * 
      * @param enable Enable or disable debugging.
      */
-    public void enableDebug(boolean enable)
-    {
+    public void enableDebug(boolean enable) {
         enableDebug = enable;
     }
     
     /**
      * Log level
      */
-    public enum Level
-    {
+    public enum Level {
         DEBUG, INFO, WARN, ERROR
     }
 
     /**
      * Log entry
      */
-    public static class LogEntry
-    {
+    public static class LogEntry {
         private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
         private final Date date;
@@ -167,8 +159,7 @@ public final class LogService {
         private final String category;        
         private final String message;
 
-        public LogEntry(Level level, String category, String message)
-        {
+        public LogEntry(Level level, String category, String message) {
             this.date = new Date();
             this.category = category;
             this.level = level;
@@ -192,8 +183,7 @@ public final class LogService {
         }
 
         @Override
-        public String toString()
-        {
+        public String toString() {
             StringBuilder buf = new StringBuilder();
             buf.append(DATE_FORMAT.format(date)).append(" ");
             buf.append(level).append(" ");
