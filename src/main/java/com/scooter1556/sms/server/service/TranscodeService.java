@@ -407,7 +407,17 @@ public class TranscodeService {
             
             // Format
             command.add("-f");
-            command.add(getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
+            
+            switch(profile.getClient()) {
+                case "chromecast":
+                    command.add(getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
+                    break;
+                    
+                default:
+                    command.add("mpegts");
+                    command.add("-mpegts_copyts");
+                    command.add("1");  
+            }
         }
                 
         // Use all CPU cores
@@ -505,16 +515,11 @@ public class TranscodeService {
                     commands.add("-crf");
                     commands.add("23");
                     commands.add("-preset");
-                    commands.add("veryfast");
+                    commands.add("superfast");
                     commands.add("-pix_fmt");
                     commands.add("yuv420p");
                     commands.add("-profile:v");
-                    
-                    if(profile.getQuality() < 4) {
-                        commands.add("baseline");
-                    } else {
-                        commands.add("high");
-                    }
+                    commands.add("baseline");
                     
                     break;
 

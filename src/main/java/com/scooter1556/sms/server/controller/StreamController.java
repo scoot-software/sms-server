@@ -44,6 +44,7 @@ import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
 import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
 import com.scooter1556.sms.server.service.TranscodeService.VideoQuality;
+import static com.scooter1556.sms.server.service.TranscodeService.getFormatForAudioCodec;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import java.io.File;
 import java.io.IOException;
@@ -553,7 +554,14 @@ public class StreamController {
                 
                 // Determine proper mimetype for audio
                 if(type.equals("audio")) {
-                    mimeType = TranscodeService.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
+                    switch(profile.getClient()) {
+                        case "chromecast":
+                            mimeType = TranscodeService.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
+                            break;
+
+                        default:
+                            break; 
+                    }
                 }
                 
                 process = new StreamProcess(id, command, mimeType, request, response);

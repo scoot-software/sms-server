@@ -85,6 +85,8 @@ public class AdaptiveStreamingService {
         
         // Get offset
         if(num > 0) {
+            // Start transcoding from the previous segment
+            num -= 1;
             profile.setOffset(num * HLS_SEGMENT_DURATION);
         }
         
