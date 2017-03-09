@@ -41,13 +41,31 @@ public class SessionService {
             return null;
         }
         
+        // Generate new ID and add to session list
+        UUID id = UUID.randomUUID();
+        addSession(id, username);
+                
+        return id;
+    }
+    
+    public int addSession(UUID id, String username) {
+        // Checks
+        if(id == null || username == null) {
+            return -1;
+        }
+        
+        // Check session doesn't already exist
+        if(getSessionById(id) != null) {
+            return 0;
+        }
+        
         // Create a new session and add it to the list
-        Session session = new Session(UUID.randomUUID(), username);
+        Session session = new Session(id, username);
         sessions.add(session);
         
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "New session created: " + session.toString(), null);
         
-        return session.getId();
+        return 1;
     }
     
     public Session getSessionById(UUID id) {

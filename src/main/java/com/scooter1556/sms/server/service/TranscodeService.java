@@ -133,7 +133,7 @@ public class TranscodeService {
     };
     
     public static final String[][] AUDIO_CODEC_ISO_SPEC = {
-        {"mp3", "mp4a.69"},
+        {"mp3", "mp4a.40.34"},
         {"aac", "mp4a.40.2"},
         {"ac3", "ac-3"},
         {"eac3", "ec-3"},

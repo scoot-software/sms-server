@@ -55,15 +55,29 @@ public class SessionController {
         return new ResponseEntity<>(sessions, HttpStatus.OK);
     }
     
-    @RequestMapping(value="/initialise", method=RequestMethod.GET)
-    public ResponseEntity<String> initialiseSession(HttpServletRequest request) {
+    @RequestMapping(value="/create", method=RequestMethod.GET)
+    public ResponseEntity<String> createSession(HttpServletRequest request) {
         UUID id = sessionService.createSession(request.getUserPrincipal().getName());
         
         if (id == null) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
         return new ResponseEntity<>(id.toString(), HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/add/{id}", method=RequestMethod.GET)
+    public ResponseEntity<String> addSession(@PathVariable("id") UUID id, 
+                                             HttpServletRequest request) {
+        int result = sessionService.addSession(id, request.getUserPrincipal().getName());
+        
+        if (result < 0) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        } else if(result == 0) {
+            return new ResponseEntity<>("Session already exists with ID: " + id, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("Session added with ID: " + id, HttpStatus.OK);
+        }
     }
     
     @RequestMapping(value="/end/{id}", method=RequestMethod.GET)

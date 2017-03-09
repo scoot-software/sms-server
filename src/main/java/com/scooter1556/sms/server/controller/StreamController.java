@@ -44,7 +44,6 @@ import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.service.TranscodeService.StreamType;
 import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
 import com.scooter1556.sms.server.service.TranscodeService.VideoQuality;
-import static com.scooter1556.sms.server.service.TranscodeService.getFormatForAudioCodec;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import java.io.File;
 import java.io.IOException;
@@ -63,6 +62,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -96,6 +96,7 @@ public class StreamController {
     @Autowired
     private SessionService sessionService;
 
+    @CrossOrigin
     @RequestMapping(value="/initialise/{session}/{id}", method=RequestMethod.GET)
     @ResponseBody
     public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("session") UUID sessionId,
