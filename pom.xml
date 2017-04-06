@@ -12,7 +12,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>1.4.0.RELEASE</version>
+        <version>1.5.2.RELEASE</version>
     </parent>
 
     <dependencies>
@@ -92,29 +92,9 @@
     <profiles>
         <profile>
             <id>windows</id>
-            <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/resources</directory>
-                        <includes>
-                            <include>com/scooter1556/sms/server/service/ffmpeg.exe</include>
-                        </includes>
-                    </resource>
-                </resources>
-            </build>
         </profile>
         <profile>
             <id>linux</id>
-            <build>
-                <resources>
-                    <resource>
-                        <directory>src/main/resources</directory>
-                        <includes>
-                            <include>com/scooter1556/sms/server/service/ffmpeg</include>
-                        </includes>
-                    </resource>
-                </resources>
-            </build>
         </profile>
     </profiles>
 </project>
