@@ -964,7 +964,7 @@ public class TranscodeService {
         }
 
         // Check audio sample rate
-        if(stream.getSampleRate() > profile.getMaxSampleRate()) {
+        if(stream.getSampleRate() > profile.getMaxSampleRate() && !stream.getCodec().contains("dsd")) {
             return true;
         }
 
