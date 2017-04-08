@@ -33,6 +33,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -89,6 +90,7 @@ public class JobController {
         return new ResponseEntity<>(jobs, HttpStatus.OK);
     }
     
+    @CrossOrigin
     @RequestMapping(value="/end/{id}", method=RequestMethod.GET)
     public ResponseEntity<String> endJob(@PathVariable("id") UUID id) {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ending job with ID: " + id, null);
