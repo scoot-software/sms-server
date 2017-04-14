@@ -285,13 +285,6 @@ public class AdaptiveStreamingService {
                 }                
             }
             
-            // Process video variants
-            int quality = TranscodeService.getHighestVideoQuality(mediaElement);
-            
-            if(quality < 0 || quality > profile.getQuality()) {
-                quality = profile.getQuality();
-            }
-            
             // If client doesn't support bitrate switching just give them one variant  
             int offset;
             
@@ -300,7 +293,7 @@ public class AdaptiveStreamingService {
             } else {
                 switch(profile.getClient()) {
                     case "kodi":
-                        offset = quality;
+                        offset = profile.getQuality();
                         break;
 
                     default:
@@ -309,7 +302,7 @@ public class AdaptiveStreamingService {
                 }
             }
             
-            for(int i = offset; i <= quality; i++) {
+            for(int i = offset; i <= profile.getQuality(); i++) {
                 Dimension resolution = TranscodeService.VIDEO_QUALITY_RESOLUTION[i];
                 
                 StringBuilder builder = new StringBuilder();
@@ -318,7 +311,7 @@ public class AdaptiveStreamingService {
                 builder.append(",RESOLUTION=").append(String.format("%dx%d", resolution.width, resolution.height));
                 builder.append(",CODECS=\"");
                 
-                if(quality > VideoQuality.HIGH) {
+                if(profile.getQuality() > VideoQuality.HIGH) {
                     builder.append("avc1.640028");
                 } else {
                     builder.append("avc1.42e01e");

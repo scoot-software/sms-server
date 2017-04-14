@@ -333,8 +333,7 @@ public class TranscodeService {
             }
             
             if(profile.getType() == StreamType.ADAPTIVE) {
-                command.add("-c:v");
-                command.add("copy");
+                command.addAll(getVideoCommands(profile));
                 
                 if(profile.getMediaElement().getVideoCodec().equals("h264")) {
                     command.add("-bsf:v");
@@ -384,15 +383,24 @@ public class TranscodeService {
         if(type.equals("video")) {
             // Check profile
             if(!extra.equals(profile.getQuality())) {
-                profile.setQuality(extra);
-                processVideo(profile);
+                Dimension resolution = getVideoResolution(profile.getMediaElement(), extra);
+                
+                if(resolution != null) {
+                    profile.getVideoTranscode().setResolution(resolution);
+                }
             }
             
             if(profile.getVideoTranscode() != null) {
                 command.add("-map");
                 command.add("0:v");
 
-                command.addAll(getVideoCommands(profile));
+                // If highest possible quality then copy stream
+                if(extra.equals(profile.getQuality())) {
+                    command.add("-c:v");
+                    command.add("copy");
+                } else {
+                    command.addAll(getVideoCommands(profile));
+                }
                 
                 // Format
                 command.add("-f");
@@ -525,7 +533,7 @@ public class TranscodeService {
                     commands.add("-crf");
                     commands.add("23");
                     commands.add("-preset");
-                    commands.add("superfast");
+                    commands.add("ultrafast");
                     commands.add("-pix_fmt");
                     commands.add("yuv420p");
                     commands.add("-profile:v");
@@ -1042,10 +1050,16 @@ public class TranscodeService {
         String codec = null;
         Dimension resolution = null;
         boolean transcodeRequired = false;
+        int quality = TranscodeService.getHighestVideoQuality(profile.getMediaElement());
         VideoStream stream = profile.getMediaElement().getVideoStream();
         
         if(stream == null) {
             return false;
+        }
+        
+        // Process quality
+        if(quality < 0 || quality < profile.getQuality()) {
+            profile.setQuality(quality);
         }
         
         // Check if subtitles require transcode
@@ -1551,12 +1565,11 @@ public class TranscodeService {
     
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public static class VideoTranscode {
-        private final String codec;
-        private final Dimension resolution;
+        private String codec;
+        private Dimension resolution;
         
         public VideoTranscode(String codec, Dimension resolution) {
             this.codec = codec;
-            
             this.resolution = resolution;
         }
         
@@ -1571,9 +1584,17 @@ public class TranscodeService {
             return codec;
         }
         
+        public void setCodec(String codec) {
+            this.codec = codec;
+        }
+        
         @JsonIgnore
         public Dimension getResolution() {
             return resolution;
+        }
+        
+        public void setResolution(Dimension resolution) {
+            this.resolution = resolution;
         }
     }
     

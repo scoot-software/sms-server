@@ -505,7 +505,7 @@ public class StreamController {
             
             while(!segment.exists() && count < 10) {
                 try {
-                    Thread.sleep(500);
+                    Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
                 }
@@ -515,7 +515,7 @@ public class StreamController {
             
             // Check that the segment is available
             if(!segment.exists()) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Could not return segment " + file + " for job " + id + ".", null);
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + id + ".", null);
                 response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                 return;
             }
@@ -531,7 +531,7 @@ public class StreamController {
                 length = segment.length();
                 
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(500);
                 } catch (InterruptedException ex) {
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
                 }
