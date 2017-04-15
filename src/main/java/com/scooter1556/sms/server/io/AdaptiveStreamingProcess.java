@@ -48,7 +48,7 @@ public class AdaptiveStreamingProcess extends SMSProcess {
             process.destroy();
         }
         
-        File streamDirectory = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id);
+        File streamDirectory = new File(SettingsService.getCacheDirectory().getPath() + "/streams/" + id);
         
         try {
             if(streamDirectory.exists()) {
@@ -99,7 +99,7 @@ public class AdaptiveStreamingProcess extends SMSProcess {
         }
         
         // Cleanup working directory
-        File streamDirectory = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id);
+        File streamDirectory = new File(SettingsService.getCacheDirectory().getPath() + "/streams/" + id);
        
         try {
             // Wait for process to finish

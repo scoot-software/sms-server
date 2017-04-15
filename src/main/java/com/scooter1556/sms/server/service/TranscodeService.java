@@ -35,12 +35,7 @@ import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.utilities.FileUtils;
 import java.awt.Dimension;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,10 +44,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 
 @Service
 public class TranscodeService {
@@ -68,7 +61,7 @@ public class TranscodeService {
     private static final String WINDOWS_32_MD5SUM = "a97326fc4348e24ed80ca41ba44c39c4";
     private static final String WINDOWS_64_MD5SUM = "100d2dd55a682d16f845d36f215fc717";
     
-    private final String TRANSCODER_FILE = SettingsService.getHomeDirectory() + "/transcoder";
+    private final String TRANSCODER_FILE = SettingsService.getDataDirectory() + "/transcoder";
         
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
@@ -471,7 +464,7 @@ public class TranscodeService {
                         commands.add(profile.getOffset().toString());
                     }
                     
-                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/%d.ts");
+                    commands.add(SettingsService.getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d.ts");
                     
                     break;
                     
@@ -486,7 +479,7 @@ public class TranscodeService {
                     commands.add("-f");
                     commands.add("dash");
                                         
-                    commands.add(SettingsService.getHomeDirectory().getPath() + "/stream/" + profile.getID() + "/playlist.mpd");
+                    commands.add(SettingsService.getDataDirectory().getPath() + "/streams/" + profile.getID() + "/playlist.mpd");
                     break;
                     
                 default:
@@ -508,10 +501,12 @@ public class TranscodeService {
         
         VideoTranscode transcode = profile.getVideoTranscode();
         
+        if(transcode.getResolution() != null) {
+            commands.add("-vf");
+            commands.add("scale=w=" + transcode.getResolution().width + ":h=" + transcode.getResolution().height);
+        }
+        
         if(transcode.getCodec() != null) {
-            // De-interlace for all codecs (auto-detect)
-            commands.add("-deinterlace");
-
             // Video Codec
             commands.add("-c:v");
 
@@ -533,7 +528,7 @@ public class TranscodeService {
                     commands.add("-crf");
                     commands.add("23");
                     commands.add("-preset");
-                    commands.add("ultrafast");
+                    commands.add("superfast");
                     commands.add("-pix_fmt");
                     commands.add("yuv420p");
                     commands.add("-profile:v");
@@ -544,11 +539,6 @@ public class TranscodeService {
                 default:
                     commands.add(transcode.getCodec());
             }
-        }
-        
-        if(transcode.getResolution() != null) {
-            commands.add("-s");
-            commands.add(transcode.getResolution().width + "x" + transcode.getResolution().height);
         }
         
         return commands;

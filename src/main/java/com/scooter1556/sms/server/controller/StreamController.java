@@ -483,7 +483,7 @@ public class StreamController {
             }
             
             // Find Segment File
-            segment = new File(SettingsService.getHomeDirectory().getPath() + "/stream/" + id + "/" + file + "." + extension);
+            segment = new File(SettingsService.getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "." + extension);
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Path: " + segment.getPath(), null);
             

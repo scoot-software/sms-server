@@ -37,8 +37,7 @@ public class SettingsController {
     private static final String CLASS_NAME = "SettingsController";
 
     @RequestMapping(value="/version", method=RequestMethod.GET)
-    public ResponseEntity<String> getVersion()
-    {
-        return new ResponseEntity<>(SettingsService.getVersion().toString(), HttpStatus.OK);
+    public ResponseEntity<String> getVersion() {
+        return new ResponseEntity<>(SettingsService.VERSION_INT.toString(), HttpStatus.OK);
     }
 }

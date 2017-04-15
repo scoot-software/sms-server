@@ -52,6 +52,11 @@
             <artifactId>netty-socketio</artifactId>
             <version>1.7.8</version>
         </dependency>
+        <dependency>
+            <groupId>net.harawata</groupId>
+            <artifactId>appdirs</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -89,12 +94,4 @@
         </pluginRepository>
     </pluginRepositories>
     
-    <profiles>
-        <profile>
-            <id>windows</id>
-        </profile>
-        <profile>
-            <id>linux</id>
-        </profile>
-    </profiles>
 </project>

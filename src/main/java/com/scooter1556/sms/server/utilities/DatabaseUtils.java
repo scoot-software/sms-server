@@ -38,13 +38,13 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 public class DatabaseUtils {
     
     public static DataSource getDataSource(String db, int version) throws DatabaseException {
-        if(SettingsService.getHomeDirectory() == null) {
-            throw new DatabaseException("Home directory is unreachable!");
+        if(SettingsService.getDataDirectory() == null) {
+            throw new DatabaseException("Data directory does not exist or is not writable!");
         }
         
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        dataSource.setUrl("jdbc:h2:" + SettingsService.getHomeDirectory() + "/db/" + db.toLowerCase() + "." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
+        dataSource.setUrl("jdbc:h2:" + SettingsService.getDataDirectory() + "/db/" + db.toLowerCase() + "." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
         
         return dataSource;
     }
@@ -61,11 +61,11 @@ public class DatabaseUtils {
     }
     
     public static File[] getDatabaseFiles(String db) {
-        if(SettingsService.getHomeDirectory() == null) {
+        if(SettingsService.getDataDirectory() == null) {
             return null;
         }
         
-        File dir = new File(SettingsService.getHomeDirectory() + "/db/");
+        File dir = new File(SettingsService.getDataDirectory() + "/db/");
         FileFilter fileFilter = new WildcardFileFilter(db.toLowerCase() + ".*.h2.db");
         
         return dir.listFiles(fileFilter);
@@ -98,13 +98,13 @@ public class DatabaseUtils {
     }
     
     public static boolean createNewDatabaseFile(String db, int oldVersion, int newVersion) {
-        if(SettingsService.getHomeDirectory() == null) {
+        if(SettingsService.getDataDirectory() == null) {
             return false;
         }
             
         try {
-            Path oldDb = Paths.get(SettingsService.getHomeDirectory() + "/db/" + db.toLowerCase() + "." + oldVersion + ".h2.db");
-            Path newDb = Paths.get(SettingsService.getHomeDirectory() + "/db/" + db.toLowerCase() + "." + newVersion + ".h2.db");
+            Path oldDb = Paths.get(SettingsService.getDataDirectory() + "/db/" + db.toLowerCase() + "." + oldVersion + ".h2.db");
+            Path newDb = Paths.get(SettingsService.getDataDirectory() + "/db/" + db.toLowerCase() + "." + newVersion + ".h2.db");
             
             // Copy old database file to a new file and remove the old one
             Files.copy(oldDb, newDb);

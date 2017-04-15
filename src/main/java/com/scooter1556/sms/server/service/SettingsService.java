@@ -24,54 +24,116 @@
 package com.scooter1556.sms.server.service;
 
 import java.io.File;
+import net.harawata.appdirs.AppDirs;
+import net.harawata.appdirs.AppDirsFactory;
 
 public class SettingsService {
     
     private static final String CLASS_NAME = "SettingsService";
     
-    // SMS Version
-    private static final String VERSION = "0.3.10";
-    private static final Integer VERSION_INT = 40;
-    
-    // SMS home directory
-    private static final File HOME_DIRECTORY = new File(System.getProperty( "user.home" ) + "/.sms/server-dev");
-    private static File homeDirectory;
+    // Descriptors
+    public static final String AUTHOR = "Scoot Software";
+    public static final String NAME = "sms-server-dev";
+    public static final String VERSION = "0.3.10";
+    public static final Integer VERSION_INT = 40;
     
     /**
-    * Returns the SMS home directory.
+    * Returns the data directory.
     *
-    * @return The SMS home directory, if it exists.
+    * @return The data directory, if it exists.
     * @throws RuntimeException If directory doesn't exist.
     */
-    public static synchronized File getHomeDirectory() {
+    public static synchronized File getDataDirectory() {
+        AppDirs dirs = AppDirsFactory.getInstance();
+        File dataDir = new File(dirs.getUserDataDir(NAME, null, AUTHOR));
 
-        if (homeDirectory != null) {
-            return homeDirectory;
-        }
-
-        // Attempt to create home directory if it doesn't exist.
-        if (!HOME_DIRECTORY.exists() || !HOME_DIRECTORY.isDirectory())
-        {
-            boolean success = HOME_DIRECTORY.mkdirs();
-            if (success) 
-            {
-                return HOME_DIRECTORY;
-            } 
-            else
-            {
-                System.out.println("The directory " + HOME_DIRECTORY + " does not exist. Please create it and make it writable.");
+        // Attempt to create data directory if it doesn't exist.
+        if (!dataDir.exists() || !dataDir.isDirectory()) {
+            boolean success = dataDir.mkdirs();
+            
+            if (success) {
+                return dataDir;
             }
-        } 
-        else 
-        {
-            return HOME_DIRECTORY;
+        } else if(dataDir.canWrite()) {
+            return dataDir;
         }
 
+        System.out.println("The directory '" + dataDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
         return null;
     }
     
-    public static Integer getVersion()
-    {
-        return VERSION_INT;
+    /**
+    * Returns the config directory.
+    *
+    * @return The config directory, if it exists.
+    * @throws RuntimeException If directory doesn't exist.
+    */
+    public static synchronized File getConfigDirectory() {
+        AppDirs dirs = AppDirsFactory.getInstance();
+        File configDir = new File(dirs.getUserConfigDir(NAME, null, AUTHOR));
+
+        // Attempt to create config directory if it doesn't exist.
+        if (!configDir.exists() || !configDir.isDirectory()) {
+            boolean success = configDir.mkdirs();
+            
+            if (success) {
+                return configDir;
+            }
+        } else if(configDir.canWrite()) {
+            return configDir;
+        }
+
+        System.out.println("The directory '" + configDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        return null;
+    }
+    
+    /**
+    * Returns the cache directory.
+    *
+    * @return The cache directory, if it exists.
+    * @throws RuntimeException If directory doesn't exist.
+    */
+    public static synchronized File getCacheDirectory() {
+        AppDirs dirs = AppDirsFactory.getInstance();
+        File cacheDir = new File(dirs.getUserCacheDir(NAME, null, AUTHOR));
+
+        // Attempt to create cache directory if it doesn't exist.
+        if (!cacheDir.exists() || !cacheDir.isDirectory()) {
+            boolean success = cacheDir.mkdirs();
+            
+            if (success) {
+                return cacheDir;
+            }
+        } else if(cacheDir.canWrite()) {
+            return cacheDir;
+        }
+
+        System.out.println("The directory '" + cacheDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        return null;
+    }
+    
+    /**
+    * Returns the log directory.
+    *
+    * @return The log directory, if it exists.
+    * @throws RuntimeException If directory doesn't exist.
+    */
+    public static synchronized File getLogDirectory() {
+        AppDirs dirs = AppDirsFactory.getInstance();
+        File logDir = new File(dirs.getUserLogDir(NAME, null, AUTHOR));
+
+        // Attempt to create log directory if it doesn't exist.
+        if (!logDir.exists() || !logDir.isDirectory()) {
+            boolean success = logDir.mkdirs();
+            
+            if (success) {
+                return logDir;
+            }
+        } else if(logDir.canWrite()) {
+            return logDir;
+        }
+
+        System.out.println("The directory '" + logDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        return null;
     }
 }

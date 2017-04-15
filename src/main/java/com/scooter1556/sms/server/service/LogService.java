@@ -37,7 +37,7 @@ import java.util.List;
 
 public final class LogService {
     
-    private final String LOG_FILE = SettingsService.getHomeDirectory() + "/log";
+    private final String LOG_FILE = SettingsService.getLogDirectory() + "/" + SettingsService.NAME + ".log";
     private static final int LOG_BUFFER_SIZE = 50;
     
     private final List<LogEntry> logEntries = new ArrayList<>();
@@ -117,8 +117,7 @@ public final class LogService {
     public void removeLog() {
         File log = new File(LOG_FILE);
         
-        if(log.exists())
-        {
+        if(log.exists()) {
             log.renameTo(new File(LOG_FILE + ".old"));
         }
     }
