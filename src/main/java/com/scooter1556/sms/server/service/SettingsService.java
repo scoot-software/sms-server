@@ -24,18 +24,69 @@
 package com.scooter1556.sms.server.service;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.harawata.appdirs.AppDirs;
 import net.harawata.appdirs.AppDirsFactory;
+import org.apache.commons.configuration2.Configuration;
+import org.apache.commons.configuration2.FileBasedConfiguration;
+import org.apache.commons.configuration2.PropertiesConfiguration;
+import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
+import org.apache.commons.configuration2.builder.fluent.Parameters;
+import org.apache.commons.configuration2.ex.ConfigurationException;
+import org.springframework.stereotype.Service;
 
+@Service
 public class SettingsService {
     
     private static final String CLASS_NAME = "SettingsService";
+    
+    // Config File
+    public static final String CONFIG_FILE = "config.properties";
     
     // Descriptors
     public static final String AUTHOR = "Scoot Software";
     public static final String NAME = "sms-server-dev";
     public static final String VERSION = "0.3.10";
     public static final Integer VERSION_INT = 40;
+    
+    // Configuration
+    public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
+    
+    Configuration config;
+    
+    // Load config
+    public SettingsService() {
+        Parameters params = new Parameters();
+        File configFile = getConfigFile();
+        
+        // Check config file exists and create it if not
+        if(!configFile.exists()) {
+            try {
+                configFile.createNewFile();
+            } catch (IOException ex) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create configuration file!", ex);
+            }
+        }
+        
+        // Load configuration from file
+        FileBasedConfigurationBuilder<FileBasedConfiguration> builder =
+            new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
+            .configure(params.properties()
+                .setFile(configFile));
+        
+        // Automatically save config to file when modified
+        builder.setAutoSave(true);
+
+        try {
+            config = builder.getConfiguration();
+        } catch(ConfigurationException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to load configuration file!", ex);
+        }
+        
+        initialiseConfig();
+    }
     
     /**
     * Returns the data directory.
@@ -136,4 +187,45 @@ public class SettingsService {
         System.out.println("The directory '" + logDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
         return null;
     }
+    
+    private static File getConfigFile() {
+        return new File(getConfigDirectory() + File.separator + CONFIG_FILE);
+    }
+    
+    private void initialiseConfig() {
+        if(config == null) {
+            return;
+        }
+        
+        if(!config.containsKey(CONFIG_TRANSCODE_PATH)) {
+            config.setProperty(CONFIG_TRANSCODE_PATH, "");
+        }
+    }
+    
+    //
+    // Configuration
+    //
+    
+    public String getTranscodePath() {
+        if(config == null) {
+            return null;
+        }
+        
+        String value = config.getString(CONFIG_TRANSCODE_PATH);
+        
+        if(value == null || value.isEmpty()) {
+            return null;
+        } else {
+            return value;
+        }
+    }
+    
+    public void setTranscodePath(String value) {
+        if(config == null || value == null) {
+            return;
+        }
+        
+        config.setProperty(CONFIG_TRANSCODE_PATH, value);
+    }
+
 }
