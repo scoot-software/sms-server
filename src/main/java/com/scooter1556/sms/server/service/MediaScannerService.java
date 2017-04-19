@@ -33,6 +33,7 @@ import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import com.scooter1556.sms.server.service.parser.NFOParser.NFOData;
 import com.scooter1556.sms.server.utilities.MediaUtils;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -451,7 +452,7 @@ public class MediaScannerService {
         //
         
         private boolean isMediaFile(Path path) {
-            for (String type : TranscodeService.SUPPORTED_FILE_EXTENSIONS) {
+            for (String type : TranscodeUtils.SUPPORTED_FILE_EXTENSIONS) {
                 if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
                     return true;
                 }

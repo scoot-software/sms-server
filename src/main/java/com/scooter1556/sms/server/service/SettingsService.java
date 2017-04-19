@@ -25,8 +25,6 @@ package com.scooter1556.sms.server.service;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.harawata.appdirs.AppDirs;
 import net.harawata.appdirs.AppDirsFactory;
 import org.apache.commons.configuration2.Configuration;

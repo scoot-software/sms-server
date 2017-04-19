@@ -23,16 +23,22 @@
  */
 package com.scooter1556.sms.server.service;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.scooter1556.sms.server.domain.AudioTranscode;
+import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import org.apache.commons.lang3.SystemUtils;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
+import com.scooter1556.sms.server.domain.SubtitleTranscode;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
+import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
+import com.scooter1556.sms.server.domain.VideoTranscode;
+import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.utilities.FileUtils;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -62,141 +68,8 @@ public class TranscodeService {
     private static final String WINDOWS_64_MD5SUM = "100d2dd55a682d16f845d36f215fc717";
     
     private final String TRANSCODER_FILE = SettingsService.getDataDirectory() + "/transcoder";
-        
+            
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
-    
-    public static final String[] FORMATS = {"hls","dash","matroska","webm"};
-    public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
-    public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","mpeg2video","vc1","vp8"};
-    public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
-    public static final String[] SUPPORTED_SUBTITLE_CODECS = {"subrip","webvtt","dvb","dvd","pgs"};
-    public static final String[] TRANSCODE_VIDEO_CODECS = {"h264","vp8"};
-    public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","ac3","flac","mp3","pcm","vorbis"};
-    
-    public static final String[] LOSSLESS_CODECS= {"flac","pcm","alac","dsd"};
-        
-    private static final String[][] AUDIO_CODEC_FORMAT = {
-        {"aac", "adts"},
-        {"ac3", "ac3"},
-        {"flac", "flac"},
-        {"mp3", "mp3"},
-        {"vorbis", "oga"},
-        {"pcm", "wav"}
-    };
-    
-    private static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,mp3,aac,ac3"},
-        {"dash", "h264,aac"},
-        {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
-        {"webm", "vp8,vorbis,opus"},
-    };
-    
-    private static final String[][] AUDIO_MIME_TYPES = {
-        {"aac", "audio/aac"},
-        {"adts", "audio/aac"},
-        {"aiff", "audio/aiff"},
-        {"dash", "application/dash+xml"},
-        {"dsf", "audio/dsf"},
-        {"flac", "audio/flac"},
-        {"hls", "application/x-mpegurl"},
-        {"m4a", "audio/mp4"},
-        {"mka", "audio/x-matroska"},
-        {"matroska", "audio/x-matroska"},
-        {"mp3", "audio/mpeg"},
-        {"mp4", "audio/mp4"},
-        {"oga", "audio/ogg"},
-        {"ogg", "audio/ogg"},
-        {"opus", "audio/opus"},        
-        {"wav", "audio/wav"},
-        {"webm", "audio/webm"}
-    };
-    
-    private static final String[][] VIDEO_MIME_TYPES = {
-        {"3gp", "video/3gpp"},
-        {"avi", "video/avi"},
-        {"dash", "application/dash+xml"},
-        {"hls", "application/x-mpegurl"},
-        {"m4v", "video/mp4"},
-        {"matroska", "video/x-matroska"},
-        {"mkv", "video/x-matroska"},
-        {"mp4", "video/mp4"},
-        {"mpeg", "video/mpeg"},
-        {"mpg", "video/mpeg"},
-        {"ogg", "video/ogg"},
-        {"ogv", "video/ogg"},
-        {"ts", "video/MP2T"},
-        {"webm", "video/webm"}
-    };
-    
-    private static final String[][] AUDIO_CODEC_ENCODER = {
-        {"mp3", "libmp3lame"},
-        {"vorbis", "libvorbis"},
-        {"aac", "aac"},
-        {"flac", "flac"},
-        {"pcm", "pcm_s16le"},
-        {"ac3", "ac3"}
-    };
-    
-    public static final String[][] AUDIO_CODEC_ISO_SPEC = {
-        {"mp3", "mp4a.40.34"},
-        {"aac", "mp4a.40.2"},
-        {"ac3", "ac-3"},
-        {"eac3", "ec-3"},
-    };
-    
-    private static final String[][] AUDIO_CODEC_QUALITY = {
-        {"mp3", "6", "4", "0", "0"},
-        {"vorbis", "2", "5", "8", "10"},
-        {"aac", "1", "2", "3", "10"}
-    };
-    
-    public static final int[] AUDIO_QUALITY_MAX_BITRATE = {64,96,160,-1};
-    
-    public static final int[] VIDEO_QUALITY_MAX_BITRATE = {250,375,600,1000,1500,2500,4500};
-    
-    public static final int[] VIDEO_QUALITY_AUDIO_QUALITY = {AudioQuality.LOW,
-                                                             AudioQuality.LOW,
-                                                             AudioQuality.LOW,
-                                                             AudioQuality.LOW,
-                                                             AudioQuality.MEDIUM,
-                                                             AudioQuality.MEDIUM,
-                                                             AudioQuality.HIGH
-    };
-    
-    public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(320,240),
-                                                                new Dimension(384,288),
-                                                                new Dimension(512,384),
-                                                                new Dimension(640,480),
-                                                                new Dimension(720,480),
-                                                                new Dimension(1280,720),
-                                                                new Dimension(1920,1080)
-    };
-    
-    private static final String[][] AUDIO_CODEC_MAX_SAMPLE_RATE = {
-        {"mp3", "48000"},
-        {"vorbis", "48000"},
-        {"aac", "96000"},
-        {"flac", "192000"},
-        {"pcm", "192000"},
-        {"ac3", "48000"}
-    };
-    
-    private static final String[][] CHANNEL_CONFIGURATION = {
-        {"1", "1"},
-        {"mono", "1"},
-        {"2", "2"},
-        {"stereo", "2"},
-        {"4", "4"},
-        {"quad", "4"},
-        {"5", "5"},
-        {"5.0", "5"},
-        {"6", "6"},
-        {"5.1", "6"},
-        {"7", "7"},
-        {"6.1", "7"},
-        {"8", "8"},
-        {"7.1", "8"}
-    };
     
     // Setup transcoder
     public TranscodeService() {
@@ -247,16 +120,16 @@ public class TranscodeService {
     
     public static String[] getSupportedCodecs() {
         List<String> codecs = new ArrayList<>();
-        codecs.addAll(Arrays.asList(SUPPORTED_VIDEO_CODECS));
-        codecs.addAll(Arrays.asList(SUPPORTED_AUDIO_CODECS));
-        codecs.addAll(Arrays.asList(SUPPORTED_SUBTITLE_CODECS));
+        codecs.addAll(Arrays.asList(TranscodeUtils.SUPPORTED_VIDEO_CODECS));
+        codecs.addAll(Arrays.asList(TranscodeUtils.SUPPORTED_AUDIO_CODECS));
+        codecs.addAll(Arrays.asList(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS));
         return codecs.toArray(new String[codecs.size()]);
     }
     
     public static String[] getTranscodeCodecs() {
         List<String> codecs = new ArrayList<>();
-        codecs.addAll(Arrays.asList(TRANSCODE_VIDEO_CODECS));
-        codecs.addAll(Arrays.asList(TRANSCODE_AUDIO_CODECS));
+        codecs.addAll(Arrays.asList(TranscodeUtils.TRANSCODE_VIDEO_CODECS));
+        codecs.addAll(Arrays.asList(TranscodeUtils.TRANSCODE_AUDIO_CODECS));
         return codecs.toArray(new String[codecs.size()]);
     }
     
@@ -376,7 +249,7 @@ public class TranscodeService {
         if(type.equals("video")) {
             // Check profile
             if(!extra.equals(profile.getQuality())) {
-                Dimension resolution = getVideoResolution(profile.getMediaElement(), extra);
+                Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
                 
                 if(resolution != null) {
                     profile.getVideoTranscode().setResolution(resolution);
@@ -421,7 +294,7 @@ public class TranscodeService {
             
             switch(profile.getClient()) {
                 case "chromecast":
-                    command.add(getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
+                    command.add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
                     break;
                     
                 default:
@@ -639,254 +512,6 @@ public class TranscodeService {
         return commands;
     }
     
-    /*
-     * Returns a suitable video resolution based on the video quality requested.
-     */
-    public static Dimension getVideoResolution(MediaElement element, int quality) {
-        // Check variables
-        if(element == null || !VideoQuality.isValid(quality)) {
-            return null;
-        }
-        
-        // Check this is a video element
-        if(element.getType() != MediaElementType.VIDEO) {
-            return null;
-        }
-        
-        // Determine resolution based on the requested quality.
-        Dimension requested = VIDEO_QUALITY_RESOLUTION[quality];
-
-        // Make sure we managed to set a resolution based on the requested quality
-        if(requested == null || element.getVideoHeight() == null || element.getVideoWidth() == null) {
-            return null;
-        }
-        
-        // If the original resolution is less than the requested we don't need to continue
-        Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
-        
-        if (original.width < requested.width || original.height < requested.height) {
-            return null;
-        }
-
-        // Calculate the aspect ratio of the original video.
-        double aspectRatio = new Integer(original.width).doubleValue() / new Integer(original.height).doubleValue();
-        requested.height = (int) Math.round(requested.width / aspectRatio);
-
-        return new Dimension(even(requested.width), even(requested.height));
-    }
-    
-    
-    /*
-     * Make sure width and height are multiples of two for the transcoder.
-     */
-    private static int even(int size) {
-        return size + (size % 2);
-    }
-    
-    /*
-     * Returns the highest possible transcode quality for a given video element
-     */
-    public static int getHighestVideoQuality(MediaElement element) {
-        // Check variables
-        if(element == null || element.getType() != MediaElementType.VIDEO) {
-            return -1;
-        }
-        
-        // Loop through possible qualities until we find the highest
-        for(int i = VideoQuality.getMax(); i >= 0; i--) {
-            if(getVideoResolution(element, i) != null) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-    
-    public static boolean isAudioStreamAvailable(int streamNum, MediaElement element) {        
-        // Get list of audio streams for element
-        List<AudioStream> audioStreams = element.getAudioStreams();
-        
-        if(audioStreams == null) {
-            return false;
-        }
-        
-        return audioStreams.size() >= streamNum;
-    }
-    
-    public static boolean isSubtitleStreamAvailable(int streamNum, MediaElement element) {
-        // Check this is a video element
-        if(element.getType() != MediaElementType.VIDEO) {
-            return false;
-        }
-        
-        // Get list of subtitle streams for video file
-        List<SubtitleStream> subtitles = element.getSubtitleStreams();
-        
-        if(subtitles == null) {
-            return false;
-        }
-        
-        return subtitles.size() >= streamNum;
-    }
-    
-    public Integer getForcedSubtitleIndex(MediaElement element) {
-        // Check this is a video element
-        if(element.getType() != MediaElementType.VIDEO) {
-            return null;
-        }
-        
-        // Get list of subtitle streams for video file
-        List<SubtitleStream> subtitles = element.getSubtitleStreams();
-        
-        if(subtitles == null) {
-            return null;
-        }
-        
-        // Scan subtitles for forced streams
-        for(SubtitleStream subtitle : subtitles) {
-            if(subtitle.isForced()) {
-                return subtitle.getStream();
-            }
-        }
-        
-        return null;
-    }
-    
-    public static String getMimeType(String format, byte type) {
-        if(type == MediaElementType.AUDIO) {
-            for (String[] map : AUDIO_MIME_TYPES) {
-                if (map[0].equalsIgnoreCase(format)) { return map[1]; }
-            }
-        } else if(type == MediaElementType.VIDEO) {
-            for (String[] map : VIDEO_MIME_TYPES) {
-                if (map[0].equalsIgnoreCase(format)) { return map[1]; }
-            }
-        }
-        
-        return null;
-    }
-    
-    public static String getFormatForAudioCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_FORMAT) {
-            if (map[0].contains(codec)) { return map[1]; }
-        }
-        
-        return null;
-    }
-    
-    //
-    // Return the codecs supported by a given format
-    //
-    public static String[] getCodecsForFormat(String test) {
-        if(test == null) {
-            return null;
-        }
-        
-        for(String[] format : FORMAT_CODECS) {
-            if(format[0].contains(test)) {
-                return format[1].split(",");
-            }
-        }
-        
-        return null;
-    }
-    
-    public static int validateAudioQuality(int quality) {
-        if(quality >= AudioQuality.LOW && quality <= AudioQuality.LOSSLESS) {
-            return quality;
-        } else {
-            return AudioQuality.MEDIUM;
-        }
-    }
-    
-    public static int getAudioChannelCount(String audioConfiguration) {
-        for (String[] map : CHANNEL_CONFIGURATION) {
-            if (map[0].equalsIgnoreCase(audioConfiguration)) {
-                return Integer.valueOf(map[1]);
-            }
-        }
-        
-        // Default to stereo
-        return 2;
-    }
-    
-    public static Integer getAudioQualityForCodec(String codec, int quality) {
-        if(quality >= AudioQuality.LOW && quality <= AudioQuality.LOSSLESS) {
-            for (String[] map : AUDIO_CODEC_QUALITY) {
-                if (codec.contains(map[0])) {
-                    return Integer.valueOf(map[quality + 1]);
-                }
-            }
-        }
-        
-        return null;
-    }
-    
-    public static String getEncoderForAudioCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_ENCODER) {
-            if (map[0].contains(codec)) {
-                return map[1];
-            }
-        }
-        
-        return null;
-    }
-    
-    public static String getIsoSpecForAudioCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_ISO_SPEC) {
-            if (codec.contains(map[0])) {
-                return map[1];
-            }
-        }
-        
-        return null;
-    }
-    
-    public static Integer getMaxSampleRateForCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_MAX_SAMPLE_RATE) {
-            if (codec.contains(map[0])) {
-                return Integer.valueOf(map[1]);
-            }
-        }
-        
-        return null;
-    }
-    
-    public static int compareDimensions(Dimension d1, Dimension d2) {
-        int a = d1.height * d1.width;
-        int b = d2.height * d2.width;
-        
-        if(a < b) {
-            return 0;
-        } else if(a > b) {
-            return 1;
-        } else if(a == b) {
-            return 2;
-        }
-        
-        return -1;
-    }
-    
-    public static String[] sortStringList(String[] listToSort, String[] priorityList) {
-        List<String> list = new ArrayList<>();
-        
-        // First parse
-        for(String item : listToSort) {
-            if(isSupported(priorityList, item)) {
-                list.add(item);
-            }
-        }
-        
-        // Second parse
-        for(String item : listToSort) {
-            if(!isSupported(priorityList, item)) {
-                list.add(item);
-            }
-        }
-        
-        return list.toArray(new String[list.size()]);
-    }
-    
     public static Boolean isTranscodeRequired(TranscodeProfile profile) {
         // Make sure we have the information we require
         if(profile.getMediaElement() == null || profile.getQuality() == null || profile.getCodecs() == null) {
@@ -912,7 +537,7 @@ public class TranscodeService {
         // Check subtitle streams
         if(profile.getMediaElement().getSubtitleStreams() != null) {
             for(SubtitleStream stream : profile.getMediaElement().getSubtitleStreams()) {
-                if(!isSupported(profile.getCodecs(), stream.getFormat())) {
+                if(!TranscodeUtils.isSupported(profile.getCodecs(), stream.getFormat())) {
                     return true;
                 }
             }
@@ -922,7 +547,7 @@ public class TranscodeService {
     }
     
     public static boolean isTranscodeRequired(TranscodeProfile profile, VideoStream stream) {
-        if(!isSupported(profile.getCodecs(), stream.getCodec())) {
+        if(!TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec())) {
             return true;
         }
         
@@ -936,12 +561,12 @@ public class TranscodeService {
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
             // Check bitrate
-            if(profile.getMediaElement().getBitrate() > VIDEO_QUALITY_MAX_BITRATE[profile.getQuality()]) {
+            if(profile.getMediaElement().getBitrate() > TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[profile.getQuality()]) {
                 return true;
             }
 
             // Check resolution
-            if(compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), VIDEO_QUALITY_RESOLUTION[profile.getQuality()]) == 1) {
+            if(TranscodeUtils.compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), TranscodeUtils.VIDEO_QUALITY_RESOLUTION[profile.getQuality()]) == 1) {
                 return true;
             }
         }
@@ -951,12 +576,12 @@ public class TranscodeService {
     
     public static boolean isTranscodeRequired(TranscodeProfile profile, AudioStream stream) {
         // Check audio codec
-        if(getAudioChannelCount(stream.getConfiguration()) > 2) {
-            if(profile.getMchCodecs() == null || !isSupported(profile.getMchCodecs(), stream.getCodec())) {
+        if(TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) > 2) {
+            if(profile.getMchCodecs() == null || !TranscodeUtils.isSupported(profile.getMchCodecs(), stream.getCodec())) {
                 return true;
             }
         } else {
-            if(!isSupported(profile.getCodecs(), stream.getCodec())) {
+            if(!TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec())) {
                 return true;
             }
         }
@@ -970,7 +595,7 @@ public class TranscodeService {
         if(!profile.isDirectPlayEnabled()) {
             // Check bitrate for audio elements
             if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
-                int bitrate = (getAudioChannelCount(stream.getConfiguration()) * AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
+                int bitrate = (TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
 
                 if(bitrate > 0 && profile.getMediaElement().getBitrate() > bitrate) {
                     return true;
@@ -1004,9 +629,9 @@ public class TranscodeService {
             String codec = null;
             boolean hardcode = false;
             
-            if(isSupported(profile.getCodecs(), stream.getFormat()) && isSupported(getCodecsForFormat(profile.getFormat()), stream.getFormat())) {
+            if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getFormat()) && TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getFormat())) {
                 codec = "copy";
-            } else if(isSupported(SUPPORTED_SUBTITLE_CODECS, stream.getFormat())){
+            } else if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, stream.getFormat())){
                 codec = stream.getFormat();
                 hardcode = true;
             }
@@ -1040,7 +665,7 @@ public class TranscodeService {
         String codec = null;
         Dimension resolution = null;
         boolean transcodeRequired = false;
-        int quality = TranscodeService.getHighestVideoQuality(profile.getMediaElement());
+        int quality = TranscodeUtils.getHighestVideoQuality(profile.getMediaElement());
         VideoStream stream = profile.getMediaElement().getVideoStream();
         
         if(stream == null) {
@@ -1066,13 +691,13 @@ public class TranscodeService {
         
         // Test that the codec is supported by the given format
         if(!transcodeRequired) {
-            transcodeRequired = !isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec());
+            transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
         }
         
         if(transcodeRequired) {
             // Get suitable codec
             for(String test : profile.getCodecs()) {
-                if(isSupported(getCodecsForFormat(profile.getFormat()), test) && isSupported(TRANSCODE_VIDEO_CODECS, test)) {
+                if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test) && TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_VIDEO_CODECS, test)) {
                     codec = test;
                     break;
                 }
@@ -1085,7 +710,7 @@ public class TranscodeService {
             
             // Get suitable resolution (use native resolution if direct play is enabled)
             if(!profile.isDirectPlayEnabled()) {
-                resolution = getVideoResolution(profile.getMediaElement(), profile.getQuality());      
+                resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), profile.getQuality());      
             }
         } else {
             codec = "copy";
@@ -1137,9 +762,9 @@ public class TranscodeService {
             // Check the format supports this codec for video or that we can stream this codec for audio
             if(!transcodeRequired) {
                 if(profile.getFormat() != null) {
-                    transcodeRequired = !isSupported(getCodecsForFormat(profile.getFormat()), stream.getCodec());
+                    transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
                 } else {
-                    transcodeRequired = !isSupported(TRANSCODE_AUDIO_CODECS, stream.getCodec());
+                    transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, stream.getCodec());
                 }
             }
             
@@ -1149,26 +774,26 @@ public class TranscodeService {
                 
                 // Get format if required
                 if(profile.getFormat() == null) {
-                    profile.setFormat(getFormatForAudioCodec(stream.getCodec()));
+                    profile.setFormat(TranscodeUtils.getFormatForAudioCodec(stream.getCodec()));
                 }
             } else {
                 // Test if lossless codecs should be prioritised
-                if(profile.getMediaElement().getType() == MediaElementType.AUDIO && (profile.getQuality() == AudioQuality.LOSSLESS || profile.isDirectPlayEnabled()) && isSupported(LOSSLESS_CODECS, stream.getCodec())) {
-                    profile.setCodecs(sortStringList(profile.getCodecs(), LOSSLESS_CODECS));
+                if(profile.getMediaElement().getType() == MediaElementType.AUDIO && (profile.getQuality() == AudioQuality.LOSSLESS || profile.isDirectPlayEnabled()) && TranscodeUtils.isSupported(TranscodeUtils.LOSSLESS_CODECS, stream.getCodec())) {
+                    profile.setCodecs(TranscodeUtils.sortStringList(profile.getCodecs(), TranscodeUtils.LOSSLESS_CODECS));
                     
-                    if(profile.mchCodecs != null) {
-                        profile.setMchCodecs(sortStringList(profile.getMchCodecs(), LOSSLESS_CODECS));
+                    if(profile.getMchCodecs() != null) {
+                        profile.setMchCodecs(TranscodeUtils.sortStringList(profile.getMchCodecs(), TranscodeUtils.LOSSLESS_CODECS));
                     }
                 }
                 
                 // Check for multichannel codecs if this is a multichannel stream
-                if(getAudioChannelCount(stream.getConfiguration()) > 2) {
+                if(TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) > 2) {
                     // Try to get a suitable multichannel codec
                     if(profile.getMchCodecs() != null) {
                         for(String test : profile.getMchCodecs()) {
-                            if(isSupported(TRANSCODE_AUDIO_CODECS, test)) {
+                            if(TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, test)) {
                                 if(profile.getFormat() != null) {
-                                    if(isSupported(getCodecsForFormat(profile.getFormat()), test)) {
+                                    if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test)) {
                                         codec = test;
                                         break;
                                     }
@@ -1189,9 +814,9 @@ public class TranscodeService {
                 // If we still don't have a codec just try anything...
                 if(codec == null) {
                     for(String test : profile.getCodecs()) {
-                        if(isSupported(TRANSCODE_AUDIO_CODECS, test)) {
+                        if(TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, test)) {
                             if(profile.getFormat() != null) {
-                                if(isSupported(getCodecsForFormat(profile.getFormat()), test)) {
+                                if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test)) {
                                     codec = test;
                                     break;
                                 }
@@ -1207,24 +832,24 @@ public class TranscodeService {
                 if(codec != null) {
                     
                     // Sample rate
-                    if((stream.getSampleRate() > profile.getMaxSampleRate()) || (stream.getSampleRate() > getMaxSampleRateForCodec(codec))) {
-                        sampleRate = (profile.getMaxSampleRate() > getMaxSampleRateForCodec(codec)) ? getMaxSampleRateForCodec(codec) : profile.getMaxSampleRate();
+                    if((stream.getSampleRate() > profile.getMaxSampleRate()) || (stream.getSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec))) {
+                        sampleRate = (profile.getMaxSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec)) ? TranscodeUtils.getMaxSampleRateForCodec(codec) : profile.getMaxSampleRate();
                     }
                     
                     // Quality
                     if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
-                        quality = getAudioQualityForCodec(codec, profile.getQuality());
+                        quality = TranscodeUtils.getAudioQualityForCodec(codec, profile.getQuality());
                     } else if (profile.getMediaElement().getType() == MediaElementType.VIDEO) {
-                        quality = getAudioQualityForCodec(codec, VIDEO_QUALITY_AUDIO_QUALITY[profile.getQuality()]);
+                        quality = TranscodeUtils.getAudioQualityForCodec(codec, TranscodeUtils.VIDEO_QUALITY_AUDIO_QUALITY[profile.getQuality()]);
                     }
                     
                     // Get format if required
                     if(profile.getFormat() == null) {
-                        profile.setFormat(getFormatForAudioCodec(codec));
+                        profile.setFormat(TranscodeUtils.getFormatForAudioCodec(codec));
                     }
                     
                     // Update codec
-                    codec = getEncoderForAudioCodec(codec);
+                    codec = TranscodeUtils.getEncoderForAudioCodec(codec);
                 }
             }
             
@@ -1236,48 +861,6 @@ public class TranscodeService {
         profile.setAudioTranscodes(transcodes.toArray(new AudioTranscode[transcodes.size()]));
         
         return true;
-    }
-    
-    //
-    // Helper Functions For Child Transcode Services
-    //
-    public static boolean isSupported(String[] list, String test) {
-        for (String item : list) {
-            if(test.contains(item)) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    public static class AudioQuality {
-        public static final int LOW = 0;
-        public static final int MEDIUM = 1;
-        public static final int HIGH = 2;
-        public static final int LOSSLESS = 3;
-        
-        public static boolean isValid(int quality) {
-            return !(quality > 3 || quality < 0);
-        }
-    }
-    
-    public static class VideoQuality {
-        public static final int VERY_LOW = 0;
-        public static final int LOW = 1;
-        public static final int MEDIUM = 2;
-        public static final int HIGH = 3;
-        public static final int VERY_HIGH = 4;
-        public static final int HD = 5;
-        public static final int FULLHD = 6;
-        
-        public static boolean isValid(int quality) {
-            return !(quality > 6 || quality < 0);
-        }
-        
-        public static int getMax() {
-            return 6;
-        }
     }
     
     //
@@ -1318,345 +901,5 @@ public class TranscodeService {
             
             index ++;
         }
-    }
-    
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public static class TranscodeProfile {
-        private UUID id;
-        private byte type;
-        private MediaElement element;
-        private String[] files, codecs, mchCodecs;
-        private Integer quality, maxBitRate, maxSampleRate = 48000;
-        private String url, format, mimeType, client;
-        private VideoTranscode videoTranscode;
-        private AudioTranscode[] audioTranscodes;
-        private SubtitleTranscode[] subtitleTranscodes;
-        private Integer audioTrack, subtitleTrack;
-        private Integer offset = 0;
-        private boolean directPlay = false;
-        private boolean active = true;
-        
-        public TranscodeProfile() {}
-        
-        public TranscodeProfile(UUID id) {
-            this.id = id;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
-                    id == null ? "null" : id.toString(),
-                    String.valueOf(type),
-                    element == null ? "null" : element.getID().toString(),
-                    client == null ? "null" : client,
-                    files == null ? "null" : Arrays.toString(files),
-                    codecs == null ? "null" : Arrays.toString(codecs),
-                    mchCodecs == null ? "null" : Arrays.toString(mchCodecs),
-                    quality == null ? "null" : quality.toString(),
-                    maxSampleRate == null ? "null" : maxSampleRate.toString(),
-                    maxBitRate == null ? "null" : maxBitRate.toString(),
-                    format == null ? "null" : format,
-                    mimeType == null ? "null" : mimeType,
-                    videoTranscode == null ? "null" : videoTranscode.toString(),
-                    audioTranscodes == null ? "null" : Arrays.toString(audioTranscodes),
-                    subtitleTranscodes == null ? "null" : Arrays.toString(subtitleTranscodes),
-                    audioTrack == null ? "null" : audioTrack.toString(),
-                    subtitleTrack == null ? "null" : subtitleTrack.toString(),
-                    offset == null ? "null" : offset.toString(),
-                    String.valueOf(directPlay));
-        }
-        
-        public UUID getID() {
-            return id;
-        }
-        
-        public void setID(UUID id) {
-            this.id = id;
-        }
-        
-        public byte getType() {
-            return type;
-        }
-        
-        public void setType(byte type) {
-            this.type = type;
-        }
-        
-        @JsonIgnore
-        public MediaElement getMediaElement() {
-            return element;
-        }
-        
-        public void setMediaElement(MediaElement element) {
-            this.element = element;
-        }
-        
-        @JsonIgnore
-        public boolean isDirectPlayEnabled() {
-            return directPlay;
-        }
-        
-        public void setDirectPlayEnabled(boolean directPlay) {
-            this.directPlay = directPlay;
-        }
-
-        @JsonIgnore
-        public String[] getFiles() {
-            return files;
-        }
-        
-        public void setFiles(String[] files) {
-            this.files = files;
-        }
-        
-        @JsonIgnore
-        public String[] getCodecs() {
-            return codecs;
-        }
-        
-        public void setCodecs(String[] codecs) {
-            this.codecs = codecs;
-        }
-        
-        @JsonIgnore
-        public String[] getMchCodecs() {
-            return mchCodecs;
-        }
-        
-        public void setMchCodecs(String[] mchCodecs) {
-            this.mchCodecs = mchCodecs;
-        }
-        
-        @JsonIgnore
-        public String getUrl() {
-            return url;
-        }
-        
-        public void setUrl(String url) {
-            this.url = url;
-        }
-        
-        @JsonIgnore
-        public String getFormat() {
-            return format;
-        }
-        
-        public void setFormat(String format) {
-            this.format = format;
-        }
-        
-        public String getMimeType() {
-            return mimeType;
-        }
-        
-        public void setMimeType(String mimeType) {
-            this.mimeType = mimeType;
-        }
-        
-        @JsonIgnore
-        public String getClient() {
-            return client;
-        }
-        
-        public void setClient(String client) {
-            this.client = client;
-        }
-        
-        @JsonIgnore
-        public VideoTranscode getVideoTranscode() {
-            return videoTranscode;
-        }
-        
-        public void setVideoTranscode(VideoTranscode videoTranscode) {
-            this.videoTranscode = videoTranscode;
-        }
-        
-        @JsonIgnore
-        public AudioTranscode[] getAudioTranscodes() {
-            return audioTranscodes;
-        }
-        
-        public void setAudioTranscodes(AudioTranscode[] audioTranscodes) {
-            this.audioTranscodes = audioTranscodes;
-        }
-        
-        @JsonIgnore
-        public SubtitleTranscode[] getSubtitleTranscodes() {
-            return subtitleTranscodes;
-        }
-        
-        public void setSubtitleTranscodes(SubtitleTranscode[] subtitleTranscodes) {
-            this.subtitleTranscodes = subtitleTranscodes;
-        }
-        
-        @JsonIgnore
-        public Integer getQuality() {
-            return quality;
-        }
-        
-        public void setQuality(int quality) {
-            this.quality = quality;
-        }
-        
-        @JsonIgnore
-        public Integer getAudioTrack() {
-            return audioTrack;
-        }
-        
-        public void setAudioTrack(Integer audioTrack) {
-            this.audioTrack = audioTrack;
-        }
-        
-        @JsonIgnore
-        public Integer getSubtitleTrack() {
-            return subtitleTrack;
-        }
-        
-        public void setSubtitleTrack(Integer subtitleTrack) {
-            this.subtitleTrack = subtitleTrack;
-        }
-        
-        @JsonIgnore
-        public Integer getMaxSampleRate() {
-            return maxSampleRate;
-        }
-        
-        public void setMaxSampleRate(int maxSampleRate) {
-            this.maxSampleRate = maxSampleRate;
-        }
-        
-        @JsonIgnore
-        public Integer getMaxBitRate() {
-            return maxBitRate;
-        }
-        
-        public void setMaxBitRate(int maxBitRate) {
-            this.maxBitRate = maxBitRate;
-        }
-        
-        @JsonIgnore
-        public Integer getOffset() {
-            return offset;
-        }
-        
-        public void setOffset(int offset) {
-            this.offset = offset;
-        }
-        
-        @JsonIgnore
-        public boolean isActive() {
-            return active;
-        }
-        
-        public void setActive(boolean active) {
-            this.active = active;
-        }
-    }
-    
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public static class VideoTranscode {
-        private String codec;
-        private Dimension resolution;
-        
-        public VideoTranscode(String codec, Dimension resolution) {
-            this.codec = codec;
-            this.resolution = resolution;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("{Codec=%s, Resolution=%s}",
-                    codec == null ? "null" : codec,
-                    resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height));
-        }
-        
-        public String getCodec() {
-            return codec;
-        }
-        
-        public void setCodec(String codec) {
-            this.codec = codec;
-        }
-        
-        @JsonIgnore
-        public Dimension getResolution() {
-            return resolution;
-        }
-        
-        public void setResolution(Dimension resolution) {
-            this.resolution = resolution;
-        }
-    }
-    
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public static class AudioTranscode {
-        private final String codec;
-        private final Integer quality;
-        private final Integer sampleRate;
-        private final boolean downmix;
-        
-        public AudioTranscode(String codec, Integer quality, Integer sampleRate, boolean downmix) {
-            this.codec = codec;
-            this.quality = quality;
-            this.sampleRate = sampleRate;
-            this.downmix = downmix;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("{Codec=%s, Quality=%s, Sample Rate=%s, Downmix=%s}",
-                    codec == null ? "null" : codec,
-                    quality == null ? "null" : quality.toString(),
-                    sampleRate == null ? "null" : sampleRate.toString(),
-                    String.valueOf(downmix));
-        }
-        
-        public String getCodec() {
-            return codec;
-        }
-        
-        public Integer getQuality() {
-            return quality;
-        }
-        
-        public Integer getSampleRate() {
-            return sampleRate;
-        }
-        
-        public boolean isDownmixed() {
-            return downmix;
-        }
-    }
-    
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public static class SubtitleTranscode {
-        private final String codec;
-        private boolean hardcode = false;
-        
-        public SubtitleTranscode(String codec, boolean hardcode) {
-            this.codec = codec;
-            this.hardcode = hardcode;
-        }
-        
-        @Override
-        public String toString() {
-            return String.format("{Codec=%s, Hardcoded=%s}",
-                    codec == null ? "null" : codec,
-                    String.valueOf(hardcode));
-        }
-        
-        public String getCodec() {
-            return codec;
-        }
-        
-        public boolean isHardcoded() {
-            return hardcode;
-        }
-    }
-    
-    public static class StreamType {
-        public static final byte TRANSCODE = 0;
-        public static final byte ADAPTIVE = 1;
-        public static final byte FILE = 2;
     }
 }

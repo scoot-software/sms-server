@@ -25,15 +25,16 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
+import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
+import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
+import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
-import com.scooter1556.sms.server.service.TranscodeService.AudioTranscode;
-import com.scooter1556.sms.server.service.TranscodeService.StreamType;
-import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
-import com.scooter1556.sms.server.service.TranscodeService.VideoQuality;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -250,14 +251,14 @@ public class AdaptiveStreamingService {
                 int bandwidth = -1;
                 
                 if(profile.getQuality() != null) {
-                    bandwidth = (TranscodeService.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()] * 1000);
+                    bandwidth = (TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()] * 1000);
                 }
                 
                 if(bandwidth < 0) {
                     bandwidth = 384000;
                 }
                 
-                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeService.getIsoSpecForAudioCodec(transcode.getCodec()) + "\"");
+                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec()) + "\"");
                 playlist.add(baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8");
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscode() != null) {
@@ -274,9 +275,9 @@ public class AdaptiveStreamingService {
                         selected = "YES";
                         
                         if(transcode.getCodec().equals("copy")) {
-                            audio = TranscodeService.getIsoSpecForAudioCodec(mediaElement.getAudioStreams().get(i).getCodec());
+                            audio = TranscodeUtils.getIsoSpecForAudioCodec(mediaElement.getAudioStreams().get(i).getCodec());
                         } else {
-                            audio = TranscodeService.getIsoSpecForAudioCodec(transcode.getCodec());
+                            audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
                         }
                     }
 
@@ -303,11 +304,11 @@ public class AdaptiveStreamingService {
             }
             
             for(int i = offset; i <= profile.getQuality(); i++) {
-                Dimension resolution = TranscodeService.VIDEO_QUALITY_RESOLUTION[i];
+                Dimension resolution = TranscodeUtils.VIDEO_QUALITY_RESOLUTION[i];
                 
                 StringBuilder builder = new StringBuilder();
                 builder.append("#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=");
-                builder.append(String.valueOf(TranscodeService.VIDEO_QUALITY_MAX_BITRATE[i] * 1000));
+                builder.append(String.valueOf(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[i] * 1000));
                 builder.append(",RESOLUTION=").append(String.format("%dx%d", resolution.width, resolution.height));
                 builder.append(",CODECS=\"");
                 

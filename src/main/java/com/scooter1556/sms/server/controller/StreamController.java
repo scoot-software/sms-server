@@ -25,10 +25,14 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
+import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
+import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
+import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.io.FileDownloadProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
@@ -41,10 +45,8 @@ import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.service.SessionService.Session;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
-import com.scooter1556.sms.server.service.TranscodeService.StreamType;
-import com.scooter1556.sms.server.service.TranscodeService.TranscodeProfile;
-import com.scooter1556.sms.server.service.TranscodeService.VideoQuality;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -145,7 +147,7 @@ public class StreamController {
         
         // Validate codecs
         for(String codec : codecs.split(",")) {
-            if(!TranscodeService.isSupported(TranscodeService.getSupportedCodecs(), codec)) {
+            if(!TranscodeUtils.isSupported(TranscodeService.getSupportedCodecs(), codec)) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Codec '" + codec + "' not recognised.", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
@@ -153,16 +155,16 @@ public class StreamController {
         
         // Validate format
         if(format != null) {
-            if(!TranscodeService.isSupported(TranscodeService.FORMATS, format)) {
+            if(!TranscodeUtils.isSupported(TranscodeUtils.FORMATS, format)) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format '" + format + "' is not recognised.", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }
         
         // Determine job type & validate quality
-        if(mediaElement.getType() == MediaElementType.AUDIO && TranscodeService.AudioQuality.isValid(quality)) {
+        if(mediaElement.getType() == MediaElementType.AUDIO && AudioQuality.isValid(quality)) {
             jobType = JobType.AUDIO_STREAM;
-        } else if(mediaElement.getType() == MediaElementType.VIDEO && TranscodeService.VideoQuality.isValid(quality)) {
+        } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(quality)) {
             jobType = JobType.VIDEO_STREAM;
         } else {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode request.", null);
@@ -256,7 +258,7 @@ public class StreamController {
         }
         
         if(audioTrack != null) {
-            if(TranscodeService.isAudioStreamAvailable(audioTrack, mediaElement)) {
+            if(TranscodeUtils.isAudioStreamAvailable(audioTrack, mediaElement)) {
                 profile.setAudioTrack(audioTrack);
             } else {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + audioTrack + " is not available for media element " + mediaElement.getID() + ".", null);
@@ -265,7 +267,7 @@ public class StreamController {
         }
             
         if(subtitleTrack != null) {
-            if(TranscodeService.isSubtitleStreamAvailable(subtitleTrack, mediaElement)) {
+            if(TranscodeUtils.isSubtitleStreamAvailable(subtitleTrack, mediaElement)) {
                 profile.setSubtitleTrack(subtitleTrack);
             } else {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + subtitleTrack + " is not available for media element " + mediaElement.getID() + ".", null);
@@ -278,7 +280,7 @@ public class StreamController {
         // Test if we can stream the file directly without transcoding
         if(profile.getFiles() != null) {
             // If the file type is supported and all codecs are supported without transcoding stream the file directly
-            if(TranscodeService.isSupported(profile.getFiles(), mediaElement.getFormat())) {
+            if(TranscodeUtils.isSupported(profile.getFiles(), mediaElement.getFormat())) {
                 transcodeRequired = TranscodeService.isTranscodeRequired(profile);
                 
                 if(transcodeRequired == null) {
@@ -286,7 +288,7 @@ public class StreamController {
                     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
                 } else if(!transcodeRequired) {
                     profile.setType(StreamType.FILE);
-                    profile.setMimeType(TranscodeService.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
+                    profile.setMimeType(TranscodeUtils.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
                 }
             }
         }
@@ -321,7 +323,7 @@ public class StreamController {
             
             // Set MIME Type
             if(profile.getFormat() != null) {
-                profile.setMimeType(TranscodeService.getMimeType(profile.getFormat(), mediaElement.getType()));
+                profile.setMimeType(TranscodeUtils.getMimeType(profile.getFormat(), mediaElement.getType()));
                 
                 // Set stream type
                 switch(profile.getFormat()) {
@@ -557,7 +559,7 @@ public class StreamController {
                 if(type.equals("audio")) {
                     switch(profile.getClient()) {
                         case "chromecast":
-                            mimeType = TranscodeService.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
+                            mimeType = TranscodeUtils.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
                             break;
 
                         default:
@@ -659,7 +661,7 @@ public class StreamController {
                     }
                     
                     if(audioTrack != null) {
-                        if(!TranscodeService.isAudioStreamAvailable(audioTrack, profile.getMediaElement())) {
+                        if(!TranscodeUtils.isAudioStreamAvailable(audioTrack, profile.getMediaElement())) {
                             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + audioTrack + " is not available for media element " + profile.getMediaElement().getID() + ".", null);
                             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Audio track is not available.");
                             return;
@@ -669,7 +671,7 @@ public class StreamController {
                     }
                     
                     if(subtitleTrack != null) {
-                        if(!TranscodeService.isSubtitleStreamAvailable(subtitleTrack, profile.getMediaElement())) {
+                        if(!TranscodeUtils.isSubtitleStreamAvailable(subtitleTrack, profile.getMediaElement())) {
                             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + subtitleTrack + " is not available for media element " + profile.getMediaElement().getID() + ".", null);
                             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Subtitle track is not available.");
                             return;
