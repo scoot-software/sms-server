@@ -33,10 +33,8 @@ import org.apache.commons.configuration2.PropertiesConfiguration;
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
 import org.apache.commons.configuration2.builder.fluent.Parameters;
 import org.apache.commons.configuration2.ex.ConfigurationException;
-import org.springframework.stereotype.Service;
 
-@Service
-public class SettingsService {
+public final class SettingsService {
     
     private static final String CLASS_NAME = "SettingsService";
     
@@ -51,8 +49,18 @@ public class SettingsService {
     
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
-    
     Configuration config;
+    
+    private static final SettingsService INSTANCE = new SettingsService();
+    
+    /**
+     * Get the current settings service.
+     * 
+     * @return The current instance of SettingService.
+     */
+    public static SettingsService getInstance() {
+        return INSTANCE;
+    }
     
     // Load config
     public SettingsService() {

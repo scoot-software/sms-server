@@ -26,7 +26,6 @@ package com.scooter1556.sms.server.service;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import org.apache.commons.lang3.SystemUtils;
-import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
@@ -35,7 +34,6 @@ import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode;
-import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.utilities.FileUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
@@ -61,61 +59,48 @@ public class TranscodeService {
  
     private static final String CLASS_NAME = "TranscodeService";
     
-    private static final String TRANSCODER_URL = "https://github.com/scoot-software/sms-resources/raw/master/transcode/";
-    private static final String LINUX_32_MD5SUM = "5ef7615e8c647f7fe6ea8596a43d3bdf";
-    private static final String LINUX_64_MD5SUM = "d247ba4d31c12eddd5adc77c6fc3ed8f";
-    private static final String WINDOWS_32_MD5SUM = "a97326fc4348e24ed80ca41ba44c39c4";
-    private static final String WINDOWS_64_MD5SUM = "100d2dd55a682d16f845d36f215fc717";
-    
-    private final String TRANSCODER_FILE = SettingsService.getDataDirectory() + "/transcoder";
-            
+    private File transcoder = null;
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
     // Setup transcoder
     public TranscodeService() {
-        File transcodeFile = new File(TRANSCODER_FILE);
-        boolean is64bit = (SystemUtils.OS_ARCH.contains("64"));
-        boolean download;
-        String md5sum;
-        String os;
+        // Attempt to find a transcoder
+        this.transcoder = getTranscoder();
         
-        // Get OS information
-        if(SystemUtils.IS_OS_WINDOWS) {
-            os = "windows";
-            md5sum = is64bit ? WINDOWS_64_MD5SUM : WINDOWS_32_MD5SUM;
-        } else if(SystemUtils.IS_OS_LINUX) {
-            os = "linux";
-            md5sum = is64bit ? LINUX_64_MD5SUM : LINUX_32_MD5SUM;
+        if(this.transcoder == null) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to find a suitable transcoder!", null);
         } else {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "OS (" + SystemUtils.OS_NAME + ") is not supported", null);
-            return;
+            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder found: " + this.transcoder, null);
+        }
+    }
+    
+    public final File getTranscoder() {
+        // First check we haven't already found the transcoder
+        if(this.transcoder != null && this.transcoder.canExecute()) {
+            return this.transcoder;
         }
         
-        if(!transcodeFile.exists()) {
-            download = true;
-        } else {
-            download = !FileUtils.checkIntegrity(transcodeFile, md5sum);
-        }
-        
-        if(download) {
-            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Downloading transcoder...", null);
+        // Check user config transcode path
+        if(SettingsService.getInstance().getTranscodePath() != null){
+            File tFile = new File(SettingsService.getInstance().getTranscodePath());
             
-            // Remove current transcoder
-            transcodeFile.delete();
-            
-            // Download new transcoder
-            try {
-                URL url = new URL(TRANSCODER_URL + os + "-" + (is64bit ? "64" : "32") + "/transcoder");
-                org.apache.commons.io.FileUtils.copyURLToFile(url, transcodeFile);
-                
-                // Make sure file is executable
-                transcodeFile.setExecutable(true);
-                
-                LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder initialised successfully.", null);
-            } catch (IOException ex) {
-                LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to download transcoder!", ex);
+            if(tFile.canExecute()) {
+                return tFile;
             }
         }
+        
+        // Search possible transcoder paths
+        for(String path : TranscodeUtils.getTranscodePaths()) {
+            File test = new File(path);
+            
+            if(test.canExecute()) {
+                SettingsService.getInstance().setTranscodePath(path);
+                return test;
+            }
+        }
+        
+        // Out of ideas
+        return null;
     }
     
     public static String[] getSupportedCodecs() {
@@ -131,22 +116,6 @@ public class TranscodeService {
         codecs.addAll(Arrays.asList(TranscodeUtils.TRANSCODE_VIDEO_CODECS));
         codecs.addAll(Arrays.asList(TranscodeUtils.TRANSCODE_AUDIO_CODECS));
         return codecs.toArray(new String[codecs.size()]);
-    }
-    
-    /*
-     * Returns a file reference to the transcoder.
-     */
-    public File getTranscoder() 
-    {
-        File transcoder = new File(TRANSCODER_FILE);
-        
-        // Check if the transcoder binary exists
-        if(!transcoder.exists()) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Transcoder not found!", null);
-            return null;
-        }
-        
-        return transcoder;
     }
     
     public List<String> getTranscodeCommand(TranscodeProfile profile) {

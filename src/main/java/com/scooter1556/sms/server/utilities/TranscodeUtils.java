@@ -7,6 +7,7 @@ import java.awt.Dimension;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.SystemUtils;
 
 public class TranscodeUtils {
     
@@ -152,6 +153,16 @@ public class TranscodeUtils {
         {"8", "8"},
         {"7.1", "8"}
     };
+    
+    public static String[] getTranscodePaths() {
+        if(SystemUtils.IS_OS_WINDOWS) {
+            return TRANSCODE_PATH_WINDOWS;
+        } else if(SystemUtils.IS_OS_LINUX) {
+            return TRANSCODE_PATH_LINUX;
+        }
+        
+        return null;
+    }
     
     public static boolean isSupported(String[] list, String test) {
         for (String item : list) {
