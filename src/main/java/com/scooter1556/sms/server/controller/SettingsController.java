@@ -23,7 +23,8 @@
  */
 package com.scooter1556.sms.server.controller;
 
-import com.scooter1556.sms.server.service.SettingsService;
+import com.scooter1556.sms.server.Project;
+import com.scooter1556.sms.server.domain.Version;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,6 +39,7 @@ public class SettingsController {
 
     @RequestMapping(value="/version", method=RequestMethod.GET)
     public ResponseEntity<String> getVersion() {
-        return new ResponseEntity<>(SettingsService.VERSION_INT.toString(), HttpStatus.OK);
+        Version version = Version.parse(Project.getVersion());
+        return new ResponseEntity<>(String.valueOf(version.toInt()), HttpStatus.OK);
     }
 }

@@ -3,9 +3,14 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.srw</groupId>
-    <artifactId>sms-server</artifactId>
-    <version>0.3.10</version>
+    <artifactId>sms-server-dev</artifactId>
+    <version>0.3.10-SNAPSHOT</version>
     <packaging>war</packaging>
+    
+    <organization>
+        <name>Scoot Software</name>
+        <url>https://github.com/scoot-software</url>
+    </organization>
 
     <name>sms-server</name>
     
@@ -70,6 +75,23 @@
     </dependencies>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>templating-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>generate-project-class</id>
+                                <goals>
+                                    <goal>filter-sources</goal>
+                                </goals>
+                            </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -86,6 +108,11 @@
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>templating-maven-plugin</artifactId>
+                <version>1.0.0</version>
             </plugin>
         </plugins>
     </build>

@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.service;
 
+import com.scooter1556.sms.server.Project;
 import java.io.File;
 import java.io.IOException;
 import net.harawata.appdirs.AppDirs;
@@ -40,12 +41,6 @@ public final class SettingsService {
     
     // Config File
     public static final String CONFIG_FILE = "config.properties";
-    
-    // Descriptors
-    public static final String AUTHOR = "Scoot Software";
-    public static final String NAME = "sms-server-dev";
-    public static final String VERSION = "0.3.10";
-    public static final Integer VERSION_INT = 40;
     
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
@@ -100,9 +95,9 @@ public final class SettingsService {
     * @return The data directory, if it exists.
     * @throws RuntimeException If directory doesn't exist.
     */
-    public static synchronized File getDataDirectory() {
+    public synchronized File getDataDirectory() {
         AppDirs dirs = AppDirsFactory.getInstance();
-        File dataDir = new File(dirs.getUserDataDir(NAME, null, AUTHOR));
+        File dataDir = new File(dirs.getUserDataDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create data directory if it doesn't exist.
         if (!dataDir.exists() || !dataDir.isDirectory()) {
@@ -125,9 +120,9 @@ public final class SettingsService {
     * @return The config directory, if it exists.
     * @throws RuntimeException If directory doesn't exist.
     */
-    public static synchronized File getConfigDirectory() {
+    public synchronized File getConfigDirectory() {
         AppDirs dirs = AppDirsFactory.getInstance();
-        File configDir = new File(dirs.getUserConfigDir(NAME, null, AUTHOR));
+        File configDir = new File(dirs.getUserConfigDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create config directory if it doesn't exist.
         if (!configDir.exists() || !configDir.isDirectory()) {
@@ -150,9 +145,9 @@ public final class SettingsService {
     * @return The cache directory, if it exists.
     * @throws RuntimeException If directory doesn't exist.
     */
-    public static synchronized File getCacheDirectory() {
+    public synchronized File getCacheDirectory() {
         AppDirs dirs = AppDirsFactory.getInstance();
-        File cacheDir = new File(dirs.getUserCacheDir(NAME, null, AUTHOR));
+        File cacheDir = new File(dirs.getUserCacheDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create cache directory if it doesn't exist.
         if (!cacheDir.exists() || !cacheDir.isDirectory()) {
@@ -175,9 +170,9 @@ public final class SettingsService {
     * @return The log directory, if it exists.
     * @throws RuntimeException If directory doesn't exist.
     */
-    public static synchronized File getLogDirectory() {
+    public synchronized File getLogDirectory() {
         AppDirs dirs = AppDirsFactory.getInstance();
-        File logDir = new File(dirs.getUserLogDir(NAME, null, AUTHOR));
+        File logDir = new File(dirs.getUserLogDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create log directory if it doesn't exist.
         if (!logDir.exists() || !logDir.isDirectory()) {
@@ -194,7 +189,7 @@ public final class SettingsService {
         return null;
     }
     
-    private static File getConfigFile() {
+    private File getConfigFile() {
         return new File(getConfigDirectory() + File.separator + CONFIG_FILE);
     }
     
