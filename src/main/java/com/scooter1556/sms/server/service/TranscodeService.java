@@ -25,7 +25,6 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
-import org.apache.commons.lang3.SystemUtils;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
@@ -35,12 +34,9 @@ import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService.Level;
-import com.scooter1556.sms.server.utilities.FileUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +49,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class TranscodeService {
-    
+
     @Autowired
     private AdaptiveStreamingService adaptiveStreamingService;
  
@@ -306,7 +302,7 @@ public class TranscodeService {
                         commands.add(profile.getOffset().toString());
                     }
                     
-                    commands.add(SettingsService.getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d.ts");
+                    commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d.ts");
                     
                     break;
                     
@@ -321,7 +317,7 @@ public class TranscodeService {
                     commands.add("-f");
                     commands.add("dash");
                                         
-                    commands.add(SettingsService.getDataDirectory().getPath() + "/streams/" + profile.getID() + "/playlist.mpd");
+                    commands.add(SettingsService.getInstance().getDataDirectory().getPath() + "/streams/" + profile.getID() + "/playlist.mpd");
                     break;
                     
                 default:

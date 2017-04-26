@@ -27,13 +27,9 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.TranscodeService;
-import java.io.BufferedReader;
+import com.scooter1556.sms.server.utilities.ParserUtils;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,17 +61,18 @@ public class MetadataParser {
     private TranscodeService transcodeService;
     
     public MediaElement parse(MediaElement mediaElement) {
-        
-        try 
-        {
-            // Use transcoder to parse file metadata
-            File parser = transcodeService.getTranscoder();
+        // Use transcoder to parse file metadata
+        File parser = transcodeService.getTranscoder();
 
+        // Check transcoder exists
+        if(parser == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Transcoder is not available but is required to parse metadata.", null);
+            return mediaElement;
+        }
+
+        try {
             String[] command = new String[]{parser.getAbsolutePath(), "-i", mediaElement.getPath()};
-            ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
-            Process process = processBuilder.start();
-            
-            String[] metadata = readInputStream(process.getInputStream());
+            String[] metadata = ParserUtils.getProcessOutput(command);
             
             // Get Media Type
             Byte mediaType = getMediaType(metadata);
@@ -128,23 +125,23 @@ public class MetadataParser {
                         // Always set audio language for video elements
                         if(matcher.group(1) == null && mediaType == MediaElementType.VIDEO)
                         {
-                            mediaElement.setAudioLanguage(addToCommaSeparatedList(mediaElement.getAudioLanguage(), "und"));
+                            mediaElement.setAudioLanguage(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioLanguage(), "und"));
                         }
                         
                         // Set audio language if present
                         if(matcher.group(1) != null)
                         {
-                            mediaElement.setAudioLanguage(addToCommaSeparatedList(mediaElement.getAudioLanguage(), String.valueOf(matcher.group(2))));
+                            mediaElement.setAudioLanguage(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioLanguage(), String.valueOf(matcher.group(2))));
                         }
                         
                         // Codec
-                        mediaElement.setAudioCodec(addToCommaSeparatedList(mediaElement.getAudioCodec(), String.valueOf(matcher.group(3))));
+                        mediaElement.setAudioCodec(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioCodec(), String.valueOf(matcher.group(3))));
                         
                         //Sample Rate
-                        mediaElement.setAudioSampleRate(addToCommaSeparatedList(mediaElement.getAudioSampleRate(), String.valueOf(matcher.group(4))));
+                        mediaElement.setAudioSampleRate(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioSampleRate(), String.valueOf(matcher.group(4))));
                         
                         //Configuration
-                        mediaElement.setAudioConfiguration(addToCommaSeparatedList(mediaElement.getAudioConfiguration(), String.valueOf(matcher.group(5))));
+                        mediaElement.setAudioConfiguration(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioConfiguration(), String.valueOf(matcher.group(5))));
                     }
                 }
                 
@@ -288,24 +285,24 @@ public class MetadataParser {
                         // Language
                         if(matcher.group(1) == null)
                         {
-                            mediaElement.setSubtitleLanguage(addToCommaSeparatedList(mediaElement.getSubtitleLanguage(), "und"));
+                            mediaElement.setSubtitleLanguage(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleLanguage(), "und"));
                         }
                         else
                         {
-                            mediaElement.setSubtitleLanguage(addToCommaSeparatedList(mediaElement.getSubtitleLanguage(), String.valueOf(matcher.group(2))));
+                            mediaElement.setSubtitleLanguage(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleLanguage(), String.valueOf(matcher.group(2))));
                         }
                         
                         // Format
-                        mediaElement.setSubtitleFormat(addToCommaSeparatedList(mediaElement.getSubtitleFormat(), String.valueOf(matcher.group(3))));
+                        mediaElement.setSubtitleFormat(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleFormat(), String.valueOf(matcher.group(3))));
                         
                         //Forced
                         if(matcher.group(4) == null)
                         {
-                            mediaElement.setSubtitleForced(addToCommaSeparatedList(mediaElement.getSubtitleForced(), "false"));
+                            mediaElement.setSubtitleForced(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleForced(), "false"));
                         }
                         else
                         {
-                            mediaElement.setSubtitleForced(addToCommaSeparatedList(mediaElement.getSubtitleForced(), "true"));
+                            mediaElement.setSubtitleForced(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleForced(), "true"));
                         }
                     }
                 }
@@ -317,57 +314,6 @@ public class MetadataParser {
         }
 
         return mediaElement;
-    }
-
-    private String[] readInputStream(InputStream input) throws IOException
-    {        
-        BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-
-        List<String> result = new ArrayList<>();
-        String line;
-
-        while((line = reader.readLine()) != null)
-        {
-            line = line.trim();
-
-            if (line.length() > 0)
-            {
-                result.add(line);
-            }
-        }
-
-        // Close streams
-        input.close();
-        reader.close();
-
-        return result.toArray(new String[result.size()]);        
-    }
-    
-    private String addToCommaSeparatedList(String list, String entryToAdd)
-    {
-        if(entryToAdd == null)
-        {
-            return list;
-        }
-        else if(entryToAdd.equals(""))
-        {
-            return list;
-        }
-        
-        if(list == null)
-        {
-            list = entryToAdd;
-        }
-        else if(list.equals(""))
-        {
-            list = entryToAdd;
-        }
-        else
-        {
-            list = list + "," + entryToAdd;
-        }
-            
-        return list;
     }
     
     private byte getMediaType(String[] metadata) {        
