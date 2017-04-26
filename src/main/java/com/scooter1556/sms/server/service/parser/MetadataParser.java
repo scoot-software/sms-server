@@ -25,10 +25,10 @@ package com.scooter1556.sms.server.service.parser;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
-import java.io.File;
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,7 +62,7 @@ public class MetadataParser {
     
     public MediaElement parse(MediaElement mediaElement) {
         // Use transcoder to parse file metadata
-        File parser = transcodeService.getTranscoder();
+        Transcoder parser = transcodeService.getTranscoder();
 
         // Check transcoder exists
         if(parser == null) {
@@ -71,7 +71,7 @@ public class MetadataParser {
         }
 
         try {
-            String[] command = new String[]{parser.getAbsolutePath(), "-i", mediaElement.getPath()};
+            String[] command = new String[]{parser.getPath().toString(), "-i", mediaElement.getPath()};
             String[] metadata = ParserUtils.getProcessOutput(command);
             
             // Get Media Type

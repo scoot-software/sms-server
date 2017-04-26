@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.io.ImageProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
 import java.io.File;
@@ -131,7 +132,7 @@ public class ImageService {
         SMSProcess process;
         
         // Check transcoder exists
-        File transcoder = transcodeService.getTranscoder();
+        Transcoder transcoder = transcodeService.getTranscoder();
 
         if(transcoder == null) {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
@@ -140,7 +141,7 @@ public class ImageService {
 
         // Build image scaling command
         List<String> command = new ArrayList<>();
-        command.add(transcoder.getPath());
+        command.add(transcoder.getPath().toString());
         command.add("-i");
         command.add(imageFile.getPath());
         command.add("-vf");
@@ -164,7 +165,7 @@ public class ImageService {
         SMSProcess process;
         
         // Check transcoder exists
-        File transcoder = transcodeService.getTranscoder();
+        Transcoder transcoder = transcodeService.getTranscoder();
 
         if(transcoder == null) {
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
@@ -173,7 +174,7 @@ public class ImageService {
 
         // Build image scaling command
         List<String> command = new ArrayList<>();
-        command.add(transcoder.getPath());
+        command.add(transcoder.getPath().toString());
         command.add("-ss");
         command.add(String.valueOf(offset));
         command.add("-i");

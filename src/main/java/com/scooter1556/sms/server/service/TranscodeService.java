@@ -32,8 +32,10 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
+import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService.Level;
+import com.scooter1556.sms.server.service.parser.TranscoderParser;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.File;
@@ -55,7 +57,7 @@ public class TranscodeService {
  
     private static final String CLASS_NAME = "TranscodeService";
     
-    private File transcoder = null;
+    private Transcoder transcoder = null;
     private final List<TranscodeProfile> transcodeProfiles = new ArrayList<>();
     
     // Setup transcoder
@@ -66,13 +68,13 @@ public class TranscodeService {
         if(this.transcoder == null) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to find a suitable transcoder!", null);
         } else {
-            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder found: " + this.transcoder, null);
+            LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder " + this.transcoder, null);
         }
     }
     
-    public final File getTranscoder() {
+    public final Transcoder getTranscoder() {
         // First check we haven't already found the transcoder
-        if(this.transcoder != null && this.transcoder.canExecute()) {
+        if(this.transcoder != null) {
             return this.transcoder;
         }
         
@@ -80,18 +82,18 @@ public class TranscodeService {
         if(SettingsService.getInstance().getTranscodePath() != null){
             File tFile = new File(SettingsService.getInstance().getTranscodePath());
             
-            if(tFile.canExecute()) {
-                return tFile;
+            if(TranscodeUtils.isValidTranscoder(tFile)) {
+                return TranscoderParser.parse(new Transcoder(tFile.toPath()));
             }
         }
         
         // Search possible transcoder paths
-        for(String path : TranscodeUtils.getTranscodePaths()) {
+        for(String path : TranscodeUtils.getTranscoderPaths()) {
             File test = new File(path);
             
-            if(test.canExecute()) {
+            if(TranscodeUtils.isValidTranscoder(test)) {
                 SettingsService.getInstance().setTranscodePath(path);
-                return test;
+                return TranscoderParser.parse(new Transcoder(test.toPath()));
             }
         }
         
@@ -118,7 +120,7 @@ public class TranscodeService {
         List<String> command = new ArrayList<>();
         
         // Transcoder path
-        command.add(getTranscoder().getPath());
+        command.add(getTranscoder().getPath().toString());
         
         // Seek
         command.add("-ss");
@@ -205,7 +207,7 @@ public class TranscodeService {
         List<String> command = new ArrayList<>();
         
         // Transcoder path
-        command.add(getTranscoder().getPath());
+        command.add(getTranscoder().getPath().toString());
        
         // Input media file
         command.add("-i");

@@ -5,17 +5,20 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import java.awt.Dimension;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.SystemUtils;
 
 public class TranscodeUtils {
     
-    public static final String[] TRANSCODE_PATH_LINUX = {
+    private static final String TRANSCODER = "ffmpeg";
+    
+    public static final String[] TRANSCODER_PATH_LINUX = {
         "/usr/bin/ffmpeg"
     };
     
-    public static final String[] TRANSCODE_PATH_WINDOWS = {
+    public static final String[] TRANSCODER_PATH_WINDOWS = {
         System.getenv("SystemDrive") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffmpeg.exe",
         System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
@@ -154,14 +157,38 @@ public class TranscodeUtils {
         {"7.1", "8"}
     };
     
-    public static String[] getTranscodePaths() {
+    public static String[] getTranscoderPaths() {
         if(SystemUtils.IS_OS_WINDOWS) {
-            return TRANSCODE_PATH_WINDOWS;
+            return TRANSCODER_PATH_WINDOWS;
         } else if(SystemUtils.IS_OS_LINUX) {
-            return TRANSCODE_PATH_LINUX;
+            return TRANSCODER_PATH_LINUX;
         }
         
         return null;
+    }
+    
+    public static boolean isValidTranscoder(File transcoder) {
+        // Check file exists and is executable
+        if(transcoder == null || !transcoder.canExecute()) {
+            return false;
+        }
+        
+        // Check this is a supported transcoder
+        String[] command = new String[]{transcoder.getAbsolutePath()};
+        
+        try {
+            String[] result = ParserUtils.getProcessOutput(command);
+            
+            for (String line : result) {
+                if(line.contains(TRANSCODER)) {
+                    return true;
+                }
+            }
+        } catch (IOException ex) {
+            return false;
+        }
+        
+        return false;
     }
     
     public static boolean isSupported(String[] list, String test) {

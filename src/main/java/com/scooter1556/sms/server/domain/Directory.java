@@ -40,7 +40,7 @@ public class Directory implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "Name[Name=%s, Path=%s]",
+                "Directory[Name=%s, Path=%s]",
                 name == null ? "N/A" : name, path == null ? "?" : path);
     }
     
