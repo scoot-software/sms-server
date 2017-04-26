@@ -70,6 +70,11 @@ public class TranscodeService {
         } else {
             LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder " + this.transcoder, null);
         }
+        
+        // Check all required codecs are supported
+        if(!TranscodeUtils.checkTranscoder(transcoder)) {
+            LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Transcoder is missing required codec support!", null);
+        }
     }
     
     public final Transcoder getTranscoder() {

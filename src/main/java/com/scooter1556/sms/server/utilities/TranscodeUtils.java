@@ -2,6 +2,7 @@ package com.scooter1556.sms.server.utilities;
 
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import java.awt.Dimension;
 import java.io.File;
@@ -13,6 +14,7 @@ import org.apache.commons.lang3.SystemUtils;
 public class TranscodeUtils {
     
     private static final String TRANSCODER = "ffmpeg";
+    private static final String[] TRANSCODE_CONFIGS = {"libmp3lame","libvorbis","libx264","libvpx"};
     
     public static final String[] TRANSCODER_PATH_LINUX = {
         "/usr/bin/ffmpeg"
@@ -189,6 +191,34 @@ public class TranscodeUtils {
         }
         
         return false;
+    }
+    
+    public static boolean checkTranscoder(Transcoder transcoder) {
+        // Check file exists and is executable
+        if(transcoder == null) {
+            return false;
+        }
+        
+        // Check configure options
+        String[] command = new String[]{transcoder.getPath().toString()};
+        
+        try {
+            String[] result = ParserUtils.getProcessOutput(command);
+            short check =  0;
+            
+            for (String line : result) {
+                for(String config : TRANSCODE_CONFIGS) {
+                    if(line.contains(config)) {
+                        check ++;
+                    }
+                }
+            }
+            
+            // Check all config options were found
+            return check == TRANSCODE_CONFIGS.length;
+        } catch (IOException ex) {
+            return false;
+        }
     }
     
     public static boolean isSupported(String[] list, String test) {
