@@ -13,10 +13,10 @@ public class TranscoderParser {
     private static final String CLASS_NAME = "TranscodeParser";
     
     // Patterns
-    private static final Pattern VERSION = Pattern.compile(".*?version\\s+(\\d+\\.\\d+\\.\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern VERSION = Pattern.compile(".*?version\\s+(\\d+\\.\\d+\\.?\\d*)", Pattern.CASE_INSENSITIVE);
     
     public static Transcoder parse(Transcoder transcoder) {
-        try{
+        try {
             // Parse version
             String[] command = {transcoder.getPath().toString()};
             String[] result = ParserUtils.getProcessOutput(command);
