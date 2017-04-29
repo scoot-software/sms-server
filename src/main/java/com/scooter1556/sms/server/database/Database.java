@@ -24,11 +24,9 @@
 package com.scooter1556.sms.server.database;
 
 import com.scooter1556.sms.server.exception.DatabaseException;
-import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.utilities.DatabaseUtils;
 import javax.sql.DataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class Database {
     

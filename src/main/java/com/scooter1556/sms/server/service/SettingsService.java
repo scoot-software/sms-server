@@ -25,15 +25,14 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.Project;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Properties;
 import net.harawata.appdirs.AppDirs;
 import net.harawata.appdirs.AppDirsFactory;
-import org.apache.commons.configuration2.Configuration;
-import org.apache.commons.configuration2.FileBasedConfiguration;
-import org.apache.commons.configuration2.PropertiesConfiguration;
-import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder;
-import org.apache.commons.configuration2.builder.fluent.Parameters;
-import org.apache.commons.configuration2.ex.ConfigurationException;
 
 public final class SettingsService {
     
@@ -44,7 +43,7 @@ public final class SettingsService {
     
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
-    Configuration config;
+    Properties config;
     
     private static final SettingsService INSTANCE = new SettingsService();
     
@@ -59,31 +58,22 @@ public final class SettingsService {
     
     // Load config
     public SettingsService() {
-        Parameters params = new Parameters();
+        config = new Properties();
+        InputStream input = null;
         File configFile = getConfigFile();
         
-        // Check config file exists and create it if not
-        if(!configFile.exists()) {
+        // Load config from file if it exists
+        if(configFile.exists()) {
             try {
-                configFile.createNewFile();
-            } catch (IOException ex) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create configuration file!", ex);
+                input = new FileInputStream(configFile);
+		config.load(input);
+            } catch(IOException ex) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to load configuration file!", ex);
+            } finally {
+		if(input != null) {
+                    try { input.close(); } catch(IOException e) {}
+		}
             }
-        }
-        
-        // Load configuration from file
-        FileBasedConfigurationBuilder<FileBasedConfiguration> builder =
-            new FileBasedConfigurationBuilder<FileBasedConfiguration>(PropertiesConfiguration.class)
-            .configure(params.properties()
-                .setFile(configFile));
-        
-        // Automatically save config to file when modified
-        builder.setAutoSave(true);
-
-        try {
-            config = builder.getConfiguration();
-        } catch(ConfigurationException ex) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to load configuration file!", ex);
         }
         
         initialiseConfig();
@@ -110,7 +100,7 @@ public final class SettingsService {
             return dataDir;
         }
 
-        System.out.println("The directory '" + dataDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "The directory '" + dataDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.", null);
         return null;
     }
     
@@ -135,7 +125,7 @@ public final class SettingsService {
             return configDir;
         }
 
-        System.out.println("The directory '" + configDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "The directory '" + configDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.", null);
         return null;
     }
     
@@ -160,7 +150,7 @@ public final class SettingsService {
             return cacheDir;
         }
 
-        System.out.println("The directory '" + cacheDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "The directory '" + cacheDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.", null);
         return null;
     }
     
@@ -185,7 +175,7 @@ public final class SettingsService {
             return logDir;
         }
 
-        System.out.println("The directory '" + logDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.");
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "The directory '" + logDir + "' does not exist or is not writable by user '" + System.getProperty("user.name") + "'. Please create it and make it writable.", null);
         return null;
     }
     
@@ -203,6 +193,25 @@ public final class SettingsService {
         }
     }
     
+    private void saveConfig() {
+        if(config == null) {
+            return;
+        }
+        
+        OutputStream output = null;
+
+	try {
+            output = new FileOutputStream(getConfigFile());
+            config.store(output, null);
+	} catch (IOException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to save configuration to file!", ex);
+	} finally {
+            if(output != null) {
+                try { output.close(); } catch(IOException e) {}
+            }
+	}
+    }
+    
     //
     // Configuration
     //
@@ -212,7 +221,7 @@ public final class SettingsService {
             return null;
         }
         
-        String value = config.getString(CONFIG_TRANSCODE_PATH);
+        String value = config.getProperty(CONFIG_TRANSCODE_PATH);
         
         if(value == null || value.isEmpty()) {
             return null;
@@ -227,6 +236,8 @@ public final class SettingsService {
         }
         
         config.setProperty(CONFIG_TRANSCODE_PATH, value);
+        
+        saveConfig();
     }
 
 }
