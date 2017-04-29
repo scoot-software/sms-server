@@ -301,6 +301,14 @@ public class TranscodeService {
                     commands.add("-segment_time");
                     commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
                     
+                    commands.add("-segment_format");
+                    
+                    if(profile.getVideoTranscode() == null) {
+                        commands.add("mpegts");
+                    } else {
+                        commands.add("matroska");
+                    }
+                    
                     if(profile.getOffset() > 0) {
                         commands.add("-segment_start_number");
                         commands.add(String.valueOf(profile.getOffset() / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
@@ -309,7 +317,7 @@ public class TranscodeService {
                         commands.add(profile.getOffset().toString());
                     }
                     
-                    commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d.ts");
+                    commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d");
                     
                     break;
                     

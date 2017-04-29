@@ -465,17 +465,14 @@ public class StreamController {
             }
             
             String mimeType;
-            String extension;
                     
             switch (profile.getFormat()) {
                 case "hls":
                     mimeType = "video/MP2T";
-                    extension = "ts";
                     break;
                     
                 case "dash":
                     mimeType = "video/mp4";
-                    extension = "m4s";
                     break;
                     
                 default:
@@ -485,7 +482,7 @@ public class StreamController {
             }
             
             // Find Segment File
-            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "." + extension);
+            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file);
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Path: " + segment.getPath(), null);
             
@@ -527,7 +524,7 @@ public class StreamController {
             
             while(segment.length() != length) {
                 if(length != -1) {
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, file + "." + extension + " for job " + profile.getID() + " is still being written", null);
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, file + " for job " + profile.getID() + " is still being written", null);
                 }
                 
                 length = segment.length();
