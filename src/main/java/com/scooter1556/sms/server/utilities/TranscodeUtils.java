@@ -7,7 +7,9 @@ import com.scooter1556.sms.server.domain.VideoTranscode;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.SystemUtils;
 
@@ -479,5 +481,30 @@ public class TranscodeUtils {
         }
         
         return null;
+    }
+    
+    public static Path[] getRenderDevices() {
+        List<Path> devices = new ArrayList<>();
+        
+        if(!SystemUtils.IS_OS_LINUX) {
+            return null;
+        }
+        
+        File dir = new File("/dev/dri");
+        
+        // Check device directory exists
+        if(!dir.isDirectory()) {
+            return null;
+        }
+        
+        for(File file : dir.listFiles()) {
+            if(file.toString().contains("render")){
+                devices.add(file.toPath());
+            }
+        }
+        
+        Path[] result = devices.toArray(new Path[0]);
+        Arrays.sort(result);
+        return result;
     }
 }

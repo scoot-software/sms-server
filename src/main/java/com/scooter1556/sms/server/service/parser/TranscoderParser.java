@@ -1,15 +1,19 @@
 package com.scooter1556.sms.server.service.parser;
 
+import com.scooter1556.sms.server.domain.HardwareAccelerator;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.Version;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jutils.jhardware.HardwareInfo;
+import org.jutils.jhardware.model.GraphicsCardInfo;
 
 public class TranscoderParser {
     
@@ -54,16 +58,48 @@ public class TranscoderParser {
         return null;
     }
     
-    private static String[] parseHardwareAccelerators(Transcoder transcoder) throws IOException {
+    private static HardwareAccelerator[] parseHardwareAccelerators(Transcoder transcoder) throws IOException {
         String[] command = {transcoder.getPath().toString(), "-hwaccels"};
         String[] result = ParserUtils.getProcessOutput(command);
-        List<String> hwaccels = new ArrayList<>();
+        List<HardwareAccelerator> hwaccels = new ArrayList<>();
+        
         boolean enable = false;
+        
+        // Get available graphics cards
+        GraphicsCardInfo gpus = HardwareInfo.getGraphicsCardInfo();
 
         for(String line : result) {
             if(enable) {
                 if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_HARDWARE_ACCELERATORS, line)) {
-                    hwaccels.add(line);
+                    switch(line) {
+                        case "vaapi":
+                            // Get render devices
+                            Path[] devices = TranscodeUtils.getRenderDevices();
+                            
+                            // Determine if we have a GPU which supports VAAPI
+                            for(int i = 0; i < gpus.getGraphicsCards().size(); i++) {
+                                if(gpus.getGraphicsCards().get(i).getManufacturer().contains("Intel")) {
+                                    if(i < devices.length) {
+                                        HardwareAccelerator hwaccel = new HardwareAccelerator(line);
+                                        hwaccel.setDevice(devices[i]);
+                                        hwaccels.add(hwaccel);
+                                    }
+                                }
+                            }
+                            
+                            break;
+                            
+                        case "cuvid":
+                            // Determine if we have a GPU which supports CUVID
+                            for(int i = 0; i < gpus.getGraphicsCards().size(); i++) {
+                                if(gpus.getGraphicsCards().get(i).getManufacturer().contains("NVIDIA")) {
+                                    HardwareAccelerator hwaccel = new HardwareAccelerator(line);
+                                    hwaccels.add(hwaccel);
+                                }
+                            }
+                            
+                            break;
+                    }
                 }
             } else {
                 if(line.contains(HWACCEL)) {
@@ -72,6 +108,6 @@ public class TranscoderParser {
             }
         }
         
-        return hwaccels.toArray(new String[0]);
+        return hwaccels.toArray(new HardwareAccelerator[0]);
     }
 }

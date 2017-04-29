@@ -8,7 +8,7 @@ public class Transcoder implements Serializable {
     
     private final Path path;
     private Version version;
-    private String[] hwaccels;
+    private HardwareAccelerator[] hwaccels;
     
     public Transcoder(Path path) {
         this.path = path;
@@ -35,11 +35,11 @@ public class Transcoder implements Serializable {
         this.version = version;
     }
     
-    public String[] getHardwareAccelerators() {
+    public HardwareAccelerator[] getHardwareAccelerators() {
         return hwaccels;
     }
     
-    public void setHardwareAccelerators(String[] hwaccels) {
+    public void setHardwareAccelerators(HardwareAccelerator[] hwaccels) {
         this.hwaccels = hwaccels;
     }
 }
