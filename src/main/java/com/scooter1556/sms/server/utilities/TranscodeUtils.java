@@ -34,6 +34,8 @@ public class TranscodeUtils {
     public static final String[] TRANSCODE_VIDEO_CODECS = {"h264","vp8"};
     public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","ac3","flac","mp3","pcm","vorbis"};
     
+    public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
+    
     public static final String[] LOSSLESS_CODECS= {"flac","pcm","alac","dsd"};
         
     public static final String[][] AUDIO_CODEC_FORMAT = {
