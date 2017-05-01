@@ -570,7 +570,6 @@ public class StreamController {
         } catch (IOException ex) {
             // Called if client closes the connection early.
         } finally {
-            // Return segment
             if(process != null && job != null) {
                 jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
             }

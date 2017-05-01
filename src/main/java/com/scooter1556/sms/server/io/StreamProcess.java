@@ -67,13 +67,6 @@ public class StreamProcess extends SMSProcess {
         response.setHeader("Access-Control-Allow-Methods", "GET");
         response.setIntHeader("Access-Control-Max-Age", 3600);
 
-        // Start transcoding
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-
-        process = processBuilder.start();
-        InputStream input = process.getInputStream();
-        OutputStream output = response.getOutputStream();
-
         // Set status code
         response.setStatus(SC_PARTIAL_CONTENT);
         
@@ -92,7 +85,12 @@ public class StreamProcess extends SMSProcess {
         
         /********************************************************************************/
 
-        // Start reading streams
+        // Start transcoding
+        ProcessBuilder processBuilder = new ProcessBuilder(command);
+
+        process = processBuilder.start();
+        InputStream input = process.getInputStream();
+        OutputStream output = response.getOutputStream();
         new NullStream(process.getErrorStream()).start();
 
         // Buffer
@@ -103,6 +101,11 @@ public class StreamProcess extends SMSProcess {
         while ((length = input.read(buffer)) != -1) {
             output.write(buffer, 0, length);
             bytesTransferred += length;
+        }
+        
+        // Check for error
+        if(bytesTransferred == 0) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
         }
     }
 }

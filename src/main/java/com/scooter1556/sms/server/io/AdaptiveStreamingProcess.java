@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.util.UUID;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 
-public class AdaptiveStreamingProcess extends SMSProcess {
+public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     private static final String CLASS_NAME = "AdaptiveStreamingProcess";
     
@@ -51,12 +51,12 @@ public class AdaptiveStreamingProcess extends SMSProcess {
         File streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
         
         try {
-            if(streamDirectory.exists()) {
+            if(streamDirectory.exists()) {                
                 // Wait for process to finish
                 if(process != null) {
                     process.waitFor();
                 }
-                
+                                
                 FileUtils.cleanDirectory(streamDirectory);
             } else {
                 boolean success = streamDirectory.mkdirs();
@@ -84,11 +84,8 @@ public class AdaptiveStreamingProcess extends SMSProcess {
     }
     
     @Override
-    public void start() throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder(command);
-        process = processBuilder.start();
-        new NullStream(process.getInputStream()).start();
-        new NullStream(process.getErrorStream()).start();
+    public void start() {
+        new Thread(this).start();
     }
     
     @Override
@@ -98,7 +95,6 @@ public class AdaptiveStreamingProcess extends SMSProcess {
             process.destroy();
         }
         
-        // Cleanup working directory
         File streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
        
         try {
@@ -107,6 +103,7 @@ public class AdaptiveStreamingProcess extends SMSProcess {
                 process.waitFor();
             }
             
+            // Cleanup working directory
             FileUtils.deleteDirectory(streamDirectory);
         } catch (IOException | InterruptedException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
@@ -121,5 +118,31 @@ public class AdaptiveStreamingProcess extends SMSProcess {
     
     public int getSegmentNum() {
         return this.segmentNum;
+    }
+
+    @Override
+    public void run() {
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            process = processBuilder.start();
+            new NullStream(process.getInputStream()).start();
+            new NullStream(process.getErrorStream()).start();
+            
+            // Wait for process to finish
+            int code = process.waitFor();
+            
+            // Check for error
+            if(code == 1) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
+            }
+        } catch(IOException | InterruptedException ex) {
+            if(process != null) {
+                process.destroy();
+            }
+            
+            ended = true;
+            
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error occured whilst transcoding.", ex);
+        }
     }
 }
