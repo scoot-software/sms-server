@@ -24,13 +24,12 @@
 package com.scooter1556.sms.server.io;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 public class SMSProcess {
     UUID id;
     Process process;
-    List<String> command;
+    String[][] commands;
     long bytesTransferred = 0;
     boolean ended = false;
     
@@ -63,12 +62,12 @@ public class SMSProcess {
         this.bytesTransferred = bytes;
     }
     
-    public List<String> getCommand() {
-        return this.command;
+    public String[][] getCommands() {
+        return this.commands;
     }
     
-    public void setCommand(List<String> command) {
-        this.command = command;
+    public void setCommands(String[][] commands) {
+        this.commands = commands;
     }
     
     public boolean hasEnded() {

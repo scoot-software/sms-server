@@ -28,6 +28,7 @@ import com.scooter1556.sms.server.service.SettingsService;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 
 public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
@@ -123,17 +124,23 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     @Override
     public void run() {
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
-            process = processBuilder.start();
-            new NullStream(process.getInputStream()).start();
-            new NullStream(process.getErrorStream()).start();
-            
-            // Wait for process to finish
-            int code = process.waitFor();
-            
-            // Check for error
-            if(code == 1) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
+            for(String[] command : commands) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+                
+                ProcessBuilder processBuilder = new ProcessBuilder(command);
+                process = processBuilder.start();
+                new NullStream(process.getInputStream()).start();
+                new NullStream(process.getErrorStream()).start();
+
+                // Wait for process to finish
+                int code = process.waitFor();
+
+                // Check for error
+                if(code == 1) {
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
+                } else {
+                    break;
+                }
             }
         } catch(IOException | InterruptedException ex) {
             if(process != null) {

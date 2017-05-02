@@ -26,7 +26,6 @@ package com.scooter1556.sms.server.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 
 public class ImageProcess extends SMSProcess {
@@ -40,34 +39,35 @@ public class ImageProcess extends SMSProcess {
             
     public ImageProcess() {};
     
-    public ImageProcess(List<String> command, HttpServletResponse response) {
-        this.command = command;
+    public ImageProcess(String[][] commands, HttpServletResponse response) {
+        this.commands = commands;
         this.response = response;
     }
     
     @Override
     public void start() {
         try {
-            // Start process
-            ProcessBuilder processBuilder = new ProcessBuilder(command);
+            for(String[] command : commands) {
+                // Start process
+                ProcessBuilder processBuilder = new ProcessBuilder(command);
 
-            process = processBuilder.start();
-            InputStream input = process.getInputStream();
-            OutputStream output = response.getOutputStream();
+                process = processBuilder.start();
+                InputStream input = process.getInputStream();
+                OutputStream output = response.getOutputStream();
 
-            // Start reading streams
-            new NullStream(process.getErrorStream()).start();
+                // Start reading streams
+                new NullStream(process.getErrorStream()).start();
 
-            // Buffer
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int length;
+                // Buffer
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int length;
 
-            // Write stream to output
-            while ((length = input.read(buffer)) != -1) {
-                output.write(buffer, 0, length);
-                bytesTransferred += length;
+                // Write stream to output
+                while ((length = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, length);
+                    bytesTransferred += length;
+                }
             }
-            
         } catch (IOException ex) {
             if(process != null) {
                 process.destroy();

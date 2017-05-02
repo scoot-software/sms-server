@@ -121,171 +121,183 @@ public class TranscodeService {
         return codecs.toArray(new String[codecs.size()]);
     }
     
-    public List<String> getTranscodeCommand(TranscodeProfile profile) {
-        List<String> command = new ArrayList<>();
+    public String[][] getTranscodeCommand(TranscodeProfile profile) {
+        ArrayList<ArrayList<String>> commands = new ArrayList<>();
+        commands.add(new ArrayList<String>());
+        String[][] result = new String[commands.size()][];
         
-        // Transcoder path
-        command.add(getTranscoder().getPath().toString());
-        
-        // Seek
-        command.add("-ss");
-        command.add(profile.getOffset().toString());
-        
-        // Ensure PTS is set
-        if(profile.getFormat().equals("hls")) {
-            command.add("-fflags");
-            command.add("+genpts");
-            command.add("-y");
-        }
-       
-        // Input media file
-        command.add("-i");
-        command.add(profile.getMediaElement().getPath());
-        
-        // Enable experimental codecs
-        command.add("-strict");
-        command.add("experimental");
-        
-        // Video
-        if(profile.getVideoTranscode() != null) {
-            // Subtitle commands
-            if(profile.getSubtitleTranscodes() != null) {
-                if(profile.getType() == StreamType.ADAPTIVE) {
-                    for(int i = 0; i < profile.getSubtitleTranscodes().length; i++) {
-                        command.add("-map");
-                        command.add("0:s:" + i);
-                        command.add("-c:s");
-                        command.add("copy");
+        for(int i = 0; i < commands.size(); i++) {
+            // Transcoder path
+            commands.get(i).add(getTranscoder().getPath().toString());
+
+            // Seek
+            commands.get(i).add("-ss");
+            commands.get(i).add(profile.getOffset().toString());
+
+            // Ensure PTS is set
+            if(profile.getFormat().equals("hls")) {
+                commands.get(i).add("-fflags");
+                commands.get(i).add("+genpts");
+                commands.get(i).add("-y");
+            }
+
+            // Input media file
+            commands.get(i).add("-i");
+            commands.get(i).add(profile.getMediaElement().getPath());
+
+            // Enable experimental codecs
+            commands.get(i).add("-strict");
+            commands.get(i).add("experimental");
+
+            // Video
+            if(profile.getVideoTranscode() != null) {
+                // Subtitle commands
+                if(profile.getSubtitleTranscodes() != null) {
+                    if(profile.getType() == StreamType.ADAPTIVE) {
+                        for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
+                            commands.get(i).add("-map");
+                            commands.get(i).add("0:s:" + s);
+                            commands.get(i).add("-c:s");
+                            commands.get(i).add("copy");
+                        }
+
+                        commands.get(i).add("-map");
+                        commands.get(i).add("0:v");
+
+
+                    } else if(profile.getSubtitleTrack() != null) {
+                        commands.get(i).addAll(getSubtitleCommands(profile));
                     }
-                    
-                    command.add("-map");
-                    command.add("0:v");
-                    
-                    
-                } else if(profile.getSubtitleTrack() != null) {
-                    command.addAll(getSubtitleCommands(profile));
+                } else {
+                        commands.get(i).add("-map");
+                        commands.get(i).add("0:v");
                 }
-            } else {
-                    command.add("-map");
-                    command.add("0:v");
-            }
-            
-            if(profile.getType() == StreamType.ADAPTIVE) {
-                command.addAll(getVideoCommands(profile));
-                
-                if(profile.getMediaElement().getVideoCodec().equals("h264")) {
-                    command.add("-bsf:v");
-                    command.add("h264_mp4toannexb");
+
+                if(profile.getType() == StreamType.ADAPTIVE) {
+                    commands.get(i).addAll(getVideoCommands(profile));
+
+                    if(profile.getMediaElement().getVideoCodec().equals("h264")) {
+                        commands.get(i).add("-bsf:v");
+                        commands.get(i).add("h264_mp4toannexb");
+                    }
+                } else {
+                    commands.get(i).addAll(getVideoCommands(profile));
                 }
-            } else {
-                command.addAll(getVideoCommands(profile));
             }
+
+            // Audio
+            if(profile.getAudioTranscodes() != null) {
+                if(profile.getType() == StreamType.ADAPTIVE) {
+                    for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
+                        commands.get(i).addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
+                    }
+                } else if(profile.getAudioTrack() != null) {
+                    commands.get(i).addAll(getAudioCommands(profile.getAudioTrack(), profile.getAudioTranscodes()[profile.getAudioTrack()]));
+                }
+            }
+
+            // Use all CPU cores
+            commands.get(i).add("-threads");
+            commands.get(i).add("0");
+
+            // Format
+            commands.get(i).addAll(getFormatCommands(profile));
+        
+            result[i] = commands.get(i).toArray(new String[0]);
         }
         
-        // Audio
-        if(profile.getAudioTranscodes() != null) {
-            if(profile.getType() == StreamType.ADAPTIVE) {
-                for(int i = 0; i < profile.getAudioTranscodes().length; i++) {
-                    command.addAll(getAudioCommands(i, profile.getAudioTranscodes()[i]));
-                }
-            } else if(profile.getAudioTrack() != null) {
-                command.addAll(getAudioCommands(profile.getAudioTrack(), profile.getAudioTranscodes()[profile.getAudioTrack()]));
-            }
-        }
-                
-        // Use all CPU cores
-        command.add("-threads");
-        command.add("0");
-        
-        // Format
-        command.addAll(getFormatCommands(profile));
-        
-        return command;
+        return result;
     }
     
-    public List<String> getAdaptiveSegmentTranscodeCommand(Path segment, TranscodeProfile profile, String type, Integer extra) {
+    public String[][] getAdaptiveSegmentTranscodeCommand(Path segment, TranscodeProfile profile, String type, Integer extra) {
         // Check variables
         if(segment == null || profile == null || type == null || extra == null) {
             return null;
         }
         
-        List<String> command = new ArrayList<>();
+        ArrayList<ArrayList<String>> commands = new ArrayList<>();
+        commands.add(new ArrayList<String>());
+        String[][] result = new String[commands.size()][];
         
-        // Transcoder path
-        command.add(getTranscoder().getPath().toString());
-       
-        // Input media file
-        command.add("-i");
-        command.add(segment.toString());
-        
-        if(type.equals("video")) {
-            // Check profile
-            if(!extra.equals(profile.getQuality())) {
-                Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-                
-                if(resolution != null) {
-                    profile.getVideoTranscode().setResolution(resolution);
-                }
-            }
-            
-            if(profile.getVideoTranscode() != null) {
-                command.add("-map");
-                command.add("0:v");
+        for(int i = 0; i < commands.size(); i++) {
+            // Transcoder path
+            commands.get(i).add(getTranscoder().getPath().toString());
 
-                // If highest possible quality then copy stream
-                if(extra.equals(profile.getQuality())) {
-                    command.add("-c:v");
-                    command.add("copy");
-                } else {
-                    command.addAll(getVideoCommands(profile));
+            // Input media file
+            commands.get(i).add("-i");
+            commands.get(i).add(segment.toString());
+
+            if(type.equals("video")) {
+                // Check profile
+                if(!extra.equals(profile.getQuality())) {
+                    Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
+
+                    if(resolution != null) {
+                        profile.getVideoTranscode().setResolution(resolution);
+                    }
                 }
-                
+
+                if(profile.getVideoTranscode() != null) {
+                    commands.get(i).add("-map");
+                    commands.get(i).add("0:v");
+
+                    // If highest possible quality then copy stream
+                    if(extra.equals(profile.getQuality())) {
+                        commands.get(i).add("-c:v");
+                        commands.get(i).add("copy");
+                    } else {
+                        commands.get(i).addAll(getVideoCommands(profile));
+                    }
+
+                    // Format
+                    commands.get(i).add("-f");
+                    commands.get(i).add("mpegts");
+
+                    commands.get(i).add("-mpegts_copyts");
+                    commands.get(i).add("1");
+                }
+            } else if(type.equals("audio")) {
+                // Audio
+                if(profile.getAudioTranscodes() != null) {
+                    if(profile.getAudioTranscodes().length > extra) {
+                        // Mapping
+                        commands.get(i).add("-map");
+                        commands.get(i).add("0:a:" + extra);
+
+                        // Codec
+                        commands.get(i).add("-c:a");
+                        commands.get(i).add("copy");
+                    }
+                }
+
                 // Format
-                command.add("-f");
-                command.add("mpegts");
-                
-                command.add("-mpegts_copyts");
-                command.add("1");
-            }
-        } else if(type.equals("audio")) {
-            // Audio
-            if(profile.getAudioTranscodes() != null) {
-                if(profile.getAudioTranscodes().length > extra) {
-                    // Mapping
-                    command.add("-map");
-                    command.add("0:a:" + extra);
+                commands.get(i).add("-f");
 
-                    // Codec
-                    command.add("-c:a");
-                    command.add("copy");
+                switch(profile.getClient()) {
+                    case "chromecast":
+                        commands.get(i).add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
+                        break;
+
+                    default:
+                        commands.get(i).add("mpegts");
+                        commands.get(i).add("-mpegts_copyts");
+                        commands.get(i).add("1");  
                 }
             }
+
+            // Use all CPU cores
+            commands.get(i).add("-threads");
+            commands.get(i).add("0");
+
+            // Maintain timestamps
+            commands.get(i).add("-copyts");
+
+            commands.get(i).add("-");
             
-            // Format
-            command.add("-f");
-            
-            switch(profile.getClient()) {
-                case "chromecast":
-                    command.add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
-                    break;
-                    
-                default:
-                    command.add("mpegts");
-                    command.add("-mpegts_copyts");
-                    command.add("1");  
-            }
+            result[i] = commands.get(i).toArray(new String[0]);
         }
-                
-        // Use all CPU cores
-        command.add("-threads");
-        command.add("0");
         
-        // Maintain timestamps
-        command.add("-copyts");
-        
-        command.add("-");
-        
-        return command;
+        return result;
     }
     
     private Collection<String> getFormatCommands(TranscodeProfile profile) {

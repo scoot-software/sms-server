@@ -92,9 +92,9 @@ public class AdaptiveStreamingService {
         }
         
         // Get transcode command
-        List<String> command = transcodeService.getTranscodeCommand(profile);
+        String[][] commands = transcodeService.getTranscodeCommand(profile);
         
-        if(command == null) {
+        if(commands == null) {
             return null;
         }
         
@@ -106,10 +106,8 @@ public class AdaptiveStreamingService {
             processes.add(process);
         }
         
-        process.setCommand(command);
+        process.setCommands(commands);
         process.initialise();
-        
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
         
         return process;
     }

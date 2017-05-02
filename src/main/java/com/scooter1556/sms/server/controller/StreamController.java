@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -542,15 +543,13 @@ public class StreamController {
                 process.start();
             } else {
                 // Get transcode command
-                List<String> command = transcodeService.getAdaptiveSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
+                String[][] commands = transcodeService.getAdaptiveSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
 
-                if(command == null) {
+                if(commands == null) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
                     return;
                 }
-
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
                 
                 // Determine proper mimetype for audio
                 if(type.equals("audio")) {
@@ -564,7 +563,7 @@ public class StreamController {
                     }
                 }
                 
-                process = new StreamProcess(id, command, mimeType, request, response);
+                process = new StreamProcess(id, commands, mimeType, request, response);
                 process.start();
             }
         } catch (IOException ex) {
@@ -685,16 +684,15 @@ public class StreamController {
                     }
                     
                     // Get transcode command
-                    List<String> command = transcodeService.getTranscodeCommand(profile);
+                    String[][] commands = transcodeService.getTranscodeCommand(profile);
         
-                    if(command == null) {
+                    if(commands == null) {
                         LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process transcode command for job " + job.getID() + ".", null);
                         response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process transcode command.");
                         return;
                     }
                     
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, command.toString(), null);
-                    process = new StreamProcess(id, command, profile.getMimeType(), request, response);
+                    process = new StreamProcess(id, commands, profile.getMimeType(), request, response);
                     process.start();
                     break;
                     

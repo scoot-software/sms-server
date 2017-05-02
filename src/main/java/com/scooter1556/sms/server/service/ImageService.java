@@ -140,15 +140,20 @@ public class ImageService {
         }
 
         // Build image scaling command
-        List<String> command = new ArrayList<>();
-        command.add(transcoder.getPath().toString());
-        command.add("-i");
-        command.add(imageFile.getPath());
-        command.add("-vf");
-        command.add("scale=-1:" + scale);
-        command.add("-f");
-        command.add("mjpeg");
-        command.add("-");
+        ArrayList<ArrayList<String>> commands = new ArrayList<>();
+        commands.add(new ArrayList<String>());
+        
+        commands.get(0).add(transcoder.getPath().toString());
+        commands.get(0).add("-i");
+        commands.get(0).add(imageFile.getPath());
+        commands.get(0).add("-vf");
+        commands.get(0).add("scale=-1:" + scale);
+        commands.get(0).add("-f");
+        commands.get(0).add("mjpeg");
+        commands.get(0).add("-");
+        
+        String[][] result = new String[commands.size()][];
+        result[0] = commands.get(0).toArray(new String[0]);
         
         // Set content type
         response.setContentType("image/jpeg");
@@ -157,7 +162,7 @@ public class ImageService {
         response.setStatus(SC_PARTIAL_CONTENT);
         
         // Process image
-        process = new ImageProcess(command, response);
+        process = new ImageProcess(result, response);
         process.start();
     }
     
@@ -173,19 +178,24 @@ public class ImageService {
         }
 
         // Build image scaling command
-        List<String> command = new ArrayList<>();
-        command.add(transcoder.getPath().toString());
-        command.add("-ss");
-        command.add(String.valueOf(offset));
-        command.add("-i");
-        command.add(file.getPath());
-        command.add("-vframes");
-        command.add("1");
-        command.add("-vf");
-        command.add("scale=-1:" + scale);
-        command.add("-f");
-        command.add("mjpeg");
-        command.add("-");
+        ArrayList<ArrayList<String>> commands = new ArrayList<>();
+        commands.add(new ArrayList<String>());
+        
+        commands.get(0).add(transcoder.getPath().toString());
+        commands.get(0).add("-ss");
+        commands.get(0).add(String.valueOf(offset));
+        commands.get(0).add("-i");
+        commands.get(0).add(file.getPath());
+        commands.get(0).add("-vframes");
+        commands.get(0).add("1");
+        commands.get(0).add("-vf");
+        commands.get(0).add("scale=-1:" + scale);
+        commands.get(0).add("-f");
+        commands.get(0).add("mjpeg");
+        commands.get(0).add("-");
+        
+        String[][] result = new String[commands.size()][];
+        result[0] = commands.get(0).toArray(new String[0]);
         
         // Set content type
         response.setContentType("image/jpeg");
@@ -194,7 +204,7 @@ public class ImageService {
         response.setStatus(SC_PARTIAL_CONTENT);
         
         // Process image
-        process = new ImageProcess(command, response);
+        process = new ImageProcess(result, response);
         process.start();
     }
 }

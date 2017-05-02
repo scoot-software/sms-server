@@ -28,11 +28,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
+import org.apache.commons.lang3.StringUtils;
 
 public class StreamProcess extends SMSProcess {
     
@@ -46,9 +46,9 @@ public class StreamProcess extends SMSProcess {
             
     public StreamProcess() {};
     
-    public StreamProcess(UUID id, List<String> command, String contentType, HttpServletRequest request, HttpServletResponse response) {
+    public StreamProcess(UUID id, String[][] commands, String contentType, HttpServletRequest request, HttpServletResponse response) {
         this.id = id;
-        this.command = command;
+        this.commands = commands;
         this.contentType = contentType;
         this.request = request;
         this.response = response;
@@ -84,8 +84,22 @@ public class StreamProcess extends SMSProcess {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
         
         /********************************************************************************/
-
-        // Start transcoding
+        // Try available commands
+        for (String[] command : commands) {
+            // Start transcode process
+            run(command);
+            // Check for error
+            if(bytesTransferred == 0) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
+            } else {
+                break;
+            }
+        }
+    }
+    
+    private void run(String[] command) throws IOException {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+        
         ProcessBuilder processBuilder = new ProcessBuilder(command);
 
         process = processBuilder.start();
@@ -101,11 +115,6 @@ public class StreamProcess extends SMSProcess {
         while ((length = input.read(buffer)) != -1) {
             output.write(buffer, 0, length);
             bytesTransferred += length;
-        }
-        
-        // Check for error
-        if(bytesTransferred == 0) {
-            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
         }
     }
 }
