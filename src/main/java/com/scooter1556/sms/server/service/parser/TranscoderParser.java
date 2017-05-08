@@ -94,7 +94,7 @@ public class TranscoderParser {
                             for(int i = 0; i < gpus.getGraphicsCards().size(); i++) {
                                 if(gpus.getGraphicsCards().get(i).getManufacturer().contains("NVIDIA")) {
                                     HardwareAccelerator hwaccel = new HardwareAccelerator(line);
-                                    hwaccels.add(hwaccel);
+                                    hwaccels.add(0, hwaccel);
                                 }
                             }
                             

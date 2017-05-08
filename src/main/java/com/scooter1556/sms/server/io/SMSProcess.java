@@ -23,7 +23,6 @@
  */
 package com.scooter1556.sms.server.io;
 
-import java.io.IOException;
 import java.util.UUID;
 
 public class SMSProcess {
@@ -35,7 +34,7 @@ public class SMSProcess {
     
     public SMSProcess() {};
     
-    public void start() throws IOException {}
+    public void start() throws Exception {}
 
     public void end()
     {

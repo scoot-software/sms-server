@@ -45,6 +45,7 @@ import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.service.SessionService.Session;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
+import com.scooter1556.sms.server.utilities.FileUtils;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
@@ -489,7 +490,6 @@ public class StreamController {
             
             if(profile.getFormat().equals("hls")) {
                 // Update segment tracking
-                file = file.replaceAll("\\D+","");
                 int num = Integer.parseInt(file);
                 int oldNum = transcodeProcess.getSegmentNum();
                 transcodeProcess.setSegmentNum(num);
@@ -501,40 +501,35 @@ public class StreamController {
                 }
             }
             
-            int count = 0;
+            File segmentList = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/segments.txt");
             
-            while(!segment.exists() && count < 10) {
+            // Check if segment list is available
+            if(!segmentList.exists()) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Unable to get segment list for job " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to get segment list.");
+                return;
+            }
+            
+            List<String> segments = FileUtils.readFileToList(segmentList);
+            int count = 0;
+
+            while(!segments.contains(file) && (count < 10)) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
                 }
 
+                // Update segment list
+                segments = FileUtils.readFileToList(segmentList);
                 count++;
             }
             
-            // Check that the segment is available
-            if(!segment.exists()) {
+            // Check if segment is definitely available
+            if(count >= 10 ||  !segment.exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + id + ".", null);
                 response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                 return;
-            }
-            
-            // Check file is complete
-            long length = -1;
-            
-            while(segment.length() != length) {
-                if(length != -1) {
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, file + " for job " + profile.getID() + " is still being written", null);
-                }
-                
-                length = segment.length();
-                
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ex) {
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
-                }
             }
             
             // Return file direct for audio and transcode as required for video
@@ -566,7 +561,7 @@ public class StreamController {
                 process = new StreamProcess(id, commands, mimeType, request, response);
                 process.start();
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Called if client closes the connection early.
         } finally {
             if(process != null && job != null) {
@@ -700,7 +695,7 @@ public class StreamController {
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to determine stream type for job " + job.getID() + ".", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Cannot determine stream type.");
             }
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Called if client closes the connection early.
             if(process != null) {
                 process.end();

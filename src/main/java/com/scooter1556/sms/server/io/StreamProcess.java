@@ -88,6 +88,7 @@ public class StreamProcess extends SMSProcess {
         for (String[] command : commands) {
             // Start transcode process
             run(command);
+            
             // Check for error
             if(bytesTransferred == 0) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
@@ -115,6 +116,6 @@ public class StreamProcess extends SMSProcess {
         while ((length = input.read(buffer)) != -1) {
             output.write(buffer, 0, length);
             bytesTransferred += length;
-        }
+        }        
     }
 }

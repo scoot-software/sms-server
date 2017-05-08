@@ -67,6 +67,10 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     return;
                 }
             }
+            
+            // Create segment list file
+            File list = new File(streamDirectory + "/segments.txt");
+            list.createNewFile();
 
             // Reset flags
             ended = false;

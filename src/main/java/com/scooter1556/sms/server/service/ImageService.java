@@ -31,7 +31,6 @@ import com.scooter1556.sms.server.io.SMSProcess;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,7 +127,7 @@ public class ImageService {
         return false;
     }
     
-    public void sendImage(File imageFile, int scale, HttpServletResponse response) throws IOException {
+    public void sendImage(File imageFile, int scale, HttpServletResponse response) throws Exception {
         SMSProcess process;
         
         // Check transcoder exists
@@ -166,7 +165,7 @@ public class ImageService {
         process.start();
     }
     
-    public void sendThumbnail(File file, int offset, int scale, HttpServletResponse response) throws IOException {
+    public void sendThumbnail(File file, int offset, int scale, HttpServletResponse response) throws Exception {
         SMSProcess process;
         
         // Check transcoder exists

@@ -83,7 +83,7 @@ public class ImageController {
             
             // Send image if found
             imageService.sendImage(image, scale, response);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Do nothing...
         }
     }
@@ -150,7 +150,7 @@ public class ImageController {
             
             // Send image if found
             imageService.sendImage(image, scale, response);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Do nothing...
         }
     }
@@ -181,7 +181,7 @@ public class ImageController {
             
             // Send image if found
             imageService.sendImage(image, scale, response);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Do nothing...
         }
     }
@@ -227,7 +227,7 @@ public class ImageController {
             // Send thumbnail
             imageService.sendThumbnail(file, offset, scale, response);
             
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             // Do nothing...
         }
     }
