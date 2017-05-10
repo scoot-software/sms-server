@@ -257,10 +257,10 @@ public class TranscodeUtils {
             return null;
         }
         
-        // If the original resolution is less than the requested we don't need to continue
+        // If the original resolution is less than or equal to the requested resolution we don't need to continue
         Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
         
-        if (original.width < requested.width || original.height < requested.height) {
+        if (original.width <= requested.width || original.height <= requested.height) {
             return null;
         }
 
@@ -283,15 +283,24 @@ public class TranscodeUtils {
      * Returns the highest possible transcode quality for a given video element
      */
     public static int getHighestVideoQuality(MediaElement element) {
-        // Check variables
-        if(element == null || element.getType() != MediaElement.MediaElementType.VIDEO) {
+        // Check required variables
+        if(element == null || element.getType() != MediaElement.MediaElementType.VIDEO || element.getVideoHeight() == null || element.getVideoWidth() == null) {
             return -1;
         }
         
+        // Get original resolution
+        Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
+        
         // Loop through possible qualities until we find the highest
         for(int i = VideoTranscode.VideoQuality.getMax(); i >= 0; i--) {
-            if(getVideoResolution(element, i) != null) {
-                return i;
+            // Determine resolution based on quality.
+            Dimension requested = TranscodeUtils.VIDEO_QUALITY_RESOLUTION[i];
+            
+            if(requested != null) {
+                // Check if this is the closest match to the original resolution
+                if (requested.width <= original.width || requested.height <= original.height) {
+                    return i;
+                }
             }
         }
 
