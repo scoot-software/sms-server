@@ -43,7 +43,7 @@ public final class LogService {
     
     private final List<LogEntry> logEntries = new ArrayList<>();
     
-    private boolean enableDebug = false;
+    private byte logLevel = Level.INFO;
     
     public LogService() {
         removeLog();
@@ -68,16 +68,15 @@ public final class LogService {
      * @param message The message to accompany this entry.
      * @param exception Exception stack trace (Optional).
      */
-    public void addLogEntry(Level level, String category, String message, Throwable exception) {
-        
-        if(message == null || category == null || level == null) {
+    public void addLogEntry(byte level, String category, String message, Throwable exception) {
+        if(message == null || category == null || !Level.isValid(level)) {
             return;
         }
         
         LogEntry entry = new LogEntry(level, category, message);
         
-        // If debugging is not enabled and this is a debug entry, ignore it.
-        if(entry.getLevel() == Level.DEBUG && !enableDebug) {
+        // Check log level
+        if(level > logLevel) {
             return;
         }
         
@@ -133,19 +132,39 @@ public final class LogService {
     }
     
     /**
-     * Enables debug logging.
+     * Sets log level.
      * 
-     * @param enable Enable or disable debugging.
+     * @param level Log level.
      */
-    public void enableDebug(boolean enable) {
-        enableDebug = enable;
+    public void setLogLevel(byte level) {
+        if(Level.isValid(level)) {
+            this.logLevel = level;
+        }
     }
     
     /**
      * Log level
      */
-    public enum Level {
-        DEBUG, INFO, WARN, ERROR
+    public static class Level {
+        public static final byte ERROR = 0;
+        public static final byte WARN = 1;
+        public static final byte INFO = 2;
+        public static final byte DEBUG = 3;
+        public static final byte INSANE = 4;
+        
+        private static final String[] NAME = {"ERROR","WARN","INFO","DEBUG","INSANE"};
+        
+        public static boolean isValid(byte level) {
+            return level >= ERROR && level <= INSANE;
+        }
+        
+        public static String getName(byte level) {
+            if(!isValid(level)) {
+                return "?";
+            }
+            
+            return NAME[level];
+        }
     }
 
     /**
@@ -155,11 +174,11 @@ public final class LogService {
         private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
         private final Date date;
-        private final Level level;
+        private final byte level;
         private final String category;        
         private final String message;
 
-        public LogEntry(Level level, String category, String message) {
+        public LogEntry(byte level, String category, String message) {
             this.date = new Date();
             this.category = category;
             this.level = level;
@@ -174,7 +193,7 @@ public final class LogService {
             return date;
         }
 
-        public Level getLevel() {
+        public short getLevel() {
             return level;
         }
 
@@ -186,7 +205,7 @@ public final class LogService {
         public String toString() {
             StringBuilder buf = new StringBuilder();
             buf.append(DATE_FORMAT.format(date)).append(" ");
-            buf.append(level).append(" ");
+            buf.append(Level.getName(level)).append(" ");
             buf.append(category).append(": ");
             buf.append(message);
 

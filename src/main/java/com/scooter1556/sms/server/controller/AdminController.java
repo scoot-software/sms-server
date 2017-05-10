@@ -391,15 +391,9 @@ public class AdminController {
         return new ResponseEntity<>(LogService.getInstance().getLatestLogEntries(), HttpStatus.OK);
     }
     
-    @RequestMapping(value="/log/enabledebug", method=RequestMethod.GET)
+    @RequestMapping(value="/log/level/{value}", method=RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
-    public void enableDebug() {
-        LogService.getInstance().enableDebug(true);
-    }
-    
-    @RequestMapping(value="/log/disabledebug", method=RequestMethod.GET)
-    @ResponseStatus(HttpStatus.OK)
-    public void disableDebug() {
-        LogService.getInstance().enableDebug(false);
+    public void setLogLevel(@PathVariable("value") byte level) {
+        LogService.getInstance().setLogLevel(level);
     }
 }

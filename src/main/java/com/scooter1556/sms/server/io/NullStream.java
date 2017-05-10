@@ -24,6 +24,7 @@
 package com.scooter1556.sms.server.io;
 
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.LogService.Level;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -48,7 +49,7 @@ public class NullStream extends Thread
             String line;
             
             while ((line = buffer.readLine()) != null) { 
-                //LogService.getInstance().addLogEntry(LogService.Level.DEBUG, "Transcoding", line, null);
+                LogService.getInstance().addLogEntry(Level.INSANE, "Transcoding", line, null);
             }
         }
         catch (IOException ex) {}
