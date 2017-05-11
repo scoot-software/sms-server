@@ -24,6 +24,7 @@
 package com.scooter1556.sms.server.io;
 
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.SettingsService;
 import java.io.File;
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 boolean success = streamDirectory.mkdirs();
 
                 if(!success) {
-                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to create directory " + streamDirectory.getPath(), null);
+                    LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Unable to create directory " + streamDirectory.getPath(), null);
                     return;
                 }
             }
@@ -84,7 +85,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             
             ended = true;
             
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error starting transcoding process.", ex);
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error starting transcoding process.", ex);
         }
     }
     
@@ -111,7 +112,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Cleanup working directory
             FileUtils.deleteDirectory(streamDirectory);
         } catch (IOException | InterruptedException ex) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
         }
         
         ended = true;
@@ -129,20 +130,22 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     public void run() {
         try {
             for(String[] command : commands) {
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+                LogService.getInstance().addLogEntry(Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
                 
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 process = processBuilder.start();
                 new NullStream(process.getInputStream()).start();
-                new NullStream(process.getErrorStream()).start();
+                TranscodeAnalysisStream transcodeAnalysis = new TranscodeAnalysisStream(process.getErrorStream());
+                transcodeAnalysis.start();
 
                 // Wait for process to finish
                 int code = process.waitFor();
 
                 // Check for error
                 if(code == 1) {
-                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
+                    LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
                 } else {
+                    LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcode finished for job " + id + " (fps=" + transcodeAnalysis.getFps() + ")", null);
                     break;
                 }
             }
