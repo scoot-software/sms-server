@@ -279,7 +279,7 @@ public class TranscodeService {
                         commands.get(i).add("-c:v");
                         commands.get(i).add("copy");
                     } else if(hardwareAccelerator != null) {
-                        commands.get(i).addAll(getHardwareVideoDecodingCommands(profile, hardwareAccelerator));
+                        commands.get(i).addAll(getHardwareVideoEncodingCommands(profile, hardwareAccelerator));
                     } else {
                         commands.get(i).addAll(getSoftwareVideoEncodingCommands(profile));
                     }
