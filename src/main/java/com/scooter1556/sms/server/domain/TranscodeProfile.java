@@ -239,7 +239,6 @@ public class TranscodeProfile {
     
     public static class StreamType {
         public static final byte TRANSCODE = 0;
-        public static final byte ADAPTIVE = 1;
-        public static final byte FILE = 2;
+        public static final byte DIRECT = 1;
     }
 }

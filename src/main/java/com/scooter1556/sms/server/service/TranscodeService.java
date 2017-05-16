@@ -161,24 +161,18 @@ public class TranscodeService {
                 
                 // Subtitle commands
                 if(profile.getSubtitleTranscodes() != null) {
-                    if(profile.getType() == StreamType.ADAPTIVE) {
-                        for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
-                            commands.get(i).add("-map");
-                            commands.get(i).add("0:s:" + s);
-                            commands.get(i).add("-c:s");
-                            commands.get(i).add("copy");
-                        }
-
+                    for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
                         commands.get(i).add("-map");
-                        commands.get(i).add("0:v");
-
-
-                    } else if(profile.getSubtitleTrack() != null) {
-                        commands.get(i).addAll(getSubtitleCommands(profile));
+                        commands.get(i).add("0:s:" + s);
+                        commands.get(i).add("-c:s");
+                        commands.get(i).add("copy");
                     }
+
+                    commands.get(i).add("-map");
+                    commands.get(i).add("0:v");
                 } else {
-                        commands.get(i).add("-map");
-                        commands.get(i).add("0:v");
+                    commands.get(i).add("-map");
+                    commands.get(i).add("0:v");
                 }
 
                 // Hardware encoding
@@ -201,12 +195,8 @@ public class TranscodeService {
                 commands.get(i).add("-strict");
                 commands.get(i).add("experimental");
                 
-                if(profile.getType() == StreamType.ADAPTIVE) {
-                    for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
-                        commands.get(i).addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
-                    }
-                } else if(profile.getAudioTrack() != null) {
-                    commands.get(i).addAll(getAudioCommands(profile.getAudioTrack(), profile.getAudioTranscodes()[profile.getAudioTrack()]));
+                for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
+                    commands.get(i).addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
                 }
             }
 
@@ -224,7 +214,7 @@ public class TranscodeService {
         return result;
     }
     
-    public String[][] getAdaptiveSegmentTranscodeCommand(Path segment, TranscodeProfile profile, String type, Integer extra) {
+    public String[][] getSegmentTranscodeCommand(Path segment, TranscodeProfile profile, String type, Integer extra) {
         // Check variables
         if(segment == null || profile == null || type == null || extra == null) {
             return null;
@@ -984,7 +974,7 @@ public class TranscodeService {
             if(profile.getID() != null) {
                 if(profile.getID().compareTo(id) == 0) {
                     // Stop transcode process
-                    if(profile.getType() == StreamType.ADAPTIVE) {
+                    if(profile.getType() == StreamType.TRANSCODE) {
                         adaptiveStreamingService.endProcess(id);
                     }
                     
