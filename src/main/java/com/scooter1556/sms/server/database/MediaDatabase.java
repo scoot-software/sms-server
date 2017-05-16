@@ -33,7 +33,7 @@ public class MediaDatabase extends Database {
     private static final String CLASS_NAME = "MediaDatabase";
     
     public static final String DB_NAME = "Media";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 2;
     
     public MediaDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -70,10 +70,12 @@ public class MediaDatabase extends Database {
                     + "VideoWidth SMALLINT,"
                     + "VideoHeight SMALLINT,"
                     + "VideoCodec VARCHAR(20),"
+                    + "AudioName VARCHAR,"
                     + "AudioCodec VARCHAR,"
                     + "AudioSampleRate VARCHAR,"
                     + "AudioConfiguration VARCHAR,"
                     + "AudioLanguage VARCHAR,"
+                    + "SubtitleName VARCHAR,"
                     + "SubtitleLanguage VARCHAR,"
                     + "SubtitleFormat VARCHAR,"
                     + "SubtitleForced VARCHAR,"
@@ -108,6 +110,12 @@ public class MediaDatabase extends Database {
     @Override
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+    
+        if(newVersion == 2) {
+            // Delete table and re-create
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Element");
+            create();
+        }
     }
     
     @Override

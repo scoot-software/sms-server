@@ -49,10 +49,12 @@ public class MediaElement implements Serializable {
     private Short videoWidth = 0;
     private Short videoHeight = 0;
     private String videoCodec;
+    private String audioName;
     private String audioCodec;
     private String audioSampleRate;
     private String audioConfiguration;
     private String audioLanguage;
+    private String subtitleName;
     private String subtitleLanguage;
     private String subtitleFormat;
     private String subtitleForced;
@@ -89,10 +91,12 @@ public class MediaElement implements Serializable {
                         Short videoWidth,
                         Short videoHeight,
                         String videoCodec,
+                        String audioName,
                         String audioCodec,
                         String audioSampleRate,
                         String audioConfiguration,
                         String audioLanguage,
+                        String subtitleName,
                         String subtitleLanguage,
                         String subtitleFormat,
                         String subtitleForced,
@@ -127,10 +131,12 @@ public class MediaElement implements Serializable {
         this.videoWidth = videoWidth;
         this.videoHeight = videoHeight;
         this.videoCodec = videoCodec;
+        this.audioName = audioName;
         this.audioCodec = audioCodec;
         this.audioSampleRate = audioSampleRate;
         this.audioConfiguration = audioConfiguration;
         this.audioLanguage = audioLanguage;
+        this.subtitleName = subtitleName;
         this.subtitleLanguage = subtitleLanguage;
         this.subtitleFormat = subtitleFormat;
         this.subtitleForced = subtitleForced;
@@ -165,13 +171,13 @@ public class MediaElement implements Serializable {
             else if(type == MediaElementType.VIDEO)
             {
                 return String.format(
-                    "VideoElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Resolution=%sx%s, Video Codec=%s, Audio Language(s)=%s, Audio Codec(s)=%s, Audio Configuration(s)=%s, Subtitles=%s, Subtitle Format(s)=%s, Year=%s, Genre=%s, Rating=%s, Tagline=%s, Description=%s, Certificate=%s, Collection=%s]",
-                    id == null ? "?" : id.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString(), duration.toString(), bitrate.toString(), videoWidth.toString(), videoHeight.toString(), videoCodec == null ? "N/A" : videoCodec, audioLanguage == null ? "N/A" : audioLanguage, audioCodec == null ? "N/A" : audioCodec, audioConfiguration == null ? "N/A" : audioConfiguration, subtitleLanguage == null ? "N/A" : subtitleLanguage, subtitleFormat == null ? "N/A" : subtitleFormat, year.toString(), genre == null ? "N/A" : genre, rating.toString(), tagline == null ? "N/A" : tagline, description == null ? "N/A" : description, certificate == null ? "N/A" : certificate, collection == null ? "N/A" : collection);
+                    "VideoElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Resolution=%sx%s, Video Codec=%s, Audios=%s, Audio Languages=%s, Audio Codecs=%s, Audio Configurations=%s, Subtitles=%s, Subtitle Languages=%s, Subtitle Formats=%s, Year=%s, Genre=%s, Rating=%s, Tagline=%s, Description=%s, Certificate=%s, Collection=%s]",
+                    id == null ? "?" : id.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString(), duration.toString(), bitrate.toString(), videoWidth.toString(), videoHeight.toString(), videoCodec == null ? "N/A" : videoCodec, audioName == null ? "N/A" : audioName, audioLanguage == null ? "N/A" : audioLanguage, audioCodec == null ? "N/A" : audioCodec, audioConfiguration == null ? "N/A" : audioConfiguration, subtitleName == null ? "N/A" : subtitleName, subtitleLanguage == null ? "N/A" : subtitleLanguage, subtitleFormat == null ? "N/A" : subtitleFormat, year.toString(), genre == null ? "N/A" : genre, rating.toString(), tagline == null ? "N/A" : tagline, description == null ? "N/A" : description, certificate == null ? "N/A" : certificate, collection == null ? "N/A" : collection);
             }
             else if(type == MediaElementType.AUDIO)
             {
                 return String.format(
-                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Audio Codec(s)=%s, Sample Rate=%s Hz, Audio Configuration(s)=%s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s]",
+                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Audio Codecs=%s, Sample Rate=%s Hz, Audio Configurations=%s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s]",
                     id == null ? "?" : id.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString(), duration.toString(), bitrate.toString(), audioCodec == null ? "N/A" : audioCodec, audioSampleRate == null ? "?" : audioSampleRate, audioConfiguration == null ? "N/A" : audioConfiguration, artist == null ? "N/A" : artist, albumArtist == null ? "N/A" : albumArtist, album == null ? "N/A" : album, trackNumber.toString(), discNumber.toString(), discSubtitle == null ? "N/A" : discSubtitle, year.toString(), genre == null ? "N/A" : genre, description == null ? "N/A" : description);
             }
         }
@@ -316,6 +322,14 @@ public class MediaElement implements Serializable {
         this.videoCodec = videoCodec;
     }
     
+    public String getAudioName() {
+        return audioName;
+    }
+    
+    public void setAudioName(String audioName) {
+        this.audioName = audioName;
+    }
+    
     public String getAudioCodec() {
         return audioCodec;
     }
@@ -346,6 +360,14 @@ public class MediaElement implements Serializable {
     
     public void setAudioLanguage(String audioLanguage) {
         this.audioLanguage = audioLanguage;
+    }
+    
+    public String getSubtitleName() {
+        return subtitleName;
+    }
+    
+    public void setSubtitleName(String subtitleName) {
+        this.subtitleName = subtitleName;
     }
     
     public String getSubtitleLanguage() {
@@ -491,11 +513,13 @@ public class MediaElement implements Serializable {
     // Clear all attributes relating to Audio and Subtitle streams
     public void resetStreams()
     {
+        this.audioName = null;
         this.audioCodec = null;
         this.audioConfiguration = null;
         this.audioLanguage = null;
         this.audioSampleRate = null;
         
+        this.subtitleName = null;
         this.subtitleForced = null;
         this.subtitleFormat = null;
         this.subtitleLanguage = null;
@@ -514,10 +538,11 @@ public class MediaElement implements Serializable {
     @JsonIgnore
     public List<AudioStream> getAudioStreams() {
         // Check parameters are available
-        if(audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
+        if(audioName == null || audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
             return null;
         }
         
+        String[] audioNames = null;
         String[] audioLanguages = null;
         String[] audioCodecs;
         String[] audioSampleRates;
@@ -528,6 +553,7 @@ public class MediaElement implements Serializable {
              audioLanguages = getAudioLanguage().split(",");
         }
         
+        audioNames = getAudioName().split(",");
         audioCodecs = getAudioCodec().split(",");
         audioSampleRates = getAudioSampleRate().split(",");
         audioConfigurations = getAudioConfiguration().split(",");
@@ -544,12 +570,16 @@ public class MediaElement implements Serializable {
             return null;
         }
         
+        if(audioNames != null && audioNames.length != streams) {
+            return null;
+        }
+        
         // Accumalate list of audio streams
         int count = 0;
         List<AudioStream> audioStreams = new ArrayList<>();
         
         while(count < streams) {
-            audioStreams.add(new AudioStream(count, audioLanguages == null ? "null" : audioLanguages[count], audioCodecs[count], Integer.parseInt(audioSampleRates[count]), audioConfigurations[count]));
+            audioStreams.add(new AudioStream(count, audioNames == null ? "null" : audioNames[count], audioLanguages == null ? "null" : audioLanguages[count], audioCodecs[count], Integer.parseInt(audioSampleRates[count]), audioConfigurations[count]));
             count ++;
         }
         
@@ -559,11 +589,12 @@ public class MediaElement implements Serializable {
     @JsonIgnore
     public List<SubtitleStream> getSubtitleStreams() {
         // Check parameters are available
-        if(subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
+        if(subtitleName == null || subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
             return null;
         }
         
         // Retrieve parameters as arrays
+        String[] subtitleNames = getSubtitleName().split(",");
         String[] subtitleLanguages = getSubtitleLanguage().split(",");
         String[] subtitleFormats = getSubtitleFormat().split(",");
         String[] subtitleForcedFlags = getSubtitleForced().split(",");
@@ -576,12 +607,16 @@ public class MediaElement implements Serializable {
             return null;
         }
         
+        if(subtitleName != null && subtitleNames.length != streams) {
+            return null;
+        }
+        
         // Accumalate list of subtitle streams
         int count = 0;
         List<SubtitleStream> subtitleStreams = new ArrayList<>();
         
         while(count < streams) {
-            subtitleStreams.add(new SubtitleStream(count, subtitleLanguages[count], subtitleFormats[count], Boolean.parseBoolean(subtitleForcedFlags[count])));
+            subtitleStreams.add(new SubtitleStream(count, subtitleNames == null ? "null" : subtitleNames[count], subtitleLanguages[count], subtitleFormats[count], Boolean.parseBoolean(subtitleForcedFlags[count])));
             count ++;
         }
         
@@ -613,13 +648,15 @@ public class MediaElement implements Serializable {
     
     public static class AudioStream {
         private final int stream;
+        private final String name;
         private final String language;
         private final String codec;
         private final int sampleRate;
         private final String configuration;
         
-        public AudioStream(int stream, String language, String codec, int sampleRate, String configuration) {
+        public AudioStream(int stream, String name, String language, String codec, int sampleRate, String configuration) {
             this.stream = stream;
+            this.name = name;
             this.language = language;
             this.codec = codec;
             this.sampleRate = sampleRate;
@@ -628,6 +665,10 @@ public class MediaElement implements Serializable {
 
         public int getStream() {
             return stream;
+        }
+        
+        public String getName() {
+            return name;
         }
         
         public String getLanguage() {
@@ -649,12 +690,14 @@ public class MediaElement implements Serializable {
     
     public static class SubtitleStream {
         private final int stream;
+        private final String name;
         private final String language;
         private final String format;
         private final boolean forced;
         
-        public SubtitleStream(int stream, String language, String format, boolean forced) {
+        public SubtitleStream(int stream, String name, String language, String format, boolean forced) {
             this.stream = stream;
+            this.name = name;
             this.language = language;
             this.format = format;
             this.forced = forced;
@@ -662,6 +705,10 @@ public class MediaElement implements Serializable {
 
         public int getStream() {
             return stream;
+        }
+        
+        public String getName() {
+            return name;
         }
         
         public String getLanguage() {

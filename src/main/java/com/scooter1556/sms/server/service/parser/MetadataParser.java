@@ -83,9 +83,10 @@ public class MetadataParser {
             boolean comment = false;
                         
             // Begin Parsing
-            for (String line : metadata)
+            for (int i = 0; i < metadata.length; i++)
             {
                 Matcher matcher;
+                String line = metadata[i];
                 
                 if(mediaType == MediaElementType.AUDIO || mediaType == MediaElementType.VIDEO)
                 {
@@ -101,6 +102,8 @@ public class MetadataParser {
                         int seconds = Integer.parseInt(matcher.group(3));
                         int ms = Integer.parseInt(matcher.group(4));
                         mediaElement.setDuration(hours * 3600 + minutes * 60 + seconds + Math.round((float)(ms * 0.01)));
+                        
+                        continue;
                     }
                     
                     //
@@ -111,6 +114,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setBitrate(Integer.parseInt(matcher.group(1)));
+                        
+                        continue;
                     }
                     
                     //
@@ -119,9 +124,7 @@ public class MetadataParser {
                     matcher = AUDIO_STREAM.matcher(line);
 
                     if (matcher.find()) 
-                    {
-                        // Language
-                        
+                    {     
                         // Always set audio language for video elements
                         if(matcher.group(1) == null && mediaType == MediaElementType.VIDEO)
                         {
@@ -142,6 +145,20 @@ public class MetadataParser {
                         
                         //Configuration
                         mediaElement.setAudioConfiguration(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioConfiguration(), String.valueOf(matcher.group(5))));
+                    
+                        // Title
+                        if(metadata.length > (i+2)) {
+                            matcher = TITLE.matcher(metadata[i+2]);
+                            
+                            if(matcher.find()) {
+                                i = i+2;
+                                mediaElement.setAudioName(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioName(), String.valueOf(matcher.group(1))));
+                            } else if(mediaType == MediaElementType.VIDEO) {
+                                mediaElement.setAudioName(ParserUtils.addToCommaSeparatedList(mediaElement.getAudioName(), " "));
+                            }
+                        }                        
+                        
+                        continue;
                     }
                 }
                 
@@ -156,6 +173,8 @@ public class MetadataParser {
                     {
                         mediaElement.setTitle(String.valueOf(matcher.group(1)));
                         title = true;
+                        
+                        continue;
                     }
 
                     //
@@ -166,6 +185,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setArtist(String.valueOf(matcher.group(2)));
+                        
+                        continue;
                     }
 
                     //
@@ -176,6 +197,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setAlbumArtist(String.valueOf(matcher.group(2)));
+                        
+                        continue;
                     }
 
                     //
@@ -186,6 +209,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setAlbum(String.valueOf(matcher.group(1)));
+                        
+                        continue;
                     }
 
                     //
@@ -197,6 +222,8 @@ public class MetadataParser {
                     {
                         mediaElement.setDescription(String.valueOf(matcher.group(1)));
                         comment = true;
+                        
+                        continue;
                     }
 
                     //
@@ -207,6 +234,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setYear(Short.parseShort(matcher.group(2)));
+                        
+                        continue;
                     }
 
                     //
@@ -217,6 +246,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setDiscNumber(Byte.parseByte(matcher.group(2)));
+                        
+                        continue;
                     }
 
                     //
@@ -228,6 +259,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setDiscSubtitle(String.valueOf(matcher.group(1)));
+                        
+                        continue;
                     }
 
                     //
@@ -238,6 +271,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setTrackNumber(Short.parseShort(matcher.group(1)));
+                        
+                        continue;
                     }
                     
                     //
@@ -248,6 +283,8 @@ public class MetadataParser {
                     if(matcher.find())
                     {
                         mediaElement.setGenre(String.valueOf(matcher.group(1)));
+                        
+                        continue;
                     }
                 }
                 
@@ -273,6 +310,8 @@ public class MetadataParser {
                             mediaElement.setVideoWidth(width);
                             mediaElement.setVideoHeight(height);
                         }
+                        
+                        continue;
                     }
                     
                     //
@@ -304,6 +343,18 @@ public class MetadataParser {
                         {
                             mediaElement.setSubtitleForced(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleForced(), "true"));
                         }
+                        
+                        // Title
+                        if(metadata.length > (i+2)) {
+                            matcher = TITLE.matcher(metadata[i+2]);
+                            
+                            if(matcher.find()) {
+                                i = i+2;
+                                mediaElement.setSubtitleName(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleName(), String.valueOf(matcher.group(1))));
+                            } else {
+                                mediaElement.setSubtitleName(ParserUtils.addToCommaSeparatedList(mediaElement.getSubtitleName(), " "));
+                            }
+                        }                        
                     }
                 }
             }            

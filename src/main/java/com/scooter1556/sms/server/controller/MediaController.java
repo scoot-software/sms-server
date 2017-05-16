@@ -32,7 +32,6 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.LogService;
 import java.io.File;
 import java.io.FileFilter;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.SystemUtils;

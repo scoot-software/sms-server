@@ -52,8 +52,8 @@ public class MediaDao {
     //
     
     public boolean createMediaElements(final List<MediaElement> mediaElements) {
-        String sql = "INSERT INTO MediaElement (Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,VideoWidth,VideoHeight,VideoCodec,AudioCodec,AudioSampleRate,AudioConfiguration,AudioLanguage,SubtitleLanguage,SubtitleFormat,SubtitleForced,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection) " +
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO MediaElement (Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,VideoWidth,VideoHeight,VideoCodec,AudioName,AudioCodec,AudioSampleRate,AudioConfiguration,AudioLanguage,SubtitleName,SubtitleLanguage,SubtitleFormat,SubtitleForced,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -73,27 +73,29 @@ public class MediaDao {
                     ps.setShort(11, mediaElement.getVideoWidth());
                     ps.setShort(12, mediaElement.getVideoHeight());
                     ps.setString(13, mediaElement.getVideoCodec());
-                    ps.setString(14, mediaElement.getAudioCodec());
-                    ps.setString(15, mediaElement.getAudioSampleRate());
-                    ps.setString(16, mediaElement.getAudioConfiguration());
-                    ps.setString(17, mediaElement.getAudioLanguage());
-                    ps.setString(18, mediaElement.getSubtitleLanguage());
-                    ps.setString(19, mediaElement.getSubtitleFormat());
-                    ps.setString(20, mediaElement.getSubtitleForced());
-                    ps.setString(21, mediaElement.getTitle());
-                    ps.setString(22, mediaElement.getArtist());
-                    ps.setString(23, mediaElement.getAlbumArtist());
-                    ps.setString(24, mediaElement.getAlbum());
-                    ps.setShort(25, mediaElement.getYear());
-                    ps.setByte(26, mediaElement.getDiscNumber());
-                    ps.setString(27, mediaElement.getDiscSubtitle());
-                    ps.setShort(28,mediaElement.getTrackNumber());
-                    ps.setString(29, mediaElement.getGenre());
-                    ps.setFloat(30, mediaElement.getRating());
-                    ps.setString(31, mediaElement.getTagline());
-                    ps.setString(32, mediaElement.getDescription());
-                    ps.setString(33, mediaElement.getCertificate());
-                    ps.setString(34, mediaElement.getCollection());
+                    ps.setString(14, mediaElement.getAudioName());
+                    ps.setString(15, mediaElement.getAudioCodec());
+                    ps.setString(16, mediaElement.getAudioSampleRate());
+                    ps.setString(17, mediaElement.getAudioConfiguration());
+                    ps.setString(18, mediaElement.getAudioLanguage());
+                    ps.setString(19, mediaElement.getSubtitleName());
+                    ps.setString(20, mediaElement.getSubtitleLanguage());
+                    ps.setString(21, mediaElement.getSubtitleFormat());
+                    ps.setString(22, mediaElement.getSubtitleForced());
+                    ps.setString(23, mediaElement.getTitle());
+                    ps.setString(24, mediaElement.getArtist());
+                    ps.setString(25, mediaElement.getAlbumArtist());
+                    ps.setString(26, mediaElement.getAlbum());
+                    ps.setShort(27, mediaElement.getYear());
+                    ps.setByte(28, mediaElement.getDiscNumber());
+                    ps.setString(29, mediaElement.getDiscSubtitle());
+                    ps.setShort(30,mediaElement.getTrackNumber());
+                    ps.setString(31, mediaElement.getGenre());
+                    ps.setFloat(32, mediaElement.getRating());
+                    ps.setString(33, mediaElement.getTagline());
+                    ps.setString(34, mediaElement.getDescription());
+                    ps.setString(35, mediaElement.getCertificate());
+                    ps.setString(36, mediaElement.getCollection());
                 }
 
                 @Override
@@ -138,7 +140,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByID(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE ID=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioName=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleName=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE ID=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -154,28 +156,30 @@ public class MediaDao {
                     ps.setShort(7, mediaElement.getVideoWidth());
                     ps.setShort(8, mediaElement.getVideoHeight());
                     ps.setString(9, mediaElement.getVideoCodec());
-                    ps.setString(10, mediaElement.getAudioCodec());
-                    ps.setString(11, mediaElement.getAudioSampleRate());
-                    ps.setString(12, mediaElement.getAudioConfiguration());
-                    ps.setString(13, mediaElement.getAudioLanguage());
-                    ps.setString(14, mediaElement.getSubtitleLanguage());
-                    ps.setString(15, mediaElement.getSubtitleFormat());
-                    ps.setString(16, mediaElement.getSubtitleForced());
-                    ps.setString(17, mediaElement.getTitle());
-                    ps.setString(18, mediaElement.getArtist());
-                    ps.setString(19, mediaElement.getAlbumArtist());
-                    ps.setString(20, mediaElement.getAlbum());
-                    ps.setShort(21, mediaElement.getYear());
-                    ps.setByte(22, mediaElement.getDiscNumber());
-                    ps.setString(23, mediaElement.getDiscSubtitle());
-                    ps.setShort(24,mediaElement.getTrackNumber());
-                    ps.setString(25, mediaElement.getGenre());
-                    ps.setFloat(26, mediaElement.getRating());
-                    ps.setString(27, mediaElement.getTagline());
-                    ps.setString(28, mediaElement.getDescription());
-                    ps.setString(29, mediaElement.getCertificate());
-                    ps.setString(30, mediaElement.getCollection());
-                    ps.setLong(31, mediaElement.getID());
+                    ps.setString(10, mediaElement.getAudioName());
+                    ps.setString(11, mediaElement.getAudioCodec());
+                    ps.setString(12, mediaElement.getAudioSampleRate());
+                    ps.setString(13, mediaElement.getAudioConfiguration());
+                    ps.setString(14, mediaElement.getAudioLanguage());
+                    ps.setString(15, mediaElement.getSubtitleName());
+                    ps.setString(16, mediaElement.getSubtitleLanguage());
+                    ps.setString(17, mediaElement.getSubtitleFormat());
+                    ps.setString(18, mediaElement.getSubtitleForced());
+                    ps.setString(19, mediaElement.getTitle());
+                    ps.setString(20, mediaElement.getArtist());
+                    ps.setString(21, mediaElement.getAlbumArtist());
+                    ps.setString(22, mediaElement.getAlbum());
+                    ps.setShort(23, mediaElement.getYear());
+                    ps.setByte(24, mediaElement.getDiscNumber());
+                    ps.setString(25, mediaElement.getDiscSubtitle());
+                    ps.setShort(26,mediaElement.getTrackNumber());
+                    ps.setString(27, mediaElement.getGenre());
+                    ps.setFloat(28, mediaElement.getRating());
+                    ps.setString(29, mediaElement.getTagline());
+                    ps.setString(30, mediaElement.getDescription());
+                    ps.setString(31, mediaElement.getCertificate());
+                    ps.setString(32, mediaElement.getCollection());
+                    ps.setLong(33, mediaElement.getID());
                 }
 
                 @Override
@@ -192,7 +196,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByPath(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioName=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleName=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -208,28 +212,30 @@ public class MediaDao {
                     ps.setShort(7, mediaElement.getVideoWidth());
                     ps.setShort(8, mediaElement.getVideoHeight());
                     ps.setString(9, mediaElement.getVideoCodec());
-                    ps.setString(10, mediaElement.getAudioCodec());
-                    ps.setString(11, mediaElement.getAudioSampleRate());
-                    ps.setString(12, mediaElement.getAudioConfiguration());
-                    ps.setString(13, mediaElement.getAudioLanguage());
-                    ps.setString(14, mediaElement.getSubtitleLanguage());
-                    ps.setString(15, mediaElement.getSubtitleFormat());
-                    ps.setString(16, mediaElement.getSubtitleForced());
-                    ps.setString(17, mediaElement.getTitle());
-                    ps.setString(18, mediaElement.getArtist());
-                    ps.setString(19, mediaElement.getAlbumArtist());
-                    ps.setString(20, mediaElement.getAlbum());
-                    ps.setShort(21, mediaElement.getYear());
-                    ps.setByte(22, mediaElement.getDiscNumber());
-                    ps.setString(23, mediaElement.getDiscSubtitle());
-                    ps.setShort(24,mediaElement.getTrackNumber());
-                    ps.setString(25, mediaElement.getGenre());
-                    ps.setFloat(26, mediaElement.getRating());
-                    ps.setString(27, mediaElement.getTagline());
-                    ps.setString(28, mediaElement.getDescription());
-                    ps.setString(29, mediaElement.getCertificate());
-                    ps.setString(30, mediaElement.getCollection());
-                    ps.setString(31, mediaElement.getPath());
+                    ps.setString(10, mediaElement.getAudioName());
+                    ps.setString(11, mediaElement.getAudioCodec());
+                    ps.setString(12, mediaElement.getAudioSampleRate());
+                    ps.setString(13, mediaElement.getAudioConfiguration());
+                    ps.setString(14, mediaElement.getAudioLanguage());
+                    ps.setString(15, mediaElement.getSubtitleName());
+                    ps.setString(16, mediaElement.getSubtitleLanguage());
+                    ps.setString(17, mediaElement.getSubtitleFormat());
+                    ps.setString(18, mediaElement.getSubtitleForced());
+                    ps.setString(19, mediaElement.getTitle());
+                    ps.setString(20, mediaElement.getArtist());
+                    ps.setString(21, mediaElement.getAlbumArtist());
+                    ps.setString(22, mediaElement.getAlbum());
+                    ps.setShort(23, mediaElement.getYear());
+                    ps.setByte(24, mediaElement.getDiscNumber());
+                    ps.setString(25, mediaElement.getDiscSubtitle());
+                    ps.setShort(26,mediaElement.getTrackNumber());
+                    ps.setString(27, mediaElement.getGenre());
+                    ps.setFloat(28, mediaElement.getRating());
+                    ps.setString(29, mediaElement.getTagline());
+                    ps.setString(30, mediaElement.getDescription());
+                    ps.setString(31, mediaElement.getCertificate());
+                    ps.setString(32, mediaElement.getCollection());
+                    ps.setString(33, mediaElement.getPath());
                 }
 
                 @Override
@@ -557,10 +563,12 @@ public class MediaDao {
             mediaElement.setVideoWidth(rs.getShort("VideoWidth"));
             mediaElement.setVideoHeight(rs.getShort("VideoHeight"));
             mediaElement.setVideoCodec(rs.getString("VideoCodec"));
+            mediaElement.setAudioName(rs.getString("AudioName"));
             mediaElement.setAudioCodec(rs.getString("AudioCodec"));
             mediaElement.setAudioSampleRate(rs.getString("AudioSampleRate"));
             mediaElement.setAudioConfiguration(rs.getString("AudioConfiguration"));
             mediaElement.setAudioLanguage(rs.getString("AudioLanguage"));
+            mediaElement.setSubtitleName(rs.getString("SubtitleName"));
             mediaElement.setSubtitleLanguage(rs.getString("SubtitleLanguage"));
             mediaElement.setSubtitleFormat(rs.getString("SubtitleFormat"));
             mediaElement.setSubtitleForced(rs.getString("SubtitleForced"));
