@@ -81,7 +81,7 @@ public class StreamProcess extends SMSProcess {
         }
         
         // Print Headers
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
+        LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, requestHeader, null);
         
         /********************************************************************************/
         // Try available commands

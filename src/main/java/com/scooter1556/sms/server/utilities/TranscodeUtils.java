@@ -50,7 +50,7 @@ public class TranscodeUtils {
     };
     
     public static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,mp3,aac,ac3"},
+        {"hls", "h264,mp3,aac,ac3,webvtt"},
         {"dash", "h264,aac"},
         {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
@@ -91,6 +91,10 @@ public class TranscodeUtils {
         {"ogv", "video/ogg"},
         {"ts", "video/MP2T"},
         {"webm", "video/webm"}
+    };
+    
+    public static final String[][] SUBTITLE_MIME_TYPES = {
+        {"webvtt", "text/vtt"}
     };
     
     public static final String[][] AUDIO_CODEC_ENCODER = {

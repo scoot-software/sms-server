@@ -55,6 +55,8 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.file.Paths;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
@@ -390,6 +392,15 @@ public class StreamController {
                     
                     break;
                     
+                case "subtitle":
+                    if(profile.getSubtitleTranscodes() == null || profile.getSubtitleTranscodes().length <= extra) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Subtitles stream is out of range.", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Subtitle stream is out of range.");
+                        return;
+                    }
+                    
+                    break;
+                    
                 default:
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Playlist type is not recognised.", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Playlist type is not recognised.");
@@ -473,7 +484,7 @@ public class StreamController {
             // Find Segment File
             segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file);
             
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Path: " + segment.getPath(), null);
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Segment: " + file + " Type: " + type + " Extra: " + extra, null);
             
             if(profile.getFormat().equals("hls")) {
                 // Update segment tracking
@@ -527,7 +538,7 @@ public class StreamController {
                 // Get transcode command
                 String[][] commands = transcodeService.getSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
 
-                if(commands == null) {
+                if(commands == null || commands.length == 0) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
                     return;
@@ -545,13 +556,103 @@ public class StreamController {
                     }
                 }
                 
+                // Subtitle mimetype
+                if(type.equals("subtitle")) {
+                    mimeType = "text/vtt";
+                }
+                
                 process = new StreamProcess(id, commands, mimeType, request, response);
                 process.start();
             }
         } catch (Exception ex) {
             // Called if client closes the connection early.
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Client closed connection early (Job ID: " + id + " Segment: " + file + ")", null);
         } finally {
             if(process != null && job != null) {
+                jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
+            }
+        }
+    }
+    
+    @RequestMapping(value="/{id}", method=RequestMethod.GET)
+    @ResponseBody
+    public void getStream(@PathVariable("id") UUID id,
+                          @RequestParam(value = "atrack", required = false) Integer audioTrack,
+                          @RequestParam(value = "strack", required = false) Integer subtitleTrack,
+                          @RequestParam(value = "offset", required = false) Integer offset,
+                          HttpServletRequest request,
+                          HttpServletResponse response) {
+        // Variables
+        TranscodeProfile profile;
+        Job job = null;
+        SMSProcess process = null;
+        
+        /*********************** DEBUG: Get Request Headers *********************************/        
+        String requestHeader = "\n***************\nRequest Header:\n***************\n";
+	Enumeration requestHeaderNames = request.getHeaderNames();
+        
+	while (requestHeaderNames.hasMoreElements()) {
+            String key = (String) requestHeaderNames.nextElement();
+            String value = request.getHeader(key);
+            requestHeader += key + ": " + value + "\n";
+        }
+        
+        // Print Headers
+        LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, requestHeader, null);
+        
+        /********************************************************************************/
+                
+        try {
+            // Retrieve Job
+            job = jobDao.getJobByID(id);
+            
+            if(job == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve job with id " + id + ".", null);
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to retrieve job.");
+                return;
+            }
+            
+            // Retrieve transcode profile
+            profile = transcodeService.getTranscodeProfile(id);
+            
+            if(profile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve transcode profile for job " + job.getID() + ".", null);
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve transcode profile for job " + id + ".");
+                return;
+            }
+            
+            switch(profile.getType()) {
+                case StreamType.TRANSCODE:
+                    if(profile.getFormat().equals("hls")) {
+                        adaptiveStreamingService.sendHLSPlaylist(id, null, null, request, response);
+                    } else if(profile.getFormat().equals("dash")) {
+                        adaptiveStreamingService.sendDashPlaylist(id, request, response);
+                    }
+                
+                    break;
+                    
+                case StreamType.DIRECT:
+                    if(profile.getMediaElement() == null) {
+                        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to retrieve media element for job " + job.getID() + ".", null);
+                        response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find media element.");
+                        return;
+                    }
+                    
+                    process = new FileDownloadProcess(Paths.get(profile.getMediaElement().getPath()), profile.getMimeType(), request, response);
+                    process.start();
+                    break;
+                    
+                default:
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to determine stream type for job " + job.getID() + ".", null);
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Cannot determine stream type.");
+            }
+        } catch (Exception ex) {
+            // Called if client closes the connection early.
+            if(process != null) {
+                process.end();
+            }
+        } finally {
+            if(job != null && process != null) {
                 jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
             }
         }

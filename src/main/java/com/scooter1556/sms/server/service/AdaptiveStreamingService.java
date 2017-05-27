@@ -30,6 +30,8 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
+import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
@@ -261,26 +263,53 @@ public class AdaptiveStreamingService {
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscode() != null) {
             String audio = "";
+            boolean subtitles = false;
             
             // Process audio streams
             if(profile.getAudioTranscodes() != null) {
-                for(int i = 0; i < profile.getAudioTranscodes().length; i++) {
-                    AudioTranscode transcode = profile.getAudioTranscodes()[i];
-                    AudioStream stream = mediaElement.getAudioStreams().get(i);
+                for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
+                    AudioTranscode transcode = profile.getAudioTranscodes()[a];
+                    AudioStream stream = mediaElement.getAudioStreams().get(a);
                     String selected = "NO";
                     
-                    if(profile.getAudioTrack().equals(i)) {
-                        selected = "YES";
-                        
-                        if(transcode.getCodec().equals("copy")) {
-                            audio = TranscodeUtils.getIsoSpecForAudioCodec(mediaElement.getAudioStreams().get(i).getCodec());
-                        } else {
-                            audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
+                    if(profile.getAudioTrack() != null) {
+                        if(profile.getAudioTrack().equals(a)) {
+                            selected = "YES";
                         }
                     }
 
+                    if(transcode.getCodec().equals("copy")) {
+                        audio = TranscodeUtils.getIsoSpecForAudioCodec(mediaElement.getAudioStreams().get(a).getCodec());
+                    } else {
+                        audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
+                    }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getLanguage() + "\",AUTOSELECT=YES, DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + " (" + stream.getLanguage() + ")" + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
+                }                
+            }
+            
+            // Process subtitle streams
+            if(profile.getSubtitleTranscodes() != null) {
+                for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
+                    SubtitleTranscode transcode = profile.getSubtitleTranscodes()[s];
+                    
+                    // If this subtitle needs to be hardcoded skip it
+                    if(transcode.isHardcoded()) {
+                        continue;
+                    }
+                    
+                    SubtitleStream stream = mediaElement.getSubtitleStreams().get(s);
+                    String selected = "NO";
+                    
+                    if(profile.getSubtitleTrack() != null) {
+                        if(profile.getSubtitleTrack().equals(s)) {
+                            selected = "YES";
+                        }
+                    }
+                    
+                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + " (" + stream.getLanguage() + ")" + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/subtitle/" + s + ".m3u8\"");
+                    
+                    subtitles = true;
                 }                
             }
             
@@ -318,6 +347,10 @@ public class AdaptiveStreamingService {
                 
                 if(!audio.isEmpty()) {
                     builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
+                }
+                
+                if(subtitles) {
+                    builder.append(",SUBTITLES=\"subs\"");
                 }
                 
                 playlist.add(builder.toString());
@@ -426,10 +459,13 @@ public class AdaptiveStreamingService {
             requestHeader += header + ": " + value + "\n";
         }
         
-        // Print Headers
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, requestHeader, null);
+        // Log Headers
+        LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, requestHeader, null);
         
         /********************************************************************************/
+        
+        // Log playlist
+        LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, "\n************\nHLS Playlist\n************\n" + playlistWriter.toString(), null);
     }
     
     public void addProcess(AdaptiveStreamingProcess process) {

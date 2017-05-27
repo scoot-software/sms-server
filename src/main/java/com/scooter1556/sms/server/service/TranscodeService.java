@@ -167,13 +167,10 @@ public class TranscodeService {
                         commands.get(i).add("-c:s");
                         commands.get(i).add("copy");
                     }
-
-                    commands.get(i).add("-map");
-                    commands.get(i).add("0:v");
-                } else {
-                    commands.get(i).add("-map");
-                    commands.get(i).add("0:v");
                 }
+                    
+                commands.get(i).add("-map");
+                commands.get(i).add("0:v");
 
                 // Hardware encoding
                 if(hardwareAccelerator == null) {
@@ -231,88 +228,129 @@ public class TranscodeService {
             // Transcoder path
             commands.get(i).add(getTranscoder().getPath().toString());
 
-            if(type.equals("video")) {
-                //  Check if transcode is required for the segment
-                boolean transcodeRequired = !extra.equals(profile.getQuality());
+            switch(type) {
                 
-                HardwareAccelerator hardwareAccelerator = null;
-            
-                // Software or hardware based transcoding
-                if(transcoder.getHardwareAccelerators().length > i) {
-                    hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
-                }
-                
-                // Hardware decoding
-                if(hardwareAccelerator != null && transcodeRequired) {
-                    commands.get(i).addAll(getHardwareVideoDecodingCommands(profile, hardwareAccelerator));
-                }
-
-                // Input media file
-                commands.get(i).add("-i");
-                commands.get(i).add(segment.toString());
-                
-                // Check profile
-                if(transcodeRequired) {
-                    Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-
-                    if(resolution != null) {
-                        profile.getVideoTranscode().setResolution(resolution);
+                case "video":
+                    //  Check if transcode is required for the segment
+                    boolean transcodeRequired = false;
+                    
+                    if(!extra.equals(profile.getQuality())){
+                        transcodeRequired= true;
+                    } else if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
+                        if(profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded()) {
+                            transcodeRequired= true;
+                        }
                     }
-                }
+                                        
+                    HardwareAccelerator hardwareAccelerator = null;
+                    
+                    // Software or hardware based transcoding
+                    if(transcoder.getHardwareAccelerators().length > i) {
+                        hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
+                    }   
 
-                if(profile.getVideoTranscode() != null) {
-                    commands.get(i).add("-map");
-                    commands.get(i).add("0:v");
-
-                    // If highest possible quality then copy stream
-                    if(!transcodeRequired) {
-                        commands.get(i).add("-c:v");
-                        commands.get(i).add("copy");
-                    } else if(hardwareAccelerator != null) {
-                        commands.get(i).addAll(getHardwareVideoEncodingCommands(profile, hardwareAccelerator));
-                    } else {
-                        commands.get(i).addAll(getSoftwareVideoEncodingCommands(profile));
+                    // Hardware decoding
+                    if(hardwareAccelerator != null && transcodeRequired) {
+                        commands.get(i).addAll(getHardwareVideoDecodingCommands(profile, hardwareAccelerator));
                     }
+                    
+                    // Input media file
+                    commands.get(i).add("-i");
+                    commands.get(i).add(segment.toString());
+                                        
+                    // Check profile
+                    if(transcodeRequired) {
+                        Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
+                        
+                        if(resolution != null) {
+                            profile.getVideoTranscode().setResolution(resolution);
+                        }
+                    }   
+                    
+                    if(profile.getVideoTranscode() != null) {                        
+                        commands.get(i).addAll(getSubtitleCommands(profile));
+                                                
+                        // If highest possible quality then copy stream
+                        if(!transcodeRequired) {
+                            commands.get(i).add("-c:v");
+                            commands.get(i).add("copy");
+                        } else if(hardwareAccelerator != null) {
+                            commands.get(i).addAll(getHardwareVideoEncodingCommands(profile, hardwareAccelerator));
+                        } else {
+                            commands.get(i).addAll(getSoftwareVideoEncodingCommands(profile));
+                        }
+                        
+                        // Format
+                        commands.get(i).add("-f");
+                        commands.get(i).add("mpegts");                          
+                    }
+                                        
+                    break;
+                    
+                case "audio":
+                    // Input media file
+                    commands.get(i).add("-i");
+                    commands.get(i).add(segment.toString());
+                    
+                    // Audio
+                    if(profile.getAudioTranscodes() != null) {
+                        if(profile.getAudioTranscodes().length > extra) {
+                            // Mapping
+                            commands.get(i).add("-map");
+                            commands.get(i).add("0:a:" + extra);
+                            
+                            // Codec
+                            commands.get(i).add("-c:a");
+                            commands.get(i).add("copy");
+                        }
+                    }   
 
                     // Format
                     commands.get(i).add("-f");
-                    commands.get(i).add("mpegts");
-                }
-            } else if(type.equals("audio")) {
-                // Input media file
-                commands.get(i).add("-i");
-                commands.get(i).add(segment.toString());
-                
-                // Audio
-                if(profile.getAudioTranscodes() != null) {
-                    if(profile.getAudioTranscodes().length > extra) {
-                        // Mapping
-                        commands.get(i).add("-map");
-                        commands.get(i).add("0:a:" + extra);
+                    
+                    switch(profile.getClient()) {
+                        case "chromecast":
+                            commands.get(i).add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
+                            break;
+                            
+                        default:
+                            commands.get(i).add("mpegts");
+                    }   
+                    
+                    break;
+                    
+                case "subtitle":
+                    // Input media file
+                    commands.get(i).add("-i");
+                    commands.get(i).add(segment.toString());
+                    
+                    // Subtitle
+                    if(profile.getSubtitleTranscodes() != null) {
+                        if(profile.getSubtitleTranscodes().length > extra) {
+                            // Mapping
+                            commands.get(i).add("-map");
+                            commands.get(i).add("0:s:" + extra);
+                            
+                            // Codec
+                            commands.get(i).add("-c:s");
+                            commands.get(i).add("webvtt");
+                        }
+                    }   
 
-                        // Codec
-                        commands.get(i).add("-c:a");
-                        commands.get(i).add("copy");
-                    }
-                }
-
-                // Format
-                commands.get(i).add("-f");
-
-                switch(profile.getClient()) {
-                    case "chromecast":
-                        commands.get(i).add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
-                        break;
-
-                    default:
-                        commands.get(i).add("mpegts"); 
-                }
+                    // Format
+                    commands.get(i).add("-f");
+                    commands.get(i).add("webvtt");
+                    
+                    break;
+                    
+                default:
+                    break;
             }
 
             // Maintain timestamps
             commands.get(i).add("-copyts");
 
-            commands.get(i).add("-");
+            commands.get(i).add("-");            
         }
         
         //Prepare result
@@ -421,10 +459,7 @@ public class TranscodeService {
             switch(hardwareAccelerator.getName()) {
                 case "vaapi":
                     commands.add("-vf");
-                    commands.add("format=nv12|vaapi");
-
-                    commands.add("-vf");
-                    commands.add("hwupload");
+                    commands.add("format=\'nv12|vaapi,hwupload\'");
 
                     if(profile.getVideoTranscode().getResolution() != null) {
                         commands.add("-vf");
@@ -543,15 +578,21 @@ public class TranscodeService {
     }
     
     /*
-     * Returns a list of commands for burning text and picture based subtitles into the output video.
+     * Returns a list of commands for burning picture based subtitles into the output video.
      */
-    private Collection<String> getSubtitleCommands(TranscodeProfile profile) {   
+    private Collection<String> getSubtitleCommands(TranscodeProfile profile) {  
         Collection<String> commands = new LinkedList<>();
         
         // Get subtitle transcode properties
-        SubtitleTranscode transcode = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()];
+        SubtitleTranscode transcode = null;
         
-        if(transcode == null || transcode.getCodec() == null) {
+        if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
+            if(profile.getSubtitleTrack() < profile.getSubtitleTranscodes().length) {
+                transcode = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()];
+            }
+        }
+        
+        if(transcode == null) {
             commands.add("-map");
             commands.add("0:v");
             commands.add("-sn");
@@ -560,38 +601,11 @@ public class TranscodeService {
         
         // Hardcoded subtitles
         if(transcode.isHardcoded()) {
-            switch(transcode.getCodec()) {
-                // Text Based
-                case "subrip": case "srt": case "webvtt":
-                    commands.add("-map");
-                    commands.add("0:v");
-                    commands.add("-vf");
-                    commands.add("setpts=PTS+" + profile.getOffset() + "/TB,subtitles=" + profile.getMediaElement().getPath() + ":si=" + profile.getSubtitleTrack() + ",setpts=PTS-STARTPTS");
-                    break;
-
-                // Picture Based
-                case "dvd_subtitle": case "dvb_subtitle": case "hdmv_pgs_subtitle":
-                    commands.add("-filter_complex");
-                    commands.add("[0:v][0:s:" + profile.getSubtitleTrack() + "]overlay[v]");
-                    commands.add("-map");
-                    commands.add("[v]");
-                    break;
-
-                default:
-                    commands.add("-map");
-                    commands.add("0:v");
-                    commands.add("-sn");
-                    break;
-            }
-        } else {
+            commands.add("-filter_complex");
+            commands.add("[0:v][0:s:" + profile.getSubtitleTrack() + "]overlay[v]");
             commands.add("-map");
-            commands.add("0:v");
-            commands.add("-map");
-            commands.add("0:s:" + profile.getSubtitleTrack());
-            commands.add("-c:s");
-            commands.add(transcode.getCodec());
+            commands.add("[v]");
         }
-        
         
         return commands;
     }
@@ -716,8 +730,22 @@ public class TranscodeService {
             if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getFormat()) && TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getFormat())) {
                 codec = "copy";
             } else if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, stream.getFormat())){
-                codec = stream.getFormat();
-                hardcode = true;
+                switch(stream.getFormat()) {
+                    // Text Based
+                    case "subrip": case "srt": case "webvtt":
+                        codec = "webvtt";
+                        break;
+
+                    // Picture Based
+                    case "dvd_subtitle": case "dvb_subtitle": case "hdmv_pgs_subtitle":
+                        codec = stream.getFormat();
+                        hardcode = true;
+                        break;
+
+                    default:
+                        codec = "copy";
+                        break;
+                }
             }
             
             // Enable forced subtitles by default
