@@ -125,6 +125,9 @@ public class TranscodeService {
     public String[][] getTranscodeCommand(TranscodeProfile profile) {
         ArrayList<ArrayList<String>> commands = new ArrayList<>();
         
+        // Check profile parameters
+        profile.getVideoTranscode().setResolution(TranscodeUtils.getVideoResolution(profile.getMediaElement(), profile.getQuality()));
+        
         // Determine number of potential transcode commands to generate
         int transcodeCommands = 1 + (profile.getVideoTranscode() == null ? 0 : transcoder.getHardwareAccelerators().length);
         
@@ -235,6 +238,9 @@ public class TranscodeService {
                     boolean transcodeRequired = false;
                     
                     if(!extra.equals(profile.getQuality())){
+                        // Check profile parameters
+                        profile.getVideoTranscode().setResolution(TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra));
+                        
                         transcodeRequired= true;
                     } else if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
                         if(profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded()) {
@@ -257,15 +263,6 @@ public class TranscodeService {
                     // Input media file
                     commands.get(i).add("-i");
                     commands.get(i).add(segment.toString());
-                                        
-                    // Check profile
-                    if(transcodeRequired) {
-                        Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-                        
-                        if(resolution != null) {
-                            profile.getVideoTranscode().setResolution(resolution);
-                        }
-                    }   
                     
                     if(profile.getVideoTranscode() != null) {                        
                         commands.get(i).addAll(getSubtitleCommands(profile));
