@@ -129,7 +129,11 @@ public class TranscodeService {
         profile.getVideoTranscode().setResolution(TranscodeUtils.getVideoResolution(profile.getMediaElement(), profile.getQuality()));
         
         // Determine number of potential transcode commands to generate
-        int transcodeCommands = 1 + (profile.getVideoTranscode() == null ? 0 : transcoder.getHardwareAccelerators().length);
+        int transcodeCommands = 1; 
+        
+        if(profile.getVideoTranscode() != null && !profile.getVideoTranscode().getCodec().equals("copy")) {
+            transcodeCommands += transcoder.getHardwareAccelerators().length;
+        }
         
         for(int i = 0; i < transcodeCommands; i++) {
             commands.add(new ArrayList<String>());
@@ -147,14 +151,17 @@ public class TranscodeService {
             if(profile.getVideoTranscode() != null) {
                 HardwareAccelerator hardwareAccelerator = null;
             
-                // Software or hardware based transcoding
-                if(transcoder.getHardwareAccelerators().length > i) {
-                    hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
-                }
-                
-                // Hardware decoding
-                if(hardwareAccelerator != null) {
-                    commands.get(i).addAll(getHardwareVideoDecodingCommands(profile, hardwareAccelerator));
+                // Check we are not simply copying the video stream
+                if(!profile.getVideoTranscode().getCodec().equals("copy")) {
+                    // Software or hardware based transcoding
+                    if(transcoder.getHardwareAccelerators().length > i) {
+                        hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
+                    }
+
+                    // Hardware decoding
+                    if(hardwareAccelerator != null) {
+                        commands.get(i).addAll(getHardwareVideoDecodingCommands(profile, hardwareAccelerator));
+                    }
                 }
                 
                 // Input media file
