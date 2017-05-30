@@ -101,9 +101,7 @@ public class MetadataParser {
                         int minutes = Integer.parseInt(matcher.group(2));
                         int seconds = Integer.parseInt(matcher.group(3));
                         int ms = Integer.parseInt(matcher.group(4));
-                        mediaElement.setDuration(hours * 3600 + minutes * 60 + seconds + Math.round((float)(ms * 0.01)));
-                        
-                        continue;
+                        mediaElement.setDuration(hours * 3600 + minutes * 60 + seconds + Math.round((float)(ms * 0.01)));                        
                     }
                     
                     //
