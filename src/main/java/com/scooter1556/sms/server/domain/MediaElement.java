@@ -538,7 +538,7 @@ public class MediaElement implements Serializable {
     @JsonIgnore
     public List<AudioStream> getAudioStreams() {
         // Check parameters are available
-        if(audioName == null || audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
+        if(audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
             return null;
         }
         
@@ -553,7 +553,10 @@ public class MediaElement implements Serializable {
              audioLanguages = getAudioLanguage().split(",");
         }
         
-        audioNames = getAudioName().split(",");
+        if(audioName != null) {
+            audioNames = getAudioName().split(",");
+        }
+        
         audioCodecs = getAudioCodec().split(",");
         audioSampleRates = getAudioSampleRate().split(",");
         audioConfigurations = getAudioConfiguration().split(",");
@@ -589,15 +592,23 @@ public class MediaElement implements Serializable {
     @JsonIgnore
     public List<SubtitleStream> getSubtitleStreams() {
         // Check parameters are available
-        if(subtitleName == null || subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
+        if(subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
             return null;
         }
         
+        String[] subtitleNames = null;
+        String[] subtitleLanguages;
+        String[] subtitleFormats;
+        String[] subtitleForcedFlags;
+        
         // Retrieve parameters as arrays
-        String[] subtitleNames = getSubtitleName().split(",");
-        String[] subtitleLanguages = getSubtitleLanguage().split(",");
-        String[] subtitleFormats = getSubtitleFormat().split(",");
-        String[] subtitleForcedFlags = getSubtitleForced().split(",");
+        if(subtitleName != null) {
+            subtitleNames = getSubtitleName().split(",");
+        }
+        
+        subtitleLanguages = getSubtitleLanguage().split(",");
+        subtitleFormats = getSubtitleFormat().split(",");
+        subtitleForcedFlags = getSubtitleForced().split(",");
         
         // Get the number of subtitle streams
         Integer streams = subtitleLanguages.length;
@@ -607,7 +618,7 @@ public class MediaElement implements Serializable {
             return null;
         }
         
-        if(subtitleName != null && subtitleNames.length != streams) {
+        if(subtitleNames != null && subtitleNames.length != streams) {
             return null;
         }
         
