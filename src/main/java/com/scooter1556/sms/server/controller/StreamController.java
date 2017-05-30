@@ -35,8 +35,10 @@ import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.io.FileDownloadProcess;
+import com.scooter1556.sms.server.io.NullStream;
 import com.scooter1556.sms.server.io.SMSProcess;
 import com.scooter1556.sms.server.io.StreamProcess;
+import com.scooter1556.sms.server.io.TranscodeAnalysisStream;
 import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
@@ -61,6 +63,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -531,17 +534,21 @@ public class StreamController {
             }
             
             // Return file direct for audio and transcode as required for video
-            if(profile.getMediaElement().getType().equals(MediaElementType.AUDIO)) {
-                process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
-                process.start();
-            } else {
-                // Get transcode command
-                String[][] commands = transcodeService.getSegmentTranscodeCommand(segment.toPath(), profile, type, extra);
+            if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
+                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
+                
+                if(!segment.exists()) {  
+                    // Get transcode command
+                    String[][] commands = transcodeService.getSegmentTranscodeCommand(file, profile, type, extra);
 
-                if(commands == null || commands.length == 0) {
-                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
-                    return;
+                    // Generate segment
+                    boolean success = TranscodeUtils.runTranscodeCommands(commands);
+
+                    if(!success || !segment.exists()) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
+                        return;
+                    }
                 }
                 
                 // Determine proper mimetype for audio
@@ -560,10 +567,11 @@ public class StreamController {
                 if(type.equals("subtitle")) {
                     mimeType = "text/vtt";
                 }
-                
-                process = new StreamProcess(id, commands, mimeType, request, response);
-                process.start();
             }
+            
+            process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
+            process.start();
+                
         } catch (Exception ex) {
             // Called if client closes the connection early.
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Client closed connection early (Job ID: " + id + " Segment: " + file + ")", null);

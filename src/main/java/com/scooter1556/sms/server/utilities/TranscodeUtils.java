@@ -4,6 +4,8 @@ import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
+import com.scooter1556.sms.server.io.NullStream;
+import com.scooter1556.sms.server.service.LogService;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -11,9 +13,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 
 public class TranscodeUtils {
+    
+    private static final String CLASS_NAME = "TranscodeUtils";
     
     private static final String TRANSCODER = "ffmpeg";
     private static final String[] TRANSCODE_CONFIGS = {"libmp3lame","libvorbis","libx264","libvpx"};
@@ -50,7 +55,7 @@ public class TranscodeUtils {
     };
     
     public static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,mp3,aac,ac3,webvtt"},
+        {"hls", "h264,aac,ac3,webvtt"},
         {"dash", "h264,aac"},
         {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
@@ -519,5 +524,43 @@ public class TranscodeUtils {
         Path[] result = devices.toArray(new Path[0]);
         Arrays.sort(result);
         return result;
+    }
+    
+    public static boolean runTranscodeCommands(String[][] commands) {
+        Process process = null;
+        
+        if(commands == null || commands.length == 0) {
+            return false;
+        }
+                
+        try {
+            for(String[] command : commands) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+                
+                ProcessBuilder processBuilder = new ProcessBuilder(command);
+                process = processBuilder.start();
+                new NullStream(process.getInputStream()).start();
+                new NullStream(process.getErrorStream()).start();
+
+                // Wait for process to finish
+                int code = process.waitFor();
+
+                // Check for error
+                if(code != 1) {
+                    return true;
+                } else {
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, StringUtils.join(command, " "), null);
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Transcode command failed. Attempting alternatives if available...", null);
+                }
+            }
+        } catch(IOException | InterruptedException ex) {
+            if(process != null) {
+                process.destroy();
+            }
+            
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error occured whilst transcoding.", ex);
+        }
+        
+        return false;
     }
 }
