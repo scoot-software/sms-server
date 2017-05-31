@@ -483,7 +483,7 @@ public class StreamController {
             // Find Segment File
             segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file);
             
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID: " + id + " Segment: " + file + " Type: " + type + " Extra: " + extra, null);
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + id + " Segment=" + file + " Type=" + type + " Extra=" + extra, null);
             
             if(profile.getFormat().equals("hls")) {
                 // Update segment tracking

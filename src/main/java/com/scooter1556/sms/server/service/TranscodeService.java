@@ -459,7 +459,7 @@ public class TranscodeService {
             switch(hardwareAccelerator.getName()) {
                 case "vaapi":
                     commands.add("-vf");
-                    commands.add("format=\'nv12|vaapi,hwupload\'");
+                    commands.add("format=nv12|vaapi,hwupload");
 
                     if(resolution != null) {
                         commands.add("-vf");
