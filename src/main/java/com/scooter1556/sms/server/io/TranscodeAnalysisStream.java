@@ -25,10 +25,15 @@ package com.scooter1556.sms.server.io;
 
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
+import com.scooter1556.sms.server.service.SettingsService;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -39,13 +44,17 @@ public class TranscodeAnalysisStream extends Thread {
     // Patterns
     private static final Pattern FPS = Pattern.compile(".*?fps=\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
     
+    UUID id;
+    String command;
     InputStream stream;
     
     long fps = 0;
     long fpsTotal = 0;
     long fpsReadings = 0;
     
-    public TranscodeAnalysisStream(InputStream stream) {
+    public TranscodeAnalysisStream(UUID id, String command, InputStream stream) {
+        this.id = id;
+        this.command = command;
         this.stream = stream;
     }
     
@@ -60,10 +69,14 @@ public class TranscodeAnalysisStream extends Thread {
             BufferedReader buffer = new BufferedReader(streamReader);
             String line;
             
+            // Write command to log
+            writeToLog(command);
+            
             while ((line = buffer.readLine()) != null) {
                 Matcher matcher;
                 
-                LogService.getInstance().addLogEntry(Level.INSANE, "Transcoding", line, null);
+                // Write to log
+                writeToLog(line);
                 
                 // FPS
                 matcher = FPS.matcher(line);
@@ -77,5 +90,20 @@ public class TranscodeAnalysisStream extends Thread {
                 }
             }
         } catch (IOException ex) {}
+    }
+    
+    private void writeToLog(String line) {
+        if(LogService.getInstance().getLogLevel() < Level.DEBUG) {
+            return;
+        }
+        
+        try {
+            PrintWriter out;
+            out = new PrintWriter(new BufferedWriter(new FileWriter(SettingsService.getInstance().getLogDirectory() + "/transcode-" + id + ".log", true)));
+            out.println(line);
+            out.close();
+        } catch (IOException ex) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Unable to add entry to log file.", ex);
+        }
     }
 }

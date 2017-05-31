@@ -143,6 +143,15 @@ public final class LogService {
     }
     
     /**
+     * Retrieve log level
+     * 
+     * @return Log level
+     */
+    public byte getLogLevel() {
+        return this.logLevel;
+    }
+    
+    /**
      * Log level
      */
     public static class Level {
