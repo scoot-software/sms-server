@@ -26,13 +26,11 @@ package com.scooter1556.sms.server.io;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.SettingsService;
+import com.scooter1556.sms.server.utilities.LogUtils;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,16 +65,17 @@ public class TranscodeAnalysisStream extends Thread {
         try {
             InputStreamReader streamReader = new InputStreamReader(stream);
             BufferedReader buffer = new BufferedReader(streamReader);
+            String log = SettingsService.getInstance().getLogDirectory() + "/transcode-" + id + ".log";
             String line;
             
             // Write command to log
-            writeToLog(command);
+            LogUtils.writeToLog(log, command, Level.DEBUG);
             
             while ((line = buffer.readLine()) != null) {
                 Matcher matcher;
                 
                 // Write to log
-                writeToLog(line);
+                LogUtils.writeToLog(log, line, Level.DEBUG);
                 
                 // FPS
                 matcher = FPS.matcher(line);
@@ -90,20 +89,5 @@ public class TranscodeAnalysisStream extends Thread {
                 }
             }
         } catch (IOException ex) {}
-    }
-    
-    private void writeToLog(String line) {
-        if(LogService.getInstance().getLogLevel() < Level.DEBUG) {
-            return;
-        }
-        
-        try {
-            PrintWriter out;
-            out = new PrintWriter(new BufferedWriter(new FileWriter(SettingsService.getInstance().getLogDirectory() + "/transcode-" + id + ".log", true)));
-            out.println(line);
-            out.close();
-        } catch (IOException ex) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Unable to add entry to log file.", ex);
-        }
     }
 }
