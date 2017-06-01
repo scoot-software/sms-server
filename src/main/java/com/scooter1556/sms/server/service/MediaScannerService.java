@@ -29,9 +29,11 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.DirectoryMediaType;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import com.scooter1556.sms.server.service.parser.NFOParser.NFOData;
+import com.scooter1556.sms.server.utilities.LogUtils;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
@@ -191,6 +193,7 @@ public class MediaScannerService {
         private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
         private final Deque<NFOData> nfoData = new ArrayDeque<>();
         private final HashSet<Path> directoriesToUpdate = new HashSet<>();
+        String log = SettingsService.getInstance().getLogDirectory() + "/mediascanner-" + scanTime + ".log";
         boolean directoryChanged = false;
 
         
@@ -212,7 +215,7 @@ public class MediaScannerService {
                 return SKIP_SIBLINGS;
             }
             
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing directory " + dir.toString(), null);
+            LogUtils.writeToLog(log, "Parsing directory " + dir.toString(), Level.DEBUG);
             
             // Initialise variables
             directoryChanged = false;
@@ -260,7 +263,7 @@ public class MediaScannerService {
         public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
             // Determine type of file and how to process it
             if(isMediaFile(file)) {
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing file " + file.toString(), null);
+                LogUtils.writeToLog(log, "Parsing file " + file.toString(), Level.DEBUG);
                 
                 // Update statistics
                 total++;
@@ -276,7 +279,7 @@ public class MediaScannerService {
                 
                 // Determine if we need to process the file
                 if(mediaElement.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing file " + file.toString(), null);
+                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG);
                     
                     // Add parent directory to update list
                     directoriesToUpdate.add(file.getParent());
@@ -299,7 +302,7 @@ public class MediaScannerService {
             } else if(isInfoFile(file)) {
                 // Determine if we need to parse this file
                 if(directoryChanged || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
-                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing file " + file.toString(), null);
+                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG);
                     nfoData.add(nfoParser.parse(file));
                 }
             }
@@ -358,12 +361,12 @@ public class MediaScannerService {
                     newElements.add(element);
                 } else {
                     updatedElements.add(element);
-                }
+                }                
             }
             
             // Update directory element if necessary
             if(directory != null && directoriesToUpdate.contains(dir)) {
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Processing directory " + dir.toString(), null);
+                LogUtils.writeToLog(log, "Processing directory " + dir.toString(), Level.DEBUG);
                 
                 if(!dirData.isEmpty()) {
                     nfoParser.updateMediaElement(directory, dirData.removeFirst());
@@ -433,10 +436,10 @@ public class MediaScannerService {
                     newElements.add(directory);
                 } else {
                     updatedElements.add(directory);
-                }
+                }                
             }
             
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Finished parsing directory " + dir.toString(), null);
+            LogUtils.writeToLog(log, "Finished parsing directory " + dir.toString(), Level.DEBUG);
             
             return CONTINUE;
         }
