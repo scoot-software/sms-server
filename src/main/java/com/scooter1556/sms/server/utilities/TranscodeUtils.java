@@ -35,7 +35,7 @@ public class TranscodeUtils {
     
     public static final String[] FORMATS = {"hls","dash","matroska","webm"};
     public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
-    public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","mpeg2video","vc1","vp8"};
+    public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","hevc","mpeg2video","vc1","vp8"};
     public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
     public static final String[] SUPPORTED_SUBTITLE_CODECS = {"subrip","webvtt","dvb","dvd","pgs"};
     public static final String[] TRANSCODE_VIDEO_CODECS = {"h264","vp8"};
@@ -57,7 +57,7 @@ public class TranscodeUtils {
     public static final String[][] FORMAT_CODECS = {
         {"hls", "h264,aac,ac3,webvtt"},
         {"dash", "h264,aac"},
-        {"matroska", "h264,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
+        {"matroska", "h264,hevc,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
     };
     
