@@ -284,7 +284,7 @@ public class AdaptiveStreamingService {
                         audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + " (" + stream.getLanguage() + ")" + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
                 }                
             }
             
@@ -307,7 +307,7 @@ public class AdaptiveStreamingService {
                         }
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + " (" + stream.getLanguage() + ")" + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/subtitle/" + s + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/subtitle/" + s + ".m3u8\"");
                     
                     subtitles = true;
                 }                
