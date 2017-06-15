@@ -337,6 +337,7 @@ public class AdaptiveStreamingService {
                 builder.append("#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=");
                 builder.append(String.valueOf(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[i] * 1000));
                 builder.append(",RESOLUTION=").append(String.format("%dx%d", resolution.width, resolution.height));
+                builder.append(",CLOSED-CAPTIONS=NONE");
                 builder.append(",CODECS=\"");
                 
                 if(profile.getQuality() > VideoQuality.HIGH) {
