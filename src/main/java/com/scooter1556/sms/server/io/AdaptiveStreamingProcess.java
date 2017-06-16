@@ -129,7 +129,9 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     @Override
     public void run() {
         try {
-            for(String[] command : commands) {                
+            for(String[] command : commands) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+                
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 process = processBuilder.start();
                 new NullStream(process.getInputStream()).start();
