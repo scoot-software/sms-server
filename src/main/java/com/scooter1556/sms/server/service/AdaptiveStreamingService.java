@@ -469,6 +469,30 @@ public class AdaptiveStreamingService {
         LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, "\n************\nHLS Playlist\n************\n" + playlistWriter.toString(), null);
     }
     
+    public void sendSubtitleSegment(HttpServletResponse response) throws IOException {
+        List<String> segment = new ArrayList<>();
+        segment.add("WEBVTT");
+ 
+        // Write segment to buffer so we can get the content length
+        StringWriter segmentWriter = new StringWriter();
+        for(String line : segment) {
+            segmentWriter.write(line + "\n");
+        }
+
+        // Set Header Parameters
+        response.reset();
+        response.setContentType("text/vtt");
+        response.setContentLength(segmentWriter.toString().length());
+        
+        // Enable CORS
+        response.setHeader(("Access-Control-Allow-Origin"), "*");
+        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setIntHeader("Access-Control-Max-Age", 3600);
+
+        // Write segment out to the client
+        response.getWriter().write(segmentWriter.toString());
+    }
+    
     public void addProcess(AdaptiveStreamingProcess process) {
         if(process != null) {
             processes.add(process);
