@@ -36,6 +36,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     private static final String CLASS_NAME = "AdaptiveStreamingProcess";
     
+    File streamDirectory = null;
     int segmentNum = 0;
         
     public AdaptiveStreamingProcess() {};
@@ -50,7 +51,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             process.destroy();
         }
         
-        File streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
+        // Determine stream directory
+        streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
         
         try {
             if(streamDirectory.exists()) {                
@@ -100,9 +102,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         if(process != null) {
             process.destroy();
         }
-        
-        File streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
-       
+               
         try {
             // Wait for process to finish
             if(process != null) {
@@ -131,6 +131,9 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         try {
             for(String[] command : commands) {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
+                
+                // Clean stream directory
+                FileUtils.cleanDirectory(streamDirectory);
                 
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 process = processBuilder.start();
