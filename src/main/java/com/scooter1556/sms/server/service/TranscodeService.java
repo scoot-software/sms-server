@@ -139,6 +139,7 @@ public class TranscodeService {
             
             // Transcoder path
             commands.get(i).getCommands().add(getTranscoder().getPath().toString());
+            commands.get(i).getCommands().add("-y");
 
             // Seek
             commands.get(i).getCommands().add("-ss");
@@ -232,6 +233,7 @@ public class TranscodeService {
             
             // Transcoder path
             commands.get(i).getCommands().add(getTranscoder().getPath().toString());
+            commands.get(i).getCommands().add("-y");
 
             switch(type) {
                 
@@ -245,7 +247,9 @@ public class TranscodeService {
                         // Check profile parameters
                         resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
                         transcodeRequired = true;
-                    } else if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
+                    }
+                    
+                    if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
                         if(profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded()) {
                             transcodeRequired = true;
                             hardcodedSubtitles = true;
@@ -270,6 +274,9 @@ public class TranscodeService {
                     
                     if(profile.getVideoTranscode() != null) {                        
                         commands.get(i).getCommands().addAll(getSubtitleCommands(commands.get(i), profile));
+                        
+                        commands.get(i).getCommands().add("-an");
+                        commands.get(i).getCommands().add("-sn");
                                                 
                         // If highest possible quality then copy stream
                         if(!transcodeRequired) {
@@ -597,9 +604,7 @@ public class TranscodeService {
             }
         }
         
-        if(transcode == null) {
-            commands.add("-sn");
-        } else if(transcode.isHardcoded()) {
+        if(transcode != null && transcode.isHardcoded()) {
             command.getFilters().add("[0:s:" + profile.getSubtitleTrack() + "]overlay");
         }
         

@@ -536,7 +536,7 @@ public class TranscodeUtils {
                 
         try {
             for(String[] command : commands) {
-                LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
                 
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 process = processBuilder.start();

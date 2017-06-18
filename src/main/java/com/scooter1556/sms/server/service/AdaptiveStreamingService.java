@@ -292,12 +292,6 @@ public class AdaptiveStreamingService {
             if(profile.getSubtitleTranscodes() != null) {
                 for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
                     SubtitleTranscode transcode = profile.getSubtitleTranscodes()[s];
-                    
-                    // If this subtitle needs to be hardcoded skip it
-                    if(transcode.isHardcoded()) {
-                        continue;
-                    }
-                    
                     SubtitleStream stream = mediaElement.getSubtitleStreams().get(s);
                     String selected = "NO";
                     

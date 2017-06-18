@@ -531,6 +531,20 @@ public class StreamController {
             
             // Return file direct for audio and transcode as required for video
             if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
+                // Check if this is a request for a hardcoded subtitle segment
+                if(type.equals("subtitle")) {
+                    mimeType = "text/vtt";
+                    
+                    if(profile.getSubtitleTranscodes()[extra].isHardcoded()) {
+                        // Set selected subtitle in transcode profile
+                        profile.setSubtitleTrack(extra);
+                        
+                        // Return empty webvtt segment
+                        adaptiveStreamingService.sendSubtitleSegment(response);
+                        return;
+                    }
+                }
+                
                 segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
                 
                 if(!segment.exists()) {  
@@ -557,11 +571,6 @@ public class StreamController {
                         default:
                             break; 
                     }
-                }
-                
-                // Subtitle mimetype
-                if(type.equals("subtitle")) {
-                    mimeType = "text/vtt";
                 }
             }
             
