@@ -38,6 +38,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     File streamDirectory = null;
     int segmentNum = 0;
+    int subtitleNum = 0;
+    boolean subtitlesEnabled = false;
         
     public AdaptiveStreamingProcess() {};
     
@@ -124,6 +126,22 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     public int getSegmentNum() {
         return this.segmentNum;
+    }
+    
+    public void setSubtitleNum(int num) {
+        this.subtitleNum = num;
+    }
+    
+    public int getSubtitleNum() {
+        return this.subtitleNum;
+    }
+    
+    public void setSubtitlesEnabled(boolean enabled) {
+        this.subtitlesEnabled = enabled;
+    }
+    
+    public boolean getSubtitlesEnabled() {
+        return this.subtitlesEnabled;
     }
 
     @Override

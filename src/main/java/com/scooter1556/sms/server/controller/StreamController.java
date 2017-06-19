@@ -539,10 +539,22 @@ public class StreamController {
                     if(profile.getSubtitleTranscodes()[extra].isHardcoded()) {
                         // Set selected subtitle in transcode profile
                         profile.setSubtitleTrack(extra);
+                        
+                        // Update process with subtitle information
+                        transcodeProcess.setSubtitlesEnabled(true);
+                        transcodeProcess.setSubtitleNum(Integer.parseInt(file));
                     
                         // Return empty webvtt segment
                         adaptiveStreamingService.sendSubtitleSegment(response);
                         return;
+                    }
+                }
+                
+                // Check if we need to disable subtitles
+                if(transcodeProcess.getSubtitlesEnabled()) {
+                    if(transcodeProcess.getSubtitleNum() < transcodeProcess.getSegmentNum()) {
+                        transcodeProcess.setSubtitlesEnabled(false);
+                        profile.setSubtitleTrack(null);
                     }
                 }
                 
