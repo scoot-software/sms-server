@@ -146,7 +146,17 @@ public class TranscodeService {
             commands.get(i).getCommands().add(profile.getOffset().toString());
 
             // Video
-            if(profile.getVideoTranscode() != null) {
+            if(profile.getVideoTranscode() != null) {                
+                // If there is the potential for hardcoded subtitles we need to maintain original resolution
+                if(profile.getSubtitleTranscodes() != null) {
+                    for(SubtitleTranscode transcode : profile.getSubtitleTranscodes()) {
+                        if(transcode.isHardcoded()) {
+                            profile.getVideoTranscode().setResolution(null);
+                            break;
+                        }
+                    }
+                }
+                
                 HardwareAccelerator hardwareAccelerator = null;
             
                 // Check we are not simply copying the video stream
@@ -155,11 +165,11 @@ public class TranscodeService {
                     if(transcoder.getHardwareAccelerators().length > i) {
                         hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
                     }
-
-                    // Hardware decoding
-                    if(hardwareAccelerator != null) {
-                        commands.get(i).getCommands().addAll(getHardwareVideoDecodingCommands(hardwareAccelerator));
-                    }
+                }
+                
+                // Hardware decoding
+                if(hardwareAccelerator != null) {
+                    commands.get(i).getCommands().addAll(getHardwareVideoDecodingCommands(hardwareAccelerator));
                 }
                 
                 // Input media file
@@ -224,7 +234,6 @@ public class TranscodeService {
         
         // Determine number of potential transcode commands to generate
         int transcodeCommands = 1 + (type.equals("video") ? transcoder.getHardwareAccelerators().length : 0);
-        Dimension resolution = null;
         
         ArrayList<TranscodeCommand> commands = new ArrayList<>();
         
@@ -239,20 +248,28 @@ public class TranscodeService {
                 
                 case "video":
                     // Flags
-                    boolean hardcodedSubtitles = false;
                     boolean transcodeRequired = false;
+                    Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
+                    Dimension origRes;
                     
-                    //  Check if transcode is required for the segment
-                    if(!extra.equals(profile.getQuality())){
-                        // Check profile parameters
-                        resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-                        transcodeRequired = true;
+                    // Determine resolution to compare
+                    if(profile.getVideoTranscode().getResolution() == null) {
+                        origRes = profile.getMediaElement().getVideoStream().getResolution();
+                    } else {
+                        origRes = profile.getVideoTranscode().getResolution();
                     }
                     
+                    //  Check if transcode is required for the segment
+                    if(origRes.width > resolution.width) {
+                        transcodeRequired = true;
+                    } else {
+                        resolution = null;
+                    }
+                        
+                    // Check for hardcoded subtitles
                     if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
                         if(profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded()) {
                             transcodeRequired = true;
-                            hardcodedSubtitles = true;
                         }
                     }
                                         
@@ -264,7 +281,7 @@ public class TranscodeService {
                     }   
 
                     // Hardware decoding
-                    if(hardwareAccelerator != null && transcodeRequired && !hardcodedSubtitles) {
+                    if(hardwareAccelerator != null && transcodeRequired) {
                         commands.get(i).getCommands().addAll(getHardwareVideoDecodingCommands(hardwareAccelerator));
                     }
                     
@@ -273,10 +290,11 @@ public class TranscodeService {
                     commands.get(i).getCommands().add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/" + segment);
                     
                     if(profile.getVideoTranscode() != null) {                        
-                        commands.get(i).getCommands().addAll(getSubtitleCommands(commands.get(i), profile));
-                        
                         commands.get(i).getCommands().add("-an");
                         commands.get(i).getCommands().add("-sn");
+                        
+                        // Get subtitle commands
+                        commands.get(i).getCommands().addAll(getSubtitleCommands(commands.get(i), profile));
                                                 
                         // If highest possible quality then copy stream
                         if(!transcodeRequired) {

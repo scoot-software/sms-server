@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -654,6 +655,10 @@ public class MediaElement implements Serializable {
         
         public short getHeight() {
             return height;
+        }
+        
+        public Dimension getResolution() {
+            return new Dimension(width, height);
         }
     }
     

@@ -57,6 +57,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -538,7 +539,7 @@ public class StreamController {
                     if(profile.getSubtitleTranscodes()[extra].isHardcoded()) {
                         // Set selected subtitle in transcode profile
                         profile.setSubtitleTrack(extra);
-                        
+                    
                         // Return empty webvtt segment
                         adaptiveStreamingService.sendSubtitleSegment(response);
                         return;
