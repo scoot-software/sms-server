@@ -29,6 +29,7 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.DirectoryMediaType;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.domain.MediaFolder.ContentType;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
@@ -140,6 +141,11 @@ public class MediaScannerService {
 
         // Submit scanning jobs for each media folder
         for (final MediaFolder folder : mediaFolders) {
+            // Check this is a media folder which can be scanned
+            if(folder.getType().equals(ContentType.PLAYLIST)) {
+                continue;
+            }
+            
            scanningThreads.submit(new Runnable() {
                 @Override
                 public void run() {

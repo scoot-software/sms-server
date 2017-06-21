@@ -336,6 +336,17 @@ public class MediaDao {
         }
     }
     
+    public List<MediaElement> getMediaElementsByName(String name, byte type) {
+        try {
+            List<MediaElement> mediaElements;
+            mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND Path LIKE ?", new MediaElementMapper(), new Object[] {type,"%"+name});
+            
+            return mediaElements;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
     public List<MediaElement> getRandomMediaElementsByParentPath(String path) {        
         try {
             List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ParentPath=? ORDER BY RAND()", new MediaElementMapper(), new Object[] {path});

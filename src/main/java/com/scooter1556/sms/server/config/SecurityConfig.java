@@ -54,6 +54,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .antMatchers("/job/**").hasRole("USER")
                     .antMatchers("/stream/**").permitAll()
                     .antMatchers("/image/**").permitAll()
+                    .antMatchers("/playlist/**").hasRole("USER")
                     .antMatchers("/session/active").hasRole("ADMIN")
                     .antMatchers("/session/create").hasRole("USER")
                     .antMatchers("/session/add/**").hasRole("USER")

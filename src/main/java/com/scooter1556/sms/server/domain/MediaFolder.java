@@ -128,5 +128,6 @@ public class MediaFolder implements Serializable {
     public static class ContentType {
         public static final byte AUDIO = 0;
         public static final byte VIDEO = 1;
+        public static final byte PLAYLIST = 2;
     }
 }

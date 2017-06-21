@@ -29,7 +29,6 @@ import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.io.ImageProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
