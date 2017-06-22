@@ -267,6 +267,7 @@ public class MediaElement implements Serializable {
         this.excluded = excluded;
     }
     
+    @JsonIgnore
     public String getFormat() {
         return format;
     }
@@ -275,6 +276,7 @@ public class MediaElement implements Serializable {
         this.format = format;
     }
     
+    @JsonIgnore
     public Long getSize() {
         return size;
     }
@@ -291,6 +293,7 @@ public class MediaElement implements Serializable {
         this.duration = duration;
     }
     
+    @JsonIgnore
     public Integer getBitrate() {
         return bitrate;
     }
@@ -299,6 +302,7 @@ public class MediaElement implements Serializable {
         this.bitrate = bitrate;
     }
     
+    @JsonIgnore
     public Short getVideoWidth() {
         return videoWidth;
     }
@@ -307,6 +311,7 @@ public class MediaElement implements Serializable {
         this.videoWidth = videoWidth;
     }
     
+    @JsonIgnore
     public Short getVideoHeight() {
         return videoHeight;
     }
@@ -315,6 +320,7 @@ public class MediaElement implements Serializable {
         this.videoHeight = videoHeight;
     }
     
+    @JsonIgnore
     public String getVideoCodec() {
         return videoCodec;
     }
@@ -323,6 +329,7 @@ public class MediaElement implements Serializable {
         this.videoCodec = videoCodec;
     }
     
+    @JsonIgnore
     public String getAudioName() {
         return audioName;
     }
@@ -331,6 +338,7 @@ public class MediaElement implements Serializable {
         this.audioName = audioName;
     }
     
+    @JsonIgnore
     public String getAudioCodec() {
         return audioCodec;
     }
@@ -339,6 +347,7 @@ public class MediaElement implements Serializable {
         this.audioCodec = audioCodec;
     }
     
+    @JsonIgnore
     public String getAudioSampleRate() {
         return audioSampleRate;
     }
@@ -347,6 +356,7 @@ public class MediaElement implements Serializable {
         this.audioSampleRate = audioSampleRate;
     }
     
+    @JsonIgnore
     public String getAudioConfiguration() {
         return audioConfiguration;
     }
@@ -355,6 +365,7 @@ public class MediaElement implements Serializable {
         this.audioConfiguration = audioConfiguration;
     }
     
+    @JsonIgnore
     public String getAudioLanguage() {
         return audioLanguage;
     }
@@ -363,6 +374,7 @@ public class MediaElement implements Serializable {
         this.audioLanguage = audioLanguage;
     }
     
+    @JsonIgnore
     public String getSubtitleName() {
         return subtitleName;
     }
@@ -371,6 +383,7 @@ public class MediaElement implements Serializable {
         this.subtitleName = subtitleName;
     }
     
+    @JsonIgnore
     public String getSubtitleLanguage() {
         return subtitleLanguage;
     }
@@ -379,6 +392,7 @@ public class MediaElement implements Serializable {
         this.subtitleLanguage = subtitleLanguage;
     }
     
+    @JsonIgnore
     public String getSubtitleFormat() {
         return subtitleFormat;
     }
@@ -387,6 +401,7 @@ public class MediaElement implements Serializable {
         this.subtitleFormat = subtitleFormat;
     }
     
+    @JsonIgnore
     public String getSubtitleForced() {
         return subtitleForced;
     }

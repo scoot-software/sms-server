@@ -42,11 +42,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class MediaDao {
     
-    @Autowired
-    private MediaDatabase mediaDatabase;
-    
     private static final String CLASS_NAME = "MediaDao";
     
+    @Autowired
+    private MediaDatabase mediaDatabase;
+        
     //
     // Media Elements
     //
