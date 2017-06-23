@@ -33,7 +33,7 @@ public class MediaDatabase extends Database {
     private static final String CLASS_NAME = "MediaDatabase";
     
     public static final String DB_NAME = "Media";
-    public static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
     
     public MediaDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -95,6 +95,26 @@ public class MediaDatabase extends Database {
                     + "Collection VARCHAR,"
                     + "PRIMARY KEY (ID))");
             
+            
+            // Playlists
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS Playlist ("
+                    + "ID UUID NOT NULL,"
+                    + "Name VARCHAR NOT NULL,"
+                    + "Description VARCHAR,"
+                    + "Username VARCHAR(50),"
+                    + "Path VARCHAR,"
+                    + "ParentPath VARCHAR,"
+                    + "LastScanned TIMESTAMP,"
+                    + "PRIMARY KEY (ID))");
+            
+            // Playlist Contents
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS PlaylistContent ("
+                    + "PID UUID NOT NULL,"
+                    + "MEID BIGINT NOT NULL,"
+                    + "PRIMARY KEY (PID,MEID),"
+                    + "FOREIGN KEY (MEID) REFERENCES MediaElement (ID) ON DELETE CASCADE,"
+                    + "FOREIGN KEY (PID) REFERENCES Playlist (ID) ON DELETE CASCADE)");
+                    
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS PathIndex on MediaElement(Path)");
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS ParentPathIndex on MediaElement(ParentPath)");
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS TitleIndex on MediaElement(Title)");
@@ -102,6 +122,7 @@ public class MediaDatabase extends Database {
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS AlbumArtistIndex on MediaElement(AlbumArtist)");
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS AlbumIndex on MediaElement(Album)");
             getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS GenreIndex on MediaElement(Genre)");
+            getJdbcTemplate().execute("CREATE INDEX IF NOT EXISTS PlaylistIndex on Playlist(Name)");
         } catch (DataAccessException x) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error creating database.", x);
         }
@@ -114,8 +135,9 @@ public class MediaDatabase extends Database {
         if(newVersion == 2) {
             // Delete table and re-create
             getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Element");
-            create();
         }
+        
+        create();
     }
     
     @Override
@@ -123,7 +145,10 @@ public class MediaDatabase extends Database {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Downgrading database from version " + oldVersion + " to " + newVersion, null);
         
         // Delete table and re-create
-        getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Element");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaElement");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS Playlist");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS PlaylistContent");
+        
         create();
     }
 }

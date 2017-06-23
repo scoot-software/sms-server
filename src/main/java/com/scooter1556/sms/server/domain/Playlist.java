@@ -23,25 +23,58 @@
  */
 package com.scooter1556.sms.server.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
+import java.sql.Timestamp;
+import java.util.UUID;
 
 public class Playlist implements Serializable {
     
+    private UUID id;
     private String name;
+    private String description;
+    private String username;
     private String path;
+    private String parentPath;
+    private Timestamp lastScanned;
     
     public Playlist() {};
     
-    public Playlist(String name, String path) {
+    public Playlist(UUID id,
+                    String name,
+                    String description,
+                    String username,
+                    String path,
+                    String parentPath,
+                    Timestamp lastScanned) {
+        this.id = id;
         this.name = name;
+        this.description = description;
+        this.username = username;
         this.path = path;
+        this.parentPath = parentPath;
+        this.lastScanned = lastScanned;
     }
     
     @Override
     public String toString() {
         return String.format(
-                "Directory[Name=%s, Path=%s]",
-                name == null ? "N/A" : name, path == null ? "?" : path);
+                "Playlist[ID=%s, Name=%s, Description=%s, User=%s, Path=%s, Parent Path=%s, Last Scanned=%s]",
+                id == null ? "N/A" : id,
+                name == null ? "N/A" : name,
+                description == null ? "N/A" : description,
+                username == null ? "N/A" : username,
+                path == null ? "N/A" : path,
+                parentPath == null ? "N/A" : parentPath,
+                lastScanned == null ? "N/A" : lastScanned);
+    }
+    
+    public UUID getID()  {
+        return id;
+    }
+    
+    public void setID(UUID id) {
+        this.id = id;
     }
     
     public String getName() {
@@ -52,11 +85,46 @@ public class Playlist implements Serializable {
         this.name = name;
     }
     
-    public String getpath() {
-        return this.path;
+    public String getDescription() {
+        return this.description;
+    }
+    
+    public void setDescription(String description) {
+        this.description = description;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    @JsonIgnore
+    public String getPath() {
+        return path;
     }
     
     public void setPath(String path) {
         this.path = path;
+    }
+    
+    @JsonIgnore
+    public String getParentPath() {
+        return parentPath;
+    }
+    
+    public void setParentPath(String parentPath) {
+        this.parentPath = parentPath;
+    }
+    
+    @JsonIgnore
+    public Timestamp getLastScanned() {
+        return lastScanned;
+    }
+    
+    public void setLastScanned(Timestamp lastScanned) {
+        this.lastScanned = lastScanned;
     }
 }

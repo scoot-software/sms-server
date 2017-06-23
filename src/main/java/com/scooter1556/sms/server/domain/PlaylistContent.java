@@ -21,43 +21,45 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.scooter1556.sms.server.utilities;
+package com.scooter1556.sms.server.domain;
 
-import java.io.File;
-import java.nio.file.Path;
+import java.io.Serializable;
+import java.util.List;
+import java.util.UUID;
 
-public class MediaUtils {
+public class PlaylistContent implements Serializable {
     
-    public static String getFileExtension(Path path) {
-        int extensionIndex = path.getFileName().toString().lastIndexOf(".");
-        return extensionIndex == -1 ? null : path.getFileName().toString().substring(extensionIndex + 1).toLowerCase().trim();
+    private UUID id;
+    private List<Long> media;
+    
+    public PlaylistContent() {};
+    
+    public PlaylistContent(UUID id, List<Long> media) {
+        this.id = id;
+        this.media = media;
     }
     
-    public static boolean isMediaFile(Path path) {
-        for (String type : TranscodeUtils.SUPPORTED_FILE_EXTENSIONS) {
-            if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
-                return true;
-            }
-        }
-
-        return false;
+    @Override
+    public String toString() {
+        return String.format(
+                "Playlist Content[ID=%s, Media Elements=%s]",
+                id == null ? "N/A" : id,
+                media == null ? "N/A" : media);
     }
     
-    // Determines if a directory contains media
-    public static boolean containsMedia(File directory, boolean includeDir) {
-        for (File file : directory.listFiles()) {
-            if(!file.isHidden()) {
-                if(includeDir && file.isDirectory()) {
-                    return true;
-                }
-
-                if(isMediaFile(file.toPath())) {
-                    return true;
-                }
-            }                    
-        }
-
-        return false;
+    public UUID getID()  {
+        return id;
     }
     
+    public void setID(UUID id) {
+        this.id = id;
+    }
+    
+    public List<Long> getMedia() {
+        return this.media;
+    }
+    
+    public void setMedia(List<Long> media) {
+        this.media =  media;
+    }
 }

@@ -26,12 +26,14 @@ package com.scooter1556.sms.server.dao;
 import com.scooter1556.sms.server.database.MediaDatabase;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.service.LogService;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jca.cci.InvalidResultSetAccessException;
@@ -599,6 +601,224 @@ public class MediaDao {
             mediaElement.setCollection(rs.getString("Collection"));
             
             return mediaElement;
+        }
+    }
+    
+    
+    //
+    // Playlists
+    //
+    
+    public boolean createPlaylist(Playlist playlist) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("INSERT INTO Playlist (ID, Name, Description, Username, Path, ParentPath, LastScanned) " +
+                                "VALUES (?,?,?,?,?,?,?)", new Object[] {
+                                    playlist.getID(),
+                                    playlist.getName(),
+                                    playlist.getDescription(),
+                                    playlist.getUsername(),
+                                    playlist.getPath(),
+                                    playlist.getParentPath(),
+                                    playlist.getLastScanned()
+                                });
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removePlaylist(UUID id) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM Playlist WHERE ID=?", id);
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public void removeDeletedPlaylists(String path, Timestamp lastScanned) {            
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM Playlist WHERE ParentPath LIKE ? AND LastScanned != ?", new Object[] {path + "%",lastScanned});
+    }
+    
+    public boolean updatePlaylist(Playlist playlist){
+        try{
+            mediaDatabase.getJdbcTemplate().update("UPDATE Playlist SET Name=?, Description=? WHERE ID=?", 
+                                new Object[] {playlist.getName(), playlist.getDescription(),
+                                playlist.getID()});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean updateLastScanned(UUID id, Timestamp lastScanned) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("UPDATE Playlist SET LastScanned=? WHERE ID=?", 
+                                new Object[] {lastScanned, id});
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public List<Playlist> getPlaylists() {
+        try {
+            List<Playlist> playlists = mediaDatabase.getJdbcTemplate().query("SELECT * FROM Playlist", new PlaylistMapper());
+            return playlists;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public List<Playlist> getPlaylistsByUsername(String username) {
+        try {
+            List<Playlist> playlists = mediaDatabase.getJdbcTemplate().query("SELECT * FROM Playlist WHERE Username IS NULL OR Username=?", new PlaylistMapper(), new Object[] {username});
+            return playlists;
+        } catch (DataAccessException e) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get playlists for user '" + username + "'", e);
+            return null;
+        }
+    }
+    
+    public Playlist getPlaylistByID(UUID id) {
+        Playlist playlist = null;
+
+        try {
+            List<Playlist> playlists = mediaDatabase.getJdbcTemplate().query("SELECT * FROM Playlist WHERE ID=?", new PlaylistMapper(), new Object[] {id});
+
+            if(playlists != null) {
+                if(playlists.size() > 0) {
+                    playlist = playlists.get(0);
+                }
+            }
+        } catch (DataAccessException e) {
+            return null;
+        }
+        
+        return playlist;
+    }
+    
+    public Playlist getPlaylistByPath(String path) {
+        Playlist playlist = null;
+        
+        try {
+            List<Playlist> playlists = mediaDatabase.getJdbcTemplate().query("SELECT * FROM Playlist WHERE Path=?", new PlaylistMapper(), new Object[] {path});
+
+            if(playlists != null) {
+                if(playlists.size() > 0) {
+                    playlist = playlists.get(0);
+                }
+            }
+        } catch (DataAccessException e) {
+            return null;
+        }
+        
+        return playlist;
+    }
+    
+    public List<Playlist> getPlaylistsByParentPath(String path) {
+        try {
+            List<Playlist> playlists;      
+            playlists = mediaDatabase.getJdbcTemplate().query("SELECT * FROM Playlist WHERE ParentPath=?", new PlaylistMapper(), new Object[] {path});
+            
+            return playlists;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public boolean setPlaylistContentFromIds(final UUID id, final List<Long> mediaElementIds) {
+        String sql = "INSERT INTO PlaylistContent (PID,MEID) " +
+                                "VALUES (?,?)";
+        
+        try {
+            mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    Long mediaElementId = mediaElementIds.get(i);
+                    ps.setString(1, id.toString());
+                    ps.setLong(2, mediaElementId);
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return mediaElementIds.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean setPlaylistContent(final UUID id, final List<MediaElement> mediaElements) {
+        String sql = "INSERT INTO PlaylistContent (PID,MEID) " +
+                                "VALUES (?,?)";
+        
+        try {
+            mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    MediaElement mediaElement = mediaElements.get(i);
+                    ps.setString(1, id.toString());
+                    ps.setLong(2, mediaElement.getID());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return mediaElements.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public List<MediaElement> getPlaylistContent(UUID id) {
+        try {
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE ID IN (SELECT MEID FROM PlaylistContent WHERE PID=?)", new MediaElementMapper(), new Object[] {id});
+            return mediaElements;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public boolean removePlaylistContent(UUID id) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM PlaylistContent WHERE PID=?", id);
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private static final class PlaylistMapper implements RowMapper {
+        @Override
+        public Playlist mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Playlist playlist = new Playlist();
+            playlist.setID(UUID.fromString(rs.getString("ID")));
+            playlist.setName(rs.getString("Name"));
+            playlist.setDescription(rs.getString("Description"));
+            playlist.setUsername(rs.getString("Username"));
+            playlist.setPath(rs.getString("Path"));
+            playlist.setParentPath(rs.getString("ParentPath"));
+            playlist.setLastScanned(rs.getTimestamp("LastScanned"));
+            
+            return playlist;
         }
     }
 }

@@ -27,7 +27,6 @@ import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.utilities.DatabaseUtils;
 import javax.sql.DataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 public class Database {
     

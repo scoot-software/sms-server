@@ -5,7 +5,10 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.utilities.FileUtils;
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,11 +22,11 @@ public class PlaylistService {
     @Autowired
     private MediaDao mediaDao;
     
-    public List<MediaElement> parsePlaylist(String path) {
+    public List<MediaElement> parsePlaylist(String playlistPath) {
         List<String> contents = null;
-        List<MediaElement> elements = new ArrayList<>();
+        List<MediaElement> mediaElements = new ArrayList<>();
         
-        File playlist = new File(path);
+        File playlist = new File(playlistPath);
         
         // Read contents of playlist
         if(playlist.canRead()) {
@@ -35,6 +38,13 @@ public class PlaylistService {
             return null;
         }
         
+        // Check for duplicates
+        LinkedHashSet<String> tmp = new LinkedHashSet<>();
+        tmp.addAll(contents);
+        contents.clear();
+        contents.addAll(tmp);
+        
+        
         // Parse playlist contents
         for(String line : contents) {
             // Ignore extended M3U content
@@ -42,17 +52,29 @@ public class PlaylistService {
                 continue;
             }
             
-            File file = new File(FilenameUtils.separatorsToSystem(line));                       
-            List<MediaElement> results = mediaDao.getMediaElementsByName(file.getName(), MediaElementType.AUDIO);
+            Path path = Paths.get(FilenameUtils.separatorsToSystem(line));                       
+            List<MediaElement> results = mediaDao.getMediaElementsByName(path.getFileName().toString(), MediaElementType.AUDIO);
             
+            // If nothing is found continue
             if(results == null || results.isEmpty()) {
                 continue;
             }
             
-            elements.addAll(results);
-            
+            // If more than one media element is found attempt to narrow it down further
+            if(results.size() > 1) {
+                if(path.getNameCount() > 1) {
+                    for(MediaElement mediaElement : results) {
+                        if(mediaElement.getPath().contains(path.getName(path.getNameCount() - 2).toString())) {
+                            mediaElements.add(mediaElement);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                mediaElements.add(results.get(0));
+            }
         }
-        
-        return elements;
+                
+        return mediaElements;
     }
 }

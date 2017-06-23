@@ -1,28 +1,33 @@
 package com.scooter1556.sms.server.utilities;
 
-import com.scooter1556.sms.server.domain.Playlist;
+import static com.scooter1556.sms.server.utilities.MediaUtils.isMediaFile;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
+import java.nio.file.Path;
 
 public class PlaylistUtils {
     
     public static final String[] SUPPORTED_PLAYLISTS = {"m3u","m3u8"};
     
-    public static List<Playlist> scanForPlaylists(String path) {
-        List<Playlist> playlists = new ArrayList<>();
-        
-        Collection files = FileUtils.listFiles(new File(path), SUPPORTED_PLAYLISTS, true);
-
-        for (Iterator iterator = files.iterator(); iterator.hasNext();) {
-            File file = (File) iterator.next();
-            playlists.add(new Playlist(FilenameUtils.getBaseName(file.getName()), file.getAbsolutePath()));
+    public static boolean isPlaylist(Path path) {
+        for (String type : SUPPORTED_PLAYLISTS) {
+            if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
+                return true;
+            }
         }
+
+        return false;
+    }
     
-        return playlists;
+    // Determines if a directory contains playlists
+    public static boolean containsPlaylists(File directory) {
+        for (File file : directory.listFiles()) {
+            if(!file.isHidden()) {
+                if(isPlaylist(file.toPath())) {
+                    return true;
+                }
+            }                    
+        }
+
+        return false;
     }
 }
