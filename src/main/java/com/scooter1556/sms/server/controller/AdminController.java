@@ -137,7 +137,7 @@ public class AdminController {
     @RequestMapping(value="/user/{username}/role/{role}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUserRole(@PathVariable("username") String username, @PathVariable("role") String role) {
-        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed role '" + role + "' fromm user '" + username + "'.", null);
+        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed role '" + role + "' from user '" + username + "'.", null);
         userDao.removeUserRole(username, role);
     }
     
