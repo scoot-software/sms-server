@@ -90,7 +90,6 @@ public class MediaScannerService {
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
     private long total = 0;
-    private List<MediaFolder> mediaFolders;
     
     // Media scanning thread pool
     ExecutorService scanningThreads = null;
@@ -118,34 +117,20 @@ public class MediaScannerService {
     //
     // Scans media in a separate thread.
     //
-    public synchronized void startScanning(Long id) {
+    public synchronized void startScanning(List<MediaFolder> folders) {
         // Check if media is already being scanned
         if (isScanning()) {
             return;
-        }
-
-        // Determine which folders to scan
-        if(id == null) {
-            mediaFolders = settingsDao.getMediaFolders();
-        } else {
-            MediaFolder folder = settingsDao.getMediaFolderByID(id);
-
-            if (folder == null) {
-                return;
-            }
-
-            mediaFolders = new ArrayList<>();
-            mediaFolders.add(folder);
         }
         
         // Reset scan count
         total = 0;
         
         // Create media scanning threads
-        scanningThreads = Executors.newFixedThreadPool(mediaFolders.size());
+        scanningThreads = Executors.newFixedThreadPool(folders.size());
 
         // Submit scanning jobs for each media folder
-        for (final MediaFolder folder : mediaFolders) {
+        for (final MediaFolder folder : folders) {
             scanningThreads.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -204,18 +189,21 @@ public class MediaScannerService {
             if(!fileParser.getUpdatedPlaylists().isEmpty()) {
                 for(Playlist playlist : fileParser.getUpdatedPlaylists()) {
                     if(mediaDao.updateLastScanned(playlist.getID(), fileParser.getScanTime())) {
-                        // Remove existing playlist content
-                        mediaDao.removePlaylistContent(playlist.getID());
-                        
-                        // Parse playlist
-                        List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
-                        
-                        if(mediaElements == null || mediaElements.isEmpty()) {
-                            continue;
+                        // Check if we need to update playlist contents
+                        if(playlist.getLastScanned() == null) {
+                            // Remove existing playlist content
+                            mediaDao.removePlaylistContent(playlist.getID());
+
+                            // Parse playlist
+                            List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
+
+                            if(mediaElements == null || mediaElements.isEmpty()) {
+                                continue;
+                            }
+
+                            // Update playlist content
+                            mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
                         }
-                        
-                        // Update playlist content
-                        mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
                     }
                 }
             }
@@ -360,10 +348,13 @@ public class MediaScannerService {
                 if (playlist == null) {
                     playlist = getPlaylistFromPath(file);
                     newPlaylists.add(playlist);
-                } else if(playlist.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(playlist.getLastScanned())) {
-                    LogUtils.writeToLog(log, "Processing playlist " + file.toString(), Level.DEBUG);
+                } else {
+                    if(folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
+                        LogUtils.writeToLog(log, "Processing playlist " + file.toString(), Level.DEBUG);
+                        playlist.setLastScanned(null);
+                    }
                     
-                    // Add to list of playlists to process
+                    // Add to list of playlists to update
                     updatedPlaylists.add(playlist);
                 }
             } else if(isInfoFile(file)) {

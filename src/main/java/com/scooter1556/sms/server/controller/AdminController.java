@@ -29,6 +29,7 @@ import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.domain.MediaFolder.ContentType;
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
@@ -36,10 +37,12 @@ import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.MediaScannerService;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -329,30 +332,79 @@ public class AdminController {
         mediaDao.removeAllMediaElements();
     }
     
-    @RequestMapping(value="/media/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> scanMedia(@RequestParam(value = "id", required = false) Long id,
-                                            @RequestParam(value = "forcerescan", required = false) Boolean forceRescan)
-    {        
+    @RequestMapping(value="/{type}/scan", method=RequestMethod.GET)
+    public ResponseEntity<String> scanMedia(@PathVariable("type") String type,
+                                            @RequestParam(value = "id", required = false) Long id,
+                                            @RequestParam(value = "forcerescan", required = false) Boolean forceRescan) {        
+        // Check a media scanning process is not already active
         if (mediaScannerService.isScanning()) {
-            return new ResponseEntity<>("Media is already being scanned.", HttpStatus.NOT_ACCEPTABLE);
+            return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
         }
         
+        // If an ID is specified check it is valid
         if(id != null) {
             if(settingsDao.getMediaFolderByID(id) == null) {
                 return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
             }
         }
         
+        // List of media folders to scan
+        List<MediaFolder> mediaFolders = new ArrayList<>();
+        
+        // Determine whether to scan media or playlist folders
+        switch (type) {
+            case "media":
+                if(id == null) {
+                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.AUDIO));
+                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.VIDEO));
+                } else {
+                    MediaFolder folder = settingsDao.getMediaFolderByID(id);
+                    
+                    if(folder.getType() == ContentType.PLAYLIST) {
+                        return new ResponseEntity<>("Media folder type is 'playlist'. Use a playlist scan request for this media folder.", HttpStatus.BAD_REQUEST);
+                    } else {
+                        mediaFolders.add(folder);
+                    }
+                }
+                
+                break;
+                
+            case "playlist":
+                if(id == null) {
+                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.PLAYLIST));
+                } else {
+                    MediaFolder folder = settingsDao.getMediaFolderByID(id);
+                    
+                    if(folder.getType() == ContentType.PLAYLIST) {
+                        mediaFolders.add(folder);
+                    } else {
+                        return new ResponseEntity<>("Media folder type is not 'playlist'. Use a media scan request for this media folder.", HttpStatus.BAD_REQUEST);
+                    }
+                }
+                break;
+                
+            default:
+                return new ResponseEntity<>("Scan request must be for 'media' or 'playlist'.", HttpStatus.BAD_REQUEST);
+        }
+        
+        // Check we have media folders to scan
+        if(mediaFolders.isEmpty()) {
+            return new ResponseEntity<>("No media folders to scan for this request.", HttpStatus.NOT_FOUND);
+        }
+        
+        // Reset last scanned timestamp if force rescan is set
         if(forceRescan != null) {
             if(forceRescan) {
-                settingsDao.forceRescan(id);
+                for(MediaFolder folder : mediaFolders) {
+                    folder.setLastScanned(null);
+                }
             }
         }
         
         // Start scanning media
-        mediaScannerService.startScanning(id);
+        mediaScannerService.startScanning(mediaFolders);
         
-        return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
+        return new ResponseEntity<>(StringUtils.capitalize(type) + " scanning started.", HttpStatus.OK);
     }
     
     @RequestMapping(value="/media/scan/count", method=RequestMethod.GET)

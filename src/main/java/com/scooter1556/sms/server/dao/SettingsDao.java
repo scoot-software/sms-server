@@ -84,9 +84,16 @@ public class SettingsDao {
         return true;
     }
 
-    public List<MediaFolder> getMediaFolders() {
+    public List<MediaFolder> getMediaFolders(Byte type) {
         try {
-            List<MediaFolder> mediaFolders = settingsDatabase.getJdbcTemplate().query("SELECT * FROM MediaFolder", new MediaFolderMapper());
+            List<MediaFolder> mediaFolders;
+            
+            if(type == null) {
+                mediaFolders = settingsDatabase.getJdbcTemplate().query("SELECT * FROM MediaFolder", new MediaFolderMapper());
+            } else {
+                mediaFolders = settingsDatabase.getJdbcTemplate().query("SELECT * FROM MediaFolder WHERE Type=?", new MediaFolderMapper(), new Object[]{type});
+            }
+            
             return mediaFolders;
         } catch (DataAccessException e) {
             return null;
@@ -133,22 +140,6 @@ public class SettingsDao {
         }
 
         return mediaFolder;
-    }
-    
-    public boolean forceRescan(Long id)
-    {
-        try {
-            if(id == null) {
-                settingsDatabase.getJdbcTemplate().update("UPDATE MediaFolder SET LastScanned=NULL");
-            } else {
-                settingsDatabase.getJdbcTemplate().update("UPDATE MediaFolder SET LastScanned=NULL WHERE ID=?", new Object[] {id});
-            }
-        }
-        catch (DataAccessException e) {
-            return false;
-        }
-        
-        return true;
     }
 
     private static final class MediaFolderMapper implements RowMapper {

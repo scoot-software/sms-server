@@ -57,9 +57,9 @@ public class MediaController {
     private static final String CLASS_NAME = "MediaController";
 
     @RequestMapping(value="/folder", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaFolder>> getMediaFolders()
+    public ResponseEntity<List<MediaFolder>> getMediaFolders(@RequestParam(value = "type", required = false) Byte type)
     {
-        List<MediaFolder> mediaFolders = settingsDao.getMediaFolders();
+        List<MediaFolder> mediaFolders = settingsDao.getMediaFolders(type);
         
         if (mediaFolders == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -172,12 +172,7 @@ public class MediaController {
     @RequestMapping(value="/recentlyadded/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(@PathVariable("limit") Integer limit,
                                                                                      @RequestParam(value = "type", required = false) Byte type)
-    {
-        // Check type parameter
-        if(type != null && type > 1) {
-            type = null;
-        }
-        
+    {   
         List<MediaElement> mediaElements = null;
         
         if(type == null) {
@@ -198,12 +193,7 @@ public class MediaController {
     @RequestMapping(value="/recentlyplayed/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(@PathVariable("limit") Integer limit,
                                                                                       @RequestParam(value = "type", required = false) Byte type)
-    {
-        // Check type parameter
-        if(type != null && type > 1) {
-            type = null;
-        }
-        
+    {   
         List<MediaElement> mediaElements = null;
         
         if(type == null) {
