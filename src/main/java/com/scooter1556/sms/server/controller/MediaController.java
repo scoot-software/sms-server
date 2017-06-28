@@ -92,16 +92,16 @@ public class MediaController {
         return new ResponseEntity<>(mediaElement, HttpStatus.OK);
     }
     
-    @RequestMapping(value="/audio/random", method=RequestMethod.GET)
-    public ResponseEntity<MediaElement> getRandomAudioElement()
-    {
-        MediaElement mediaElement = mediaDao.getRandomAudioElement();
+    @RequestMapping(value="/random/{limit}", method=RequestMethod.GET)
+    public ResponseEntity<List<MediaElement>> getRandomElements(@PathVariable("limit") Integer limit,
+                                                          @RequestParam(value = "type", required = false) Byte type) {
+        List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(limit, type);
         
-        if (mediaElement == null) {
+        if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        return new ResponseEntity<>(mediaElement, HttpStatus.OK);
+        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)

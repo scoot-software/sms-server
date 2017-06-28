@@ -358,22 +358,20 @@ public class MediaDao {
         }
     }
     
-    public MediaElement getRandomAudioElement() {
-        MediaElement mediaElement = null;
+    public List<MediaElement> getRandomMediaElements(int limit, Byte type) {
+        List<MediaElement> mediaElements;
 
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? ORDER BY RAND() DESC LIMIT 1", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.AUDIO});
-
-            if(mediaElements != null) {
-                if(mediaElements.size() > 0) {
-                    mediaElement = mediaElements.get(0);
-                }
+            if(type == null) {
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE NOT Excluded ORDER BY RAND() DESC LIMIT ?", new MediaElementMapper(), new Object[] {limit});
+            } else {
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY RAND() DESC LIMIT ?", new MediaElementMapper(), new Object[] {type, limit});
             }
         } catch (DataAccessException e) {
             return null;
         }
         
-        return mediaElement;
+        return mediaElements;
     }
     
     public List<MediaElement> getAlphabeticalMediaElementsByParentPath(String path) {
