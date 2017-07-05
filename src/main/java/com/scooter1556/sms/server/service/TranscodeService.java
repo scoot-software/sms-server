@@ -250,20 +250,25 @@ public class TranscodeService {
                     // Flags
                     boolean transcodeRequired = false;
                     Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-                    Dimension origRes;
                     
-                    // Determine resolution to compare
-                    if(profile.getVideoTranscode().getResolution() == null) {
-                        origRes = profile.getMediaElement().getVideoStream().getResolution();
-                    } else {
-                        origRes = profile.getVideoTranscode().getResolution();
-                    }
                     
-                    //  Check if transcode is required for the segment
-                    if(origRes.width > resolution.width) {
-                        transcodeRequired = true;
-                    } else {
-                        resolution = null;
+                    // If the resolution isn't the max the media supports determine if we need to transcode
+                    if(resolution != null) {
+                        Dimension origRes;
+
+                        // Determine resolution to compare
+                        if(profile.getVideoTranscode().getResolution() == null) {
+                            origRes = profile.getMediaElement().getVideoStream().getResolution();
+                        } else {
+                            origRes = profile.getVideoTranscode().getResolution();
+                        }
+
+                        //  Check if transcode is required for the segment
+                        if(origRes.width > resolution.width) {
+                            transcodeRequired = true;
+                        } else {
+                            resolution = null;
+                        }
                     }
                         
                     // Check for hardcoded subtitles

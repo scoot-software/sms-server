@@ -57,7 +57,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -592,7 +591,7 @@ public class StreamController {
                 
         } catch (Exception ex) {
             // Called if client closes the connection early.
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Client closed connection early (Job ID: " + id + " Segment: " + file + ")", null);
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Client closed connection early (Job ID: " + id + " Segment: " + file + ")", ex);
         } finally {
             if(process != null && job != null) {
                 jobDao.updateBytesTransferred(id, job.getBytesTransferred() + process.getBytesTransferred());
