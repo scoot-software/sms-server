@@ -211,6 +211,10 @@ public class TranscodeService {
                     commands.get(i).getCommands().addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
                 }
             }
+            
+            // Remove metadata
+            commands.get(i).getCommands().add("-map_metadata");
+            commands.get(i).getCommands().add("-1");
 
             // Format
             commands.get(i).getCommands().addAll(getFormatCommands(profile));
