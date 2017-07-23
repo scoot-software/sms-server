@@ -72,10 +72,6 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     return;
                 }
             }
-            
-            // Create segment list file
-            File list = new File(streamDirectory + "/segments.txt");
-            list.createNewFile();
 
             // Reset flags
             ended = false;
@@ -112,9 +108,11 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             }
             
             // Cleanup working directory
-            FileUtils.deleteDirectory(streamDirectory);
+            if(streamDirectory != null && streamDirectory.isDirectory()) {
+                FileUtils.deleteDirectory(streamDirectory);
+            }
         } catch (IOException | InterruptedException ex) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, null);
         }
         
         ended = true;

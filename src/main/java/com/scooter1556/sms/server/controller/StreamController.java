@@ -48,7 +48,9 @@ import com.scooter1556.sms.server.utilities.FileUtils;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -500,6 +502,19 @@ public class StreamController {
             
             File segmentList = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/segments.txt");
             
+            int count = 0;
+            
+            // Wait for segment list to become available
+            while(!segmentList.exists() && count < 5) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
+                }
+
+                count++;
+            }
+            
             // Check if segment list is available
             if(!segmentList.exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Unable to get segment list for job " + id + ".", null);
@@ -508,9 +523,10 @@ public class StreamController {
             }
             
             List<String> segments = FileUtils.readFileToList(segmentList);
-            int count = 0;
+            
+            count = 0;
 
-            while(!segments.contains(file) && (count < 10)) {
+            while(segments != null && !segments.contains(file) && (count < 20)) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
@@ -523,7 +539,7 @@ public class StreamController {
             }
             
             // Check if segment is definitely available
-            if(count >= 10 ||  !segment.exists()) {
+            if(count >= 20 || !segment.exists() || segments == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + id + ".", null);
                 response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                 return;

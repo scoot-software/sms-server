@@ -487,6 +487,8 @@ public class TranscodeService {
 
                     commands.add("-c:v");
                     commands.add("h264_vaapi");
+                    commands.add("-qp");
+                    commands.add("25");
                     break;
 
                 case "cuvid":
@@ -539,13 +541,13 @@ public class TranscodeService {
                 case "h264":
                     commands.add("libx264");
                     commands.add("-crf");
-                    commands.add("23");
+                    commands.add("25");
                     commands.add("-preset");
                     commands.add("superfast");
                     commands.add("-pix_fmt");
                     commands.add("yuv420p");
                     commands.add("-profile:v");
-                    commands.add("baseline");
+                    commands.add("high");
                     
                     break;
 
