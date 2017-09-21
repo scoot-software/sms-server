@@ -30,7 +30,6 @@ import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.ImageService;
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +46,10 @@ public class ImageController {
     
     private static final String CLASS_NAME = "ImageController";
     
+    private static final int DEFAULT_COVER_SCALE = 500;
+    private static final int DEFAULT_FANART_SCALE = 1280;
+    private static final int DEFAULT_THUMBNAIL_SCALE = 640;
+    
     @Autowired
     private MediaDao mediaDao;
     
@@ -56,10 +59,11 @@ public class ImageController {
     @Autowired
     private ImageService imageService;
     
-    @RequestMapping(value="/{id}/cover/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
+    @RequestMapping(value="/{id}/cover", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
-    public void getCoverArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale, HttpServletResponse response)
-    {
+    public void getCoverArt(@PathVariable("id") Long id, 
+                            @RequestParam(value = "scale", required = false) Integer scale,
+                            HttpServletResponse response) {
         MediaElement mediaElement;
         File image;
         
@@ -70,6 +74,11 @@ public class ImageController {
             if(mediaElement == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
                 return;
+            }
+            
+            // Ensure scale is set
+            if(scale == null || scale <= 0) {
+                scale = DEFAULT_COVER_SCALE;
             }
 
             // Get cover art
@@ -88,10 +97,10 @@ public class ImageController {
         }
     }
     
-    @RequestMapping(value="/{id}/random/{scale}", method=RequestMethod.GET, produces = "image/jpeg")
+    @RequestMapping(value="/{id}/random", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
     public void getRandomCoverArt(@PathVariable("id") Long id,
-                                  @PathVariable("scale") Integer scale,
+                                  @RequestParam(value = "scale", required = false) Integer scale,
                                   @RequestParam(value = "folder", required = false) Boolean isFolder,
                                   HttpServletResponse response) {
         MediaFolder folder = null;
@@ -103,6 +112,11 @@ public class ImageController {
             // Ensure folder flag is set
             if(isFolder == null) {
                 isFolder = false;
+            }
+            
+            // Ensure scale is set
+            if(scale == null || scale <= 0) {
+                scale = DEFAULT_COVER_SCALE;
             }
             
             // Get corresponding media item
@@ -155,9 +169,11 @@ public class ImageController {
         }
     }
     
-    @RequestMapping(value="/{id}/fanart/{scale}", method=RequestMethod.GET)
+    @RequestMapping(value="/{id}/fanart", method=RequestMethod.GET)
     @ResponseBody
-    public void getFanArt(@PathVariable("id") Long id, @PathVariable("scale") Integer scale, HttpServletResponse response) {
+    public void getFanArt(@PathVariable("id") Long id,
+                          @RequestParam(value = "scale", required = false) Integer scale,
+                          HttpServletResponse response) {
         MediaElement mediaElement;
         File image;
         
@@ -168,6 +184,11 @@ public class ImageController {
             if(mediaElement == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
                 return;
+            }
+            
+            // Ensure scale is set
+            if(scale == null || scale <= 0) {
+                scale = DEFAULT_FANART_SCALE;
             }
 
             // Get fan art
@@ -186,10 +207,10 @@ public class ImageController {
         }
     }
     
-    @RequestMapping(value="/{id}/thumbnail/{scale}", method=RequestMethod.GET)
+    @RequestMapping(value="/{id}/thumbnail", method=RequestMethod.GET)
     @ResponseBody
     public void getThumbnail(@PathVariable("id") Long id,
-                             @PathVariable("scale") Integer scale,
+                             @RequestParam(value = "scale", required = false) Integer scale,
                              @RequestParam(value = "offset", required = false) Integer offset,
                              HttpServletResponse response) {
         MediaElement mediaElement;
@@ -208,6 +229,11 @@ public class ImageController {
             if(!mediaElement.getType().equals(MediaElementType.VIDEO)) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Media element with id " + id + " is not a video element.");
                 return;
+            }
+            
+            // Ensure scale is set
+            if(scale == null || scale <= 0) {
+                scale = DEFAULT_THUMBNAIL_SCALE;
             }
             
             // Check offset
