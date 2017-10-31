@@ -48,9 +48,7 @@ import com.scooter1556.sms.server.utilities.FileUtils;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -385,9 +383,9 @@ public class StreamController {
                     break;
                     
                 case "video":
-                    if(profile.getVideoTranscode() == null && VideoQuality.isValid(extra)) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Video quality is not valid.", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Video quality is not valid.");
+                    if(profile.getVideoTranscodes() == null || extra >= profile.getVideoTranscodes().length) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Video stream requested is out of range.", null);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Video stream requested is out of range.");
                         return;
                     }
                     
@@ -483,7 +481,7 @@ public class StreamController {
             }
             
             // Find Segment File
-            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file);
+            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + id + " Segment=" + file + " Type=" + type + " Extra=" + extra, null);
             
@@ -500,7 +498,7 @@ public class StreamController {
                 }
             }
             
-            File segmentList = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/segments.txt");
+            File segmentList = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + type + "-" + extra + ".txt");
             
             int count = 0;
             
@@ -526,7 +524,7 @@ public class StreamController {
             
             count = 0;
 
-            while(segments != null && !segments.contains(file) && (count < 20)) {
+            while(segments != null && !segments.contains(file + "-" + type + "-" + extra) && (count < 20)) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
@@ -545,6 +543,7 @@ public class StreamController {
                 return;
             }
             
+            /*
             // Return file direct for audio and transcode as required for video
             if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
                 // Check if this is a request for a hardcoded subtitle segment
@@ -600,7 +599,7 @@ public class StreamController {
                             break; 
                     }
                 }
-            }
+            }*/
             
             process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
             process.start();

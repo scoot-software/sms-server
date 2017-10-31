@@ -8,17 +8,20 @@ import java.awt.Dimension;
 public class VideoTranscode {
     private String codec;
     private Dimension resolution;
+    private Integer quality;
 
-    public VideoTranscode(String codec, Dimension resolution) {
+    public VideoTranscode(String codec, Dimension resolution, Integer quality) {
         this.codec = codec;
         this.resolution = resolution;
+        this.quality = quality;
     }
 
     @Override
     public String toString() {
-        return String.format("{Codec=%s, Resolution=%s}",
+        return String.format("{Codec=%s, Resolution=%s, Quality=%s}",
                 codec == null ? "null" : codec,
-                resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height));
+                resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height),
+                quality == null ? "null" : quality.toString());
     }
 
     public String getCodec() {
@@ -36,6 +39,14 @@ public class VideoTranscode {
 
     public void setResolution(Dimension resolution) {
         this.resolution = resolution;
+    }
+    
+    public Integer getQuality() {
+        return this.quality;
+    }
+
+    public void setQuality(int quality) {
+        this.quality = quality;
     }
     
     public static class VideoQuality {

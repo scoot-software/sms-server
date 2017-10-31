@@ -30,8 +30,6 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
-import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
-import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
@@ -68,6 +66,9 @@ public class AdaptiveStreamingService {
     
     public static final Integer HLS_SEGMENT_DURATION = 10;
     public static final Integer DASH_SEGMENT_DURATION = 5;
+    
+    // The number of stream alternatives to transcode by default
+    public static final Integer DEFAULT_STREAM_COUNT = 2;
         
     @Autowired
     private JobDao jobDao;
@@ -261,7 +262,7 @@ public class AdaptiveStreamingService {
                 playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec()) + "\"");
                 playlist.add(baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8");
             }
-        } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscode() != null) {
+        } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
             String audio = "";
             boolean subtitles = false;
             
@@ -288,6 +289,7 @@ public class AdaptiveStreamingService {
                 }                
             }
             
+            /*
             // Process subtitle streams
             if(profile.getSubtitleTranscodes() != null) {
                 for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
@@ -306,30 +308,26 @@ public class AdaptiveStreamingService {
                     subtitles = true;
                 }                
             }
+            */
             
-            // If client doesn't support bitrate switching just give them one variant  
-            int offset;
-            
-            if(profile.getClient() == null) {
-                offset = 0;
-            } else {
-                switch(profile.getClient()) {
-                    case "kodi":
-                        offset = profile.getQuality();
-                        break;
-
-                    default:
-                        offset = 0;
-                        break;
+            for(int i = 0; i < profile.getVideoTranscodes().length; i++) {
+                // Determine bitrate
+                int bitrate = profile.getMediaElement().getBitrate();
+                
+                if(profile.getVideoTranscodes()[i].getQuality() != null) {
+                    bitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[profile.getVideoTranscodes()[i].getQuality()];
                 }
-            }
-            
-            for(int i = offset; i <= profile.getQuality(); i++) {
-                Dimension resolution = TranscodeUtils.VIDEO_QUALITY_RESOLUTION[i];
+                
+                // Determine resolution
+                Dimension resolution = profile.getVideoTranscodes()[i].getResolution();
+                
+                if(resolution == null) {
+                    resolution = new Dimension(profile.getMediaElement().getVideoWidth(), profile.getMediaElement().getVideoHeight());
+                }
                 
                 StringBuilder builder = new StringBuilder();
                 builder.append("#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=");
-                builder.append(String.valueOf(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[i] * 1000));
+                builder.append(String.valueOf(bitrate * 1000));
                 builder.append(",RESOLUTION=").append(String.format("%dx%d", resolution.width, resolution.height));
                 builder.append(",CLOSED-CAPTIONS=NONE");
                 builder.append(",CODECS=\"");
@@ -340,13 +338,16 @@ public class AdaptiveStreamingService {
                     builder.append("avc1.42e01e");
                 }
                 
+                
                 if(!audio.isEmpty()) {
                     builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
                 }
                 
+                /*
                 if(subtitles) {
                     builder.append(",SUBTITLES=\"subs\"");
                 }
+                */
                 
                 playlist.add(builder.toString());
                 

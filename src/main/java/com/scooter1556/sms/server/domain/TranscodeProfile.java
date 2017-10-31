@@ -13,7 +13,7 @@ public class TranscodeProfile {
     private String[] files, codecs, mchCodecs;
     private Integer quality, maxBitRate, maxSampleRate = 48000;
     private String url, format, mimeType, client;
-    private VideoTranscode videoTranscode;
+    private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
     private Integer audioTrack, subtitleTrack;
@@ -29,7 +29,7 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcode=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
+        return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
                 id == null ? "null" : id.toString(),
                 String.valueOf(type),
                 element == null ? "null" : element.getID().toString(),
@@ -42,7 +42,7 @@ public class TranscodeProfile {
                 maxBitRate == null ? "null" : maxBitRate.toString(),
                 format == null ? "null" : format,
                 mimeType == null ? "null" : mimeType,
-                videoTranscode == null ? "null" : videoTranscode.toString(),
+                videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
                 audioTranscodes == null ? "null" : Arrays.toString(audioTranscodes),
                 subtitleTranscodes == null ? "null" : Arrays.toString(subtitleTranscodes),
                 audioTrack == null ? "null" : audioTrack.toString(),
@@ -148,12 +148,12 @@ public class TranscodeProfile {
     }
 
     @JsonIgnore
-    public VideoTranscode getVideoTranscode() {
-        return videoTranscode;
+    public VideoTranscode[] getVideoTranscodes() {
+        return videoTranscodes;
     }
 
-    public void setVideoTranscode(VideoTranscode videoTranscode) {
-        this.videoTranscode = videoTranscode;
+    public void setVideoTranscodes(VideoTranscode[] videoTranscodes) {
+        this.videoTranscodes = videoTranscodes;
     }
 
     @JsonIgnore

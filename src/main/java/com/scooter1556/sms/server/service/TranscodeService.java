@@ -128,7 +128,7 @@ public class TranscodeService {
         // Determine number of potential transcode commands to generate
         int transcodeCommands = 1; 
         
-        if(profile.getVideoTranscode() != null && !profile.getVideoTranscode().getCodec().equals("copy")) {
+        if(profile.getVideoTranscodes() != null) {
             transcodeCommands += transcoder.getHardwareAccelerators().length;
         }
         
@@ -146,52 +146,86 @@ public class TranscodeService {
             commands.get(i).getCommands().add(profile.getOffset().toString());
 
             // Video
-            if(profile.getVideoTranscode() != null) {                
-                // If there is the potential for hardcoded subtitles we need to maintain original resolution
-                if(profile.getSubtitleTranscodes() != null) {
-                    for(SubtitleTranscode transcode : profile.getSubtitleTranscodes()) {
-                        if(transcode.isHardcoded()) {
-                            profile.getVideoTranscode().setResolution(null);
-                            break;
-                        }
-                    }
+            if(profile.getVideoTranscodes() != null) {
+                HardwareAccelerator hardwareAccelerator = null;
+                boolean hardcodedSubtitles = false;
+            
+                // Software or hardware based transcoding
+                if(transcoder.getHardwareAccelerators().length > i) {
+                    hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
                 }
                 
-                HardwareAccelerator hardwareAccelerator = null;
-            
-                // Check we are not simply copying the video stream
-                if(!profile.getVideoTranscode().getCodec().equals("copy")) {
-                    // Software or hardware based transcoding
-                    if(transcoder.getHardwareAccelerators().length > i) {
-                        hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
+                // Check for hardcoded subtitles
+                if(profile.getSubtitleTrack() != null) {
+                    hardcodedSubtitles = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded();
+                }
+                
+                // Populate filters
+                for(int v = 0; v < profile.getVideoTranscodes().length; v++) {
+                    // If we are copying the stream continue with the next transcode
+                    if(profile.getVideoTranscodes()[v].getCodec().equals("copy")) {
+                        continue;
+                    }
+                    
+                    // Add a filter list for video transcode
+                    commands.get(i).getFilters().add(new ArrayList<String>());
+                    
+                    // Burn in subtitles if required
+                    if(hardcodedSubtitles) {
+                        commands.get(i).getFilters().get(v).add("[0:s:" + profile.getSubtitleTrack() + "]overlay");
+                    }
+                    
+                    if(hardwareAccelerator == null) {
+                        commands.get(i).getFilters().get(v).addAll(getSoftwareVideoEncodingFilters(profile.getVideoTranscodes()[v].getResolution()));
+                    } else {
+                        commands.get(i).getFilters().get(v).addAll(getHardwareVideoEncodingFilters(profile.getVideoTranscodes()[v].getResolution(), hardwareAccelerator));
                     }
                 }
                 
                 // Hardware decoding
                 if(hardwareAccelerator != null) {
-                    commands.get(i).getCommands().addAll(getHardwareVideoDecodingCommands(hardwareAccelerator));
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, !hardcodedSubtitles));
                 }
                 
                 // Input media file
                 initialised = true;
                 commands.get(i).getCommands().add("-i");
                 commands.get(i).getCommands().add(profile.getMediaElement().getPath());
-                
-                // Subtitle commands
-                if(profile.getSubtitleTranscodes() != null) {
-                    for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
-                        commands.get(i).getCommands().add("-map");
-                        commands.get(i).getCommands().add("0:s:" + s);
-                        commands.get(i).getCommands().add("-c:s");
-                        commands.get(i).getCommands().add("copy");
-                    }
-                }
 
-                // Hardware encoding
-                if(hardwareAccelerator == null) {
-                    commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(commands.get(i), profile.getVideoTranscode().getCodec(), profile.getVideoTranscode().getResolution()));
-                } else {
-                    commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(commands.get(i), profile.getVideoTranscode().getResolution(), hardwareAccelerator));
+                // Remove metadata
+                commands.get(i).getCommands().add("-map_metadata");
+                commands.get(i).getCommands().add("-1");
+                
+                // Filter commands
+                commands.get(i).getCommands().addAll(getFilterCommands(commands.get(i).getFilters()));
+                
+                for(int v = 0; v < profile.getVideoTranscodes().length; v++) {
+                    // Stream copy
+                    if(profile.getVideoTranscodes()[v].getCodec().equals("copy")) {
+                        // Map video stream
+                        commands.get(i).getCommands().add("-map");
+                        commands.get(i).getCommands().add("0:v");
+                        
+                        // Codec
+                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec()));
+                    } else {
+                        // Map video stream
+                        commands.get(i).getCommands().add("-map");
+                        commands.get(i).getCommands().add("[v" + v + "]");
+
+                        // Encoding
+                        if(hardwareAccelerator == null) {
+                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec()));
+                        } else {
+                            commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator));
+                        }
+
+                        commands.get(i).getCommands().add("-force_key_frames");
+                        commands.get(i).getCommands().add("expr:gte(t,n_forced*" + AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString() + ")");
+                    }
+                    
+                    // Segment
+                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), null, "video-" + v, profile.getOffset()));
                 }
             }
 
@@ -209,15 +243,11 @@ public class TranscodeService {
                 
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
                     commands.get(i).getCommands().addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
+                    
+                    // Segment
+                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), null, "audio-" + a, profile.getOffset()));
                 }
             }
-            
-            // Remove metadata
-            commands.get(i).getCommands().add("-map_metadata");
-            commands.get(i).getCommands().add("-1");
-
-            // Format
-            commands.get(i).getCommands().addAll(getFormatCommands(profile));
         }
         
         // Prepare result
@@ -230,236 +260,69 @@ public class TranscodeService {
         return result;
     }
     
-    public String[][] getSegmentTranscodeCommand(String segment, TranscodeProfile profile, String type, Integer extra) {
-        // Check variables
-        if(segment == null || profile == null || type == null || extra == null) {
+    private Collection<String> getHlsCommands(UUID id, String format, String name, Integer offset) {
+        if(id == null || name == null) {
             return null;
         }
         
-        TranscodeCommand command = new TranscodeCommand();
-            
-        // Transcoder path
-        command.getCommands().add(getTranscoder().getPath().toString());
-        command.getCommands().add("-y");
-
-        switch(type) {
-
-            case "video":
-                // Flags
-                boolean transcodeRequired = false;
-                Dimension resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), extra);
-
-
-                // If the resolution isn't the max the media supports determine if we need to transcode
-                if(resolution != null) {
-                    Dimension origRes;
-
-                    // Determine resolution to compare
-                    if(profile.getVideoTranscode().getResolution() == null) {
-                        origRes = profile.getMediaElement().getVideoStream().getResolution();
-                    } else {
-                        origRes = profile.getVideoTranscode().getResolution();
-                    }
-
-                    //  Check if transcode is required for the segment
-                    if(origRes.width > resolution.width) {
-                        transcodeRequired = true;
-                    } else {
-                        resolution = null;
-                    }
-                }
-
-                // Check for hardcoded subtitles
-                if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
-                    if(profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded()) {
-                        transcodeRequired = true;
-                    }
-                }
-
-                // Input media file
-                command.getCommands().add("-i");
-                command.getCommands().add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/" + segment);
-
-                if(profile.getVideoTranscode() != null) {                        
-                    command.getCommands().add("-an");
-                    command.getCommands().add("-sn");
-
-                    // Get subtitle commands
-                    command.getCommands().addAll(getSubtitleCommands(command, profile));
-
-                    // If highest possible quality then copy stream
-                    if(!transcodeRequired) {
-                        command.getCommands().add("-c:v");
-                        command.getCommands().add("copy");
-                    } else {
-                        command.getCommands().addAll(getSoftwareVideoEncodingCommands(command, "h264", resolution));
-                    }
-
-                    // Format
-                    command.getCommands().add("-f");
-                    command.getCommands().add("mpegts");                          
-                }
-
-                break;
-
-            case "audio":
-                // Input media file
-                command.getCommands().add("-i");
-                command.getCommands().add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/" + segment);
-
-                // Audio
-                if(profile.getAudioTranscodes() != null) {
-                    if(profile.getAudioTranscodes().length > extra) {
-                        // Mapping
-                        command.getCommands().add("-map");
-                        command.getCommands().add("0:a:" + extra);
-
-                        // Codec
-                        command.getCommands().add("-c:a");
-                        command.getCommands().add("copy");
-                    }
-                }   
-
-                // Format
-                command.getCommands().add("-f");
-
-                switch(profile.getClient()) {
-                    case "chromecast":
-                        command.getCommands().add(TranscodeUtils.getFormatForAudioCodec(profile.getAudioTranscodes()[extra].getCodec()));
-                        break;
-
-                    default:
-                        command.getCommands().add("mpegts");
-                }   
-
-                break;
-
-            case "subtitle":
-                // Input media file
-                command.getCommands().add("-i");
-                command.getCommands().add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/" + segment);
-
-                // Subtitle
-                if(profile.getSubtitleTranscodes() != null) {
-                    if(profile.getSubtitleTranscodes().length > extra) {
-                        // Mapping
-                        command.getCommands().add("-map");
-                        command.getCommands().add("0:s:" + extra);
-
-                        // Codec
-                        command.getCommands().add("-c:s");
-                        command.getCommands().add("webvtt");
-                    }
-                }   
-
-                // Format
-                command.getCommands().add("-f");
-                command.getCommands().add("webvtt");
-
-                break;
-
-            default:
-                break;
-        }
-
-        // Maintain timestamps
-        command.getCommands().add("-copyts");
-
-        command.getCommands().add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/" + segment + "-" + type + "-" + extra);           
-        
-        //Prepare result
-        ArrayList<TranscodeCommand> commands = new ArrayList<>();
-        commands.add(command);
-        
-        String[][] result = new String[commands.size()][];
-
-        for(int i = 0; i < commands.size(); i++) {
-            result[i] = commands.get(i).getCommands().toArray(new String[0]);
-        }
-            
-        return result;
-    }
-    
-    private Collection<String> getFormatCommands(TranscodeProfile profile) {
         Collection<String> commands = new LinkedList<>();
         
-        if(profile.getFormat() != null) {
-            switch(profile.getFormat()) {
-                case "hls":                 
-                    // Segments
-                    commands.add("-f");
-                    commands.add("segment");
-                    
-                    commands.add("-segment_time");
-                    commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
-                    
-                    commands.add("-segment_format");
-                    
-                    if(profile.getVideoTranscode() == null) {
-                        commands.add("mpegts");
-                    } else {
-                        commands.add("matroska");
-                    }
-                    
-                    if(profile.getOffset() > 0) {
-                        commands.add("-segment_start_number");
-                        commands.add(String.valueOf(profile.getOffset() / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
-                        
-                        commands.add("-initial_offset");
-                        commands.add(profile.getOffset().toString());
-                    }
-                    
-                    commands.add("-segment_list");
-                    commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/segments.txt");
-                    
-                    commands.add("-segment_list_type");
-                    commands.add("flat");
-                    
-                    commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + profile.getID() + "/%d");
-                    
-                    break;
-                    
-                case "dash":
-                    if(profile.getVideoTranscode() != null) {
-                        // Reduce overhead with global header
-                        commands.add("-flags");
-                        commands.add("-global_header");                        
-                    }
-                    
-                    // Segments
-                    commands.add("-f");
-                    commands.add("dash");
-                                        
-                    commands.add(SettingsService.getInstance().getDataDirectory().getPath() + "/streams/" + profile.getID() + "/playlist.mpd");
-                    break;
-                    
-                default:
-                    commands.add("-f");
-                    commands.add(profile.getFormat());
-                    commands.add("-");
-                    break;
-            }
+        commands.add("-f");
+        commands.add("segment");
+
+        commands.add("-segment_time");
+        commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
+
+        commands.add("-segment_format");
+        
+        if(format == null) {
+            commands.add("mpegts");
+        } else {
+            commands.add(format);
         }
+
+        if(offset != null && offset > 0) {
+            commands.add("-segment_start_number");
+            commands.add(String.valueOf(offset / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
+
+            commands.add("-initial_offset");
+            commands.add(offset.toString());
+        }
+
+        commands.add("-segment_list");
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + name + ".txt");
+
+        commands.add("-segment_list_type");
+        commands.add("flat");
+
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d-" + name);
         
         return commands;
     }
     
-    private Collection<String> getHardwareVideoDecodingCommands(HardwareAccelerator hardwareAccelerator) {
+    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, boolean decode) {
         Collection<String> commands = new LinkedList<>();
 
         switch(hardwareAccelerator.getName()) {
             case "vaapi":
-                commands.add("-hwaccel");
-                commands.add(hardwareAccelerator.getName());
+                if(decode) {
+                    commands.add("-hwaccel");
+                    commands.add(hardwareAccelerator.getName());
+                    commands.add("-hwaccel_output_format");
+                    commands.add("vaapi");
+                }
+                
                 commands.add("-vaapi_device");
                 commands.add(hardwareAccelerator.getDevice().toString());
-                commands.add("-hwaccel_output_format");
-                commands.add("vaapi");
+                
                 break;
 
             case "cuvid":
-                commands.add("-hwaccel");
-                commands.add(hardwareAccelerator.getName());
+                if(decode) {
+                    commands.add("-hwaccel");
+                    commands.add(hardwareAccelerator.getName());
+                }
+                
                 break;
         }
         
@@ -469,22 +332,12 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given hardware accelerator.
      */
-    private Collection<String> getHardwareVideoEncodingCommands(TranscodeCommand command, Dimension resolution, HardwareAccelerator hardwareAccelerator) {
+    private Collection<String> getHardwareVideoEncodingCommands(HardwareAccelerator hardwareAccelerator) {
         Collection<String> commands = new LinkedList<>();
         
         if(hardwareAccelerator != null) {
             switch(hardwareAccelerator.getName()) {
                 case "vaapi":
-                    command.getFilters().add("format=nv12|vaapi");
-                    command.getFilters().add("hwupload");
-
-                    if(resolution != null) {
-                        command.getFilters().add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
-                    }
-                    
-                    // Get filter command
-                    commands.addAll(getFilterCommands(command.getFilters()));
-
                     commands.add("-c:v");
                     commands.add("h264_vaapi");
                     commands.add("-qp");
@@ -492,13 +345,6 @@ public class TranscodeService {
                     break;
 
                 case "cuvid":
-                    if(resolution != null) {
-                        command.getFilters().add("scale=w=" + resolution.width + ":h=" + resolution.height);
-                    }
-                    
-                    // Get filter command
-                    commands.addAll(getFilterCommands(command.getFilters()));
-
                     commands.add("-c:v");
                     commands.add("h264_nvenc");
                     break;
@@ -509,17 +355,40 @@ public class TranscodeService {
     }
     
     /*
+     * Returns a list of filters for a given hardware accelerator.
+     */
+    private List<String> getHardwareVideoEncodingFilters(Dimension resolution, HardwareAccelerator hardwareAccelerator) {
+        List<String> filters = new ArrayList<>();
+        
+        if(hardwareAccelerator != null) {
+            switch(hardwareAccelerator.getName()) {
+                case "vaapi":
+                    filters.add("format=nv12|vaapi");
+                    filters.add("hwupload");
+
+                    if(resolution != null) {
+                        filters.add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
+                    }
+                    
+                    break;
+
+                case "cuvid":
+                    if(resolution != null) {
+                        filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+                    }
+                    
+                    break;
+            }
+        }
+        
+        return filters;
+    }
+    
+    /*
      * Returns a list of commands for a given software video codec to optimise transcoding.
      */
-    private Collection<String> getSoftwareVideoEncodingCommands(TranscodeCommand command, String codec, Dimension resolution) {
+    private Collection<String> getSoftwareVideoEncodingCommands(String codec) {
         Collection<String> commands = new LinkedList<>();
-                
-        if(resolution != null) {
-            command.getFilters().add("scale=w=" + resolution.width + ":h=" + resolution.height);
-        }
-                    
-        // Get filter command
-        commands.addAll(getFilterCommands(command.getFilters()));
         
         if(codec != null) {
             // Video Codec
@@ -557,6 +426,19 @@ public class TranscodeService {
         }
         
         return commands;
+    }
+    
+    /*
+     * Returns a list of filters for software encoding.
+     */
+    private List<String> getSoftwareVideoEncodingFilters(Dimension resolution) {
+        List<String> filters = new ArrayList<>();
+        
+        if(resolution != null) {
+            filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+        }
+        
+        return filters;
     }
     
     /*
@@ -600,46 +482,31 @@ public class TranscodeService {
         return commands;
     }
     
-    /*
-     * Returns a list of commands for burning picture based subtitles into the output video.
-     */
-    private Collection<String> getSubtitleCommands(TranscodeCommand command, TranscodeProfile profile) {  
+    public Collection<String> getFilterCommands(ArrayList<ArrayList<String>> filters) {
         Collection<String> commands = new LinkedList<>();
         
-        // Get subtitle transcode properties
-        SubtitleTranscode transcode = null;
-        
-        if(profile.getSubtitleTranscodes() != null && profile.getSubtitleTrack() != null) {
-            if(profile.getSubtitleTrack() < profile.getSubtitleTranscodes().length) {
-                transcode = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()];
-            }
-        }
-        
-        if(transcode != null && transcode.isHardcoded()) {
-            command.getFilters().add("[0:s:" + profile.getSubtitleTrack() + "]overlay");
-        }
-        
-        return commands;
-    }
-    
-    public Collection<String> getFilterCommands(ArrayList<String> filters) {
-        Collection<String> commands = new LinkedList<>();
-        int i;
-        
-        if(filters.isEmpty()) {
-            commands.add("-map");
-            commands.add("0:v");
-        } else {
+        if(!filters.isEmpty()) {
             commands.add("-filter_complex");
             
             StringBuilder filterBuilder = new StringBuilder();
-            filterBuilder.append("[0:v]");
             
-            for(i = 0; i < filters.size(); i++) {
-                if(i > 0) {
-                    filterBuilder.append("[v").append(i - 1).append("]");
+            // Add each filter chain in turn
+            for(int i = 0; i < filters.size(); i++) {
+                filterBuilder.append("[0:v]");
+                
+                // If there are no filters to add utilise the 'null' filter
+                if(filters.get(i).isEmpty()) {
+                    filterBuilder.append("null");
+                } else {
+                    for(int f = 0; f < filters.get(i).size(); f++) {
+                        filterBuilder.append(filters.get(i).get(f));
+                        
+                        if(f < (filters.get(i).size() - 1)) {
+                            filterBuilder.append(",");
+                        }
+                    }
                 }
-                filterBuilder.append(filters.get(i));
+            
                 filterBuilder.append("[v").append(i).append("]");
                 
                 if(i < (filters.size() - 1)) {
@@ -648,8 +515,6 @@ public class TranscodeService {
             }
             
             commands.add(filterBuilder.toString());
-            commands.add("-map");
-            commands.add("[v" + (i - 1) + "]");
         }
         
         return commands;
@@ -819,9 +684,8 @@ public class TranscodeService {
         }
         
         // Variables
-        String codec = null;
-        Dimension resolution = null;
-        int quality = TranscodeUtils.getHighestVideoQuality(profile.getMediaElement());
+        int maxQuality = TranscodeUtils.getHighestVideoQuality(profile.getMediaElement());
+        int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
         VideoStream stream = profile.getMediaElement().getVideoStream();
         
         if(stream == null) {
@@ -829,42 +693,75 @@ public class TranscodeService {
         }
         
         // Process quality
-        if(quality < 0 || quality < profile.getQuality()) {
-            profile.setQuality(quality);
+        if(maxQuality < 0 || maxQuality < profile.getQuality()) {
+            profile.setQuality(maxQuality);
+        }
+        
+        // Determine number of streams to transcode
+        if(profile.isDirectPlayEnabled() || profile.getQuality() == 0) {
+            streamCount = 1;
+        } else if(streamCount > profile.getQuality()) {
+            streamCount = profile.getQuality();
         }
         
         // Test if transcoding is necessary
-        boolean transcodeRequired = isTranscodeRequired(profile, stream);
+        boolean transcodeRequired = streamCount > 1;
         
-        // Test that the codec is supported by the given format
+        if(!transcodeRequired) {
+            transcodeRequired = isTranscodeRequired(profile, stream);
+        }
+        
         if(!transcodeRequired) {
             transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
         }
         
-        if(transcodeRequired) {
-            // Get suitable codec
-            for(String test : profile.getCodecs()) {
-                if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test) && TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_VIDEO_CODECS, test)) {
-                    codec = test;
-                    break;
+        // Check for hardcoded subtitles
+        if(profile.getSubtitleTrack() != null) {
+            transcodeRequired = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded();
+        }
+        
+        // Process required number of video streams
+        List<VideoTranscode> transcodes = new ArrayList<>();
+        
+        for(int i = 0; i < streamCount; i++) {
+            String codec = null;
+            Dimension resolution = null;
+            Integer quality = profile.getQuality();
+            
+            if(transcodeRequired) {
+                // Determine quality for transcode
+                if(i > 0) {
+                    quality = i - 1;
                 }
+                
+                // Get suitable codec
+                for(String test : profile.getCodecs()) {
+                    if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test) && TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_VIDEO_CODECS, test)) {
+                        codec = test;
+                        break;
+                    }
+                }
+
+                // Check we got a suitable codec
+                if(codec == null) {
+                    return false;
+                }
+
+                // Get suitable resolution (use native resolution if direct play is enabled)
+                if(!profile.isDirectPlayEnabled()) {
+                    resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), quality);      
+                }
+            } else {
+                codec = "copy";
+                quality = null;
             }
             
-            // Check we got a suitable codec
-            if(codec == null) {
-                return false;
-            }
-            
-            // Get suitable resolution (use native resolution if direct play is enabled)
-            if(!profile.isDirectPlayEnabled()) {
-                resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), profile.getQuality());      
-            }
-        } else {
-            codec = "copy";
+            // Add video transcode to array
+            transcodes.add(new VideoTranscode(codec, resolution, quality));
         }
         
         // Update profile with video transcode properties
-        profile.setVideoTranscode(new VideoTranscode(codec, resolution));
+        profile.setVideoTranscodes(transcodes.toArray(new VideoTranscode[transcodes.size()]));
         
         return true;
     }
