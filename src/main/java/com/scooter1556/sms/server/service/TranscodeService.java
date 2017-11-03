@@ -149,6 +149,7 @@ public class TranscodeService {
             if(profile.getVideoTranscodes() != null) {
                 HardwareAccelerator hardwareAccelerator = null;
                 boolean hardcodedSubtitles = false;
+                boolean hardwareEncoding = !hardcodedSubtitles && profile.getMaxBitRate() == null;
             
                 // Software or hardware based transcoding
                 if(transcoder.getHardwareAccelerators().length > i) {
@@ -184,7 +185,7 @@ public class TranscodeService {
                 
                 // Hardware decoding
                 if(hardwareAccelerator != null) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, !hardcodedSubtitles));
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, hardwareEncoding));
                 }
                 
                 // Input media file
@@ -207,15 +208,15 @@ public class TranscodeService {
                         commands.get(i).getCommands().add("0:v");
                         
                         // Codec
-                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec()));
+                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec(), profile.getMaxBitRate()));
                     } else {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        if(hardwareAccelerator == null) {
-                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec()));
+                        if(hardwareAccelerator == null || !hardwareEncoding) {
+                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(profile.getVideoTranscodes()[v].getCodec(), profile.getMaxBitRate()));
                         } else {
                             commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator));
                         }
@@ -242,10 +243,25 @@ public class TranscodeService {
                 commands.get(i).getCommands().add("experimental");
                 
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
-                    commands.get(i).getCommands().addAll(getAudioCommands(a, profile.getAudioTranscodes()[a]));
+                    AudioTranscode transcode = profile.getAudioTranscodes()[a];
+                    String format = null;
                     
-                    // Segment
-                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), null, "audio-" + a, profile.getOffset()));
+                    if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
+                        switch(profile.getClient()) {
+                            case "chromecast":
+                                format = TranscodeUtils.getFormatForAudioCodec(transcode.getCodec());
+                                break;
+
+                            default:
+                                break; 
+                        }
+                    }
+                    
+                    // Transcode commands
+                    commands.get(i).getCommands().addAll(getAudioCommands(a, transcode));
+                    
+                    // Segment commands
+                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), format, "audio-" + a, profile.getOffset()));
                 }
             }
         }
@@ -387,7 +403,7 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given software video codec to optimise transcoding.
      */
-    private Collection<String> getSoftwareVideoEncodingCommands(String codec) {
+    private Collection<String> getSoftwareVideoEncodingCommands(String codec, Integer maxrate) {
         Collection<String> commands = new LinkedList<>();
         
         if(codec != null) {
@@ -400,7 +416,13 @@ public class TranscodeService {
                     commands.add("-crf");
                     commands.add("25");
                     commands.add("-b:v");
-                    commands.add("0");
+                    
+                    if(maxrate != null) {
+                        commands.add(maxrate.toString() + "k");
+                    } else {
+                        commands.add("0");
+                    }
+                    
                     commands.add("-quality");
                     commands.add("realtime");
                     commands.add("-cpu-used");
@@ -417,6 +439,13 @@ public class TranscodeService {
                     commands.add("yuv420p");
                     commands.add("-profile:v");
                     commands.add("high");
+                    
+                    if(maxrate != null) {
+                        commands.add("-maxrate");
+                        commands.add(maxrate.toString() + "k");
+                        commands.add("-bufsize");
+                        commands.add("2M");
+                    }
                     
                     break;
 
@@ -559,9 +588,11 @@ public class TranscodeService {
             return true;
         }
         
-        // Check bitrate
+        // Check maximum bitrate
+        // We are comparing against the original streams average bitrate 
+        // so to allow for this we unscientifically half the max bitrate for comparison
         if(profile.getMaxBitRate() != null) {
-            if(profile.getMediaElement().getBitrate() > profile.getMaxBitRate()) {
+            if(profile.getMediaElement().getBitrate() > (profile.getMaxBitRate() * 0.5)) {
                 return true;
             }
         }

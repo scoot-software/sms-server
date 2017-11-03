@@ -249,10 +249,6 @@ public class StreamController {
             profile.setMaxSampleRate(maxSampleRate);
         }
         
-        if(maxBitRate != null) {
-            profile.setMaxBitRate(maxBitRate);
-        }
-        
         if(mchCodecs != null) {
             profile.setMchCodecs(mchCodecs.split(","));
         }
@@ -291,6 +287,11 @@ public class StreamController {
                     profile.setMimeType(TranscodeUtils.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
                 }
             }
+        }
+        
+        // Populate max bitrate after determining if direct streaming is possible
+        if(maxBitRate != null) {
+            profile.setMaxBitRate(maxBitRate);
         }
         
         // If necessary process all streams ready for streaming and/or transcoding
@@ -543,51 +544,7 @@ public class StreamController {
                 return;
             }
             
-            /*
-            // Return file direct for audio and transcode as required for video
             if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
-                // Check if this is a request for a hardcoded subtitle segment
-                if(type.equals("subtitle")) {
-                    mimeType = "text/vtt";
-                    
-                    if(profile.getSubtitleTranscodes()[extra].isHardcoded()) {
-                        // Set selected subtitle in transcode profile
-                        profile.setSubtitleTrack(extra);
-                        
-                        // Update process with subtitle information
-                        transcodeProcess.setSubtitlesEnabled(true);
-                        transcodeProcess.setSubtitleNum(Integer.parseInt(file));
-                    
-                        // Return empty webvtt segment
-                        adaptiveStreamingService.sendSubtitleSegment(response);
-                        return;
-                    }
-                }
-                
-                // Check if we need to disable subtitles
-                if(transcodeProcess.getSubtitlesEnabled()) {
-                    if(transcodeProcess.getSubtitleNum() < transcodeProcess.getSegmentNum()) {
-                        transcodeProcess.setSubtitlesEnabled(false);
-                        profile.setSubtitleTrack(null);
-                    }
-                }
-                
-                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
-                
-                if(!segment.exists()) {  
-                    // Get transcode command
-                    String[][] commands = transcodeService.getSegmentTranscodeCommand(file, profile, type, extra);
-
-                    // Generate segment
-                    boolean success = TranscodeUtils.runTranscodeCommands(commands);
-
-                    if(!success || !segment.exists()) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to transcode segment " + file + " for job " + id + ".", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to transcode segment.");
-                        return;
-                    }
-                }
-                
                 // Determine proper mimetype for audio
                 if(type.equals("audio")) {
                     switch(profile.getClient()) {
@@ -599,7 +556,7 @@ public class StreamController {
                             break; 
                     }
                 }
-            }*/
+            }
             
             process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
             process.start();
