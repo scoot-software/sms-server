@@ -63,16 +63,28 @@ public class ImageController {
     @ResponseBody
     public void getCoverArt(@PathVariable("id") Long id, 
                             @RequestParam(value = "scale", required = false) Integer scale,
+                            @RequestParam(value = "folder", required = false) Boolean isFolder,
                             HttpServletResponse response) {
-        MediaElement mediaElement;
-        File image;
+        MediaFolder folder = null;
+        MediaElement mediaElement = null;
+        File image = null;
         
         try {
-            // Get corresponding media element
-            mediaElement = mediaDao.getMediaElementByID(id);
+            // Ensure folder flag is set
+            if(isFolder == null) {
+                isFolder = false;
+            }
+            
+            // Get corresponding media
+            if(isFolder) {
+                folder = settingsDao.getMediaFolderByID(id);
+            } else {
+                mediaElement = mediaDao.getMediaElementByID(id);
+            }
+            
 
-            if(mediaElement == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
+            if(mediaElement == null && folder == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media "+ (isFolder ? "folder" : "element") + "with id " + id + ".");
                 return;
             }
             
@@ -80,9 +92,13 @@ public class ImageController {
             if(scale == null || scale <= 0) {
                 scale = DEFAULT_COVER_SCALE;
             }
-
+            
             // Get cover art
-            image = imageService.getCoverArt(mediaElement);
+            if(folder != null) {
+                image = imageService.getCoverArt(folder);
+            } else if(mediaElement != null) {
+                image = imageService.getCoverArt(mediaElement);
+            }
 
             // Check if we were able to retrieve cover art
             if(image == null) {
@@ -173,16 +189,28 @@ public class ImageController {
     @ResponseBody
     public void getFanArt(@PathVariable("id") Long id,
                           @RequestParam(value = "scale", required = false) Integer scale,
+                          @RequestParam(value = "folder", required = false) Boolean isFolder,
                           HttpServletResponse response) {
-        MediaElement mediaElement;
-        File image;
+        MediaElement mediaElement = null;
+        MediaFolder folder = null;
+        File image = null;
         
         try {
-            // Get corresponding media element
-            mediaElement = mediaDao.getMediaElementByID(id);
+            // Ensure folder flag is set
+            if(isFolder == null) {
+                isFolder = false;
+            }
+            
+            // Get corresponding media
+            if(isFolder) {
+                folder = settingsDao.getMediaFolderByID(id);
+            } else {
+                mediaElement = mediaDao.getMediaElementByID(id);
+            }
+            
 
-            if(mediaElement == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media element with id " + id + ".");
+            if(mediaElement == null && folder == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media "+ (isFolder ? "folder" : "element") + "with id " + id + ".");
                 return;
             }
             
@@ -192,7 +220,11 @@ public class ImageController {
             }
 
             // Get fan art
-            image = imageService.getFanArt(mediaElement);
+            if(folder != null) {
+                image = imageService.getFanArt(folder);
+            } else if(mediaElement != null) {
+                image = imageService.getFanArt(mediaElement);
+            }
 
             // Check if we were able to retrieve fan art
             if(image == null) {

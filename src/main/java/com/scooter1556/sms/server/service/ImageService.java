@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.io.ImageProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
@@ -66,6 +67,19 @@ public class ImageService {
         return imageFile;
     }
     
+    public File getCoverArt(MediaFolder folder) {
+        File imageFile;
+        
+        imageFile = findCoverArt(new File(folder.getPath()));
+        
+        // If cover art is not found return.
+        if(imageFile == null) {
+            return null;
+        }
+        
+        return imageFile;
+    }
+    
     public File getFanArt(MediaElement element) {
         File imageFile;
         
@@ -81,6 +95,11 @@ public class ImageService {
             imageFile = findFanArt(new File(element.getParentPath()));
         }
         
+        return imageFile;
+    }
+    
+    public File getFanArt(MediaFolder folder) {
+        File imageFile = findFanArt(new File(folder.getPath()));
         return imageFile;
     }
     
