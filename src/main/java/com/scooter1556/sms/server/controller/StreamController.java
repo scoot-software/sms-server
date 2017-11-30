@@ -215,7 +215,9 @@ public class StreamController {
         }
         
         // Direct Play        
-        if(directPlay == null || !directPlay) {
+        if(directPlay == null) {
+            directPlay = false;
+        } else if(directPlay) {
             directPlay = isLocal;
         }
         
