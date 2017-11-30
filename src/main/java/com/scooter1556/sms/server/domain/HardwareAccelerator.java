@@ -6,6 +6,7 @@ public class HardwareAccelerator {
     
     private String name;
     private Path device;
+    private boolean streaming = true;
     
     public HardwareAccelerator(String name) { this.name = name; };
     
@@ -33,4 +34,11 @@ public class HardwareAccelerator {
         this.device = device;
     }
     
+    public boolean isStreamingSupported() {
+        return streaming;
+    }
+    
+    public void setStreamingSupported(boolean streaming) {
+        this.streaming = streaming;
+    }
 }

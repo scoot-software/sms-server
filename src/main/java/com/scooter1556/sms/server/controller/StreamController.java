@@ -184,39 +184,39 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
-        // Direct Play        
-        if(directPlay == null) {
-            directPlay = false;
+        // Determine if the device is on the local network
+        boolean isLocal = false;
+        
+        try {
+            InetAddress local = InetAddress.getByName(request.getLocalAddr());
+            InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
+
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
+
+            // Check if the remote device is on the same subnet as the server
+            for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+                if(address.getAddress().equals(local)) {
+                    int mask = address.getNetworkPrefixLength();
+                    isLocal = NetworkUtils.isLocalIP(local, remote, mask);
+                }
+            }
+
+            // Check if request came from public IP if subnet check was false
+            if(!isLocal) {
+                String ip = networkService.getPublicIP();
+
+                if(ip != null) {
+                    isLocal = remote.toString().contains(ip);
+                }
+            }
+        } catch (UnknownHostException | SocketException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
         }
         
-        // Determine if the device is on the local network
-        if(directPlay) {
-            try {
-                InetAddress local = InetAddress.getByName(request.getLocalAddr());
-                InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
-                NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
-                
-                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
-
-                // Check if the remote device is on the same subnet as the server
-                for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
-                    if(address.getAddress().equals(local)) {
-                        int mask = address.getNetworkPrefixLength();
-                        directPlay = NetworkUtils.isLocalIP(local, remote, mask);
-                    }
-                }
-                
-                // Check if request came from public IP if subnet check was false
-                if(!directPlay) {
-                    String ip = networkService.getPublicIP();
-                    
-                    if(ip != null) {
-                        directPlay = remote.toString().contains(ip);
-                    }
-                }
-            } catch (UnknownHostException | SocketException ex) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
-            }
+        // Direct Play        
+        if(directPlay == null || !directPlay) {
+            directPlay = isLocal;
         }
         
         //
@@ -224,6 +224,13 @@ public class StreamController {
         //
         
         profile = new TranscodeProfile(job.getID());
+        
+        // Set stream type
+        if(isLocal) {
+            profile.setType(TranscodeProfile.StreamType.LOCAL);
+        } else {
+            profile.setType(TranscodeProfile.StreamType.REMOTE);
+        }
         
         profile.setMediaElement(mediaElement);
         
@@ -325,12 +332,11 @@ public class StreamController {
             // Set MIME Type
             if(profile.getFormat() != null) {
                 profile.setMimeType(TranscodeUtils.getMimeType(profile.getFormat(), mediaElement.getType()));
-                profile.setType(StreamType.TRANSCODE);
             }
         }
         
         // If transcode is required start the transcode process
-        if(profile.getType() == StreamType.TRANSCODE) {
+        if(profile.getType() > StreamType.DIRECT) {
             if(adaptiveStreamingService.initialise(profile, 0) == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to intialise adaptive streaming process for job " + job.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -619,7 +625,7 @@ public class StreamController {
             }
             
             switch(profile.getType()) {
-                case StreamType.TRANSCODE:
+                case StreamType.LOCAL: case StreamType.REMOTE:
                     if(profile.getFormat().equals("hls")) {
                         adaptiveStreamingService.sendHLSPlaylist(id, null, null, request, response);
                     } else if(profile.getFormat().equals("dash")) {

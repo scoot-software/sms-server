@@ -83,7 +83,7 @@ public class AdaptiveStreamingService {
 
     public AdaptiveStreamingProcess initialise(TranscodeProfile profile, int num) {
         // Check that this is an adaptive streaming job
-        if(profile.getType() != StreamType.TRANSCODE) {
+        if(profile.getType() == StreamType.DIRECT) {
             return null;
         }
         
