@@ -82,6 +82,7 @@ public class TranscoderParser {
                                     if(i < devices.length) {
                                         HardwareAccelerator hwaccel = new HardwareAccelerator(line);
                                         hwaccel.setDevice(devices[i]);
+                                        hwaccel.setStreamingSupported(false);
                                         hwaccels.add(hwaccel);
                                     }
                                 }

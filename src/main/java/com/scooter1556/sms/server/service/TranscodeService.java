@@ -357,12 +357,14 @@ public class TranscodeService {
                     commands.add("-c:v");
                     commands.add("h264_vaapi");
                     commands.add("-qp");
-                    commands.add("25");
+                    commands.add("23");
                     break;
 
                 case "cuvid":
                     commands.add("-c:v");
                     commands.add("h264_nvenc");
+                    commands.add("-bf:v");
+                    commands.add("4");
                     break;
             }
         }
@@ -965,7 +967,7 @@ public class TranscodeService {
             if(profile.getID() != null) {
                 if(profile.getID().compareTo(id) == 0) {
                     // Stop transcode process
-                    if(profile.getType() == StreamType.TRANSCODE) {
+                    if(profile.getType() > StreamType.DIRECT) {
                         adaptiveStreamingService.endProcess(id);
                     }
                     
