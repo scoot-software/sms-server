@@ -315,6 +315,24 @@ public class TranscodeUtils {
         return -1;
     }
     
+    /*
+     * Returns the highest possible transcode quality based on bitrate
+     */
+    public static int getVideoQualityFromMaxBitrate(int maxBitrate) {
+        // Loop through possible qualities until we find the highest
+        for(int i = VideoTranscode.VideoQuality.getMax(); i >= 0; i--) {
+            // Determine max bitrate based on quality.
+            int requested = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[i];
+            
+            if(maxBitrate >= requested) {
+                return i;
+            }
+        }
+        
+        // Return the lowest quality by default
+        return 0;
+    }
+    
     public static boolean isAudioStreamAvailable(int streamNum, MediaElement element) {        
         // Get list of audio streams for element
         List<MediaElement.AudioStream> audioStreams = element.getAudioStreams();

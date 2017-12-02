@@ -50,20 +50,19 @@ public class VideoTranscode {
     }
     
     public static class VideoQuality {
-        public static final int VERY_LOW = 0;
-        public static final int LOW = 1;
-        public static final int MEDIUM = 2;
-        public static final int HIGH = 3;
-        public static final int VERY_HIGH = 4;
-        public static final int HD = 5;
-        public static final int FULLHD = 6;
+        public static final int LOW = 0;
+        public static final int MEDIUM = 1;
+        public static final int HIGH = 2;
+        public static final int VERY_HIGH = 3;
+        public static final int HD = 4;
+        public static final int FULLHD = 5;
         
         public static boolean isValid(int quality) {
             return !(quality > 6 || quality < 0);
         }
         
         public static int getMax() {
-            return 6;
+            return 5;
         }
     }
 }
