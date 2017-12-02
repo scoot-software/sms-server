@@ -126,10 +126,10 @@ public class TranscodeUtils {
     
     public static final int[] AUDIO_QUALITY_MAX_BITRATE = {64,96,160,-1};
     
-    public static final int[] VIDEO_QUALITY_MAX_BITRATE = {250,400,1000,2000,3000,5000,8000};
+    public static final int[] VIDEO_QUALITY_BITRATE = {400,800,1200,1800,2500,5000};
+    public static final int[] VIDEO_QUALITY_MAX_BITRATE = {1000,1500,2000,3000,4000,8000};
     
     public static final int[] VIDEO_QUALITY_AUDIO_QUALITY = {AudioQuality.LOW,
-                                                             AudioQuality.LOW,
                                                              AudioQuality.LOW,
                                                              AudioQuality.LOW,
                                                              AudioQuality.MEDIUM,
@@ -137,11 +137,10 @@ public class TranscodeUtils {
                                                              AudioQuality.HIGH
     };
     
-    public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(256,144),
-                                                                new Dimension(384,216),
-                                                                new Dimension(426,240),
+    public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(426,240),
                                                                 new Dimension(640,360),
-                                                                new Dimension(854,480),
+                                                                new Dimension(848,480),
+                                                                new Dimension(1024,576),
                                                                 new Dimension(1280,720),
                                                                 new Dimension(1920,1080)
     };
