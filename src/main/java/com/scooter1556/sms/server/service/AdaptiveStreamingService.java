@@ -33,8 +33,10 @@ import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
+import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.IOException;
@@ -312,19 +314,21 @@ public class AdaptiveStreamingService {
             }
             */
             
-            for(int i = 0; i < profile.getVideoTranscodes().length; i++) {
-                // Get video streams
-                List<VideoStream> videoStreams = mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID());
-                VideoStream videoStream = videoStreams.get(0);
+            for(int i = 0; i < TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size(); i++) {
+                VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(i);
+                
+                // Get video stream
+                VideoStream videoStream = MediaUtils.getVideoStreamById(profile.getMediaElement().getVideoStreams(), transcode.getId());
+                
                 // Determine bitrate
                 int bitrate = profile.getMediaElement().getBitrate();
                 
-                if(profile.getVideoTranscodes()[i].getQuality() != null) {
-                    bitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[profile.getVideoTranscodes()[i].getQuality()];
+                if(transcode.getQuality() != null) {
+                    bitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[transcode.getQuality()];
                 }
                 
                 // Determine resolution
-                Dimension resolution = profile.getVideoTranscodes()[i].getResolution();
+                Dimension resolution = transcode.getResolution();
                 
                 if(resolution == null) {
                     resolution = videoStream.getResolution();

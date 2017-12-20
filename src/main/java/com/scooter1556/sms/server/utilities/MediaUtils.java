@@ -23,8 +23,12 @@
  */
 package com.scooter1556.sms.server.utilities;
 
+import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 
 public class MediaUtils {
     
@@ -58,6 +62,51 @@ public class MediaUtils {
         }
 
         return false;
+    }
+    
+    // Returns the first video stream with the requested ID
+    public static VideoStream getVideoStreamById(List<VideoStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(VideoStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Returns the first audio stream with the requested ID
+    public static AudioStream getAudioStreamById(List<AudioStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(AudioStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Returns the first subtitle stream with the requested ID
+    public static SubtitleStream getSubtitleStreamById(List<SubtitleStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(SubtitleStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
     }
     
 }

@@ -537,18 +537,18 @@ public class TranscodeUtils {
         return false;
     }
     
-    public static VideoTranscode getVideoTranscodeById(VideoTranscode[] transcodes, int id) {
-        if(transcodes == null || transcodes.length == 0) {
-            return null;
-        }
+    public static List<VideoTranscode> getVideoTranscodesById(VideoTranscode[] transcodes, int id) {
+        List<VideoTranscode> result = new ArrayList<>();
         
-        for(VideoTranscode transcode : transcodes) {
-            if(transcode.getId() == id) {
-                return transcode;
+        if(transcodes != null && transcodes.length > 0) {
+            for(VideoTranscode transcode : transcodes) {
+                if(transcode.getId() == id) {
+                    result.add(transcode);
+                }
             }
         }
         
-        return null;
+        return result;
     }
     
     public static AudioTranscode getAudioTranscodeById(AudioTranscode[] transcodes, int id) {

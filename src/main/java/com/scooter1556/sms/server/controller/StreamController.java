@@ -169,6 +169,7 @@ public class StreamController {
         } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(quality)) {
             jobType = JobType.VIDEO_STREAM;
             mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(id));
+            mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(id));
             mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(id));
         } else {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode request.", null);
@@ -405,7 +406,7 @@ public class StreamController {
                     break;
                     
                 case "video":
-                    if(profile.getVideoTranscodes() == null || extra >= profile.getVideoTranscodes().length) {
+                    if(profile.getVideoTranscodes() == null || extra >= TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size()) {
                         LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Video stream requested is out of range.", null);
                         response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Video stream requested is out of range.");
                         return;
