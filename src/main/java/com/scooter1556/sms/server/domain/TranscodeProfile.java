@@ -185,7 +185,7 @@ public class TranscodeProfile {
     }
     
     @JsonIgnore
-    public Integer getVideStream() {
+    public Integer getVideoStream() {
         return videoStream;
     }
 
