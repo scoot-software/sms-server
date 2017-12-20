@@ -71,7 +71,7 @@ public class AdminController {
     private JobDao jobDao;
     
     @Autowired
-    private ScannerService mediaScannerService;
+    private ScannerService scannerService;
     
     //
     // User
@@ -339,7 +339,7 @@ public class AdminController {
     public ResponseEntity<String> scanMedia(@RequestParam(value = "id", required = false) UUID id,
                                             @RequestParam(value = "forcerescan", required = false) Boolean forceRescan) {        
         // Check a media scanning process is not already active
-        if (mediaScannerService.isScanning()) {
+        if (scannerService.isScanning()) {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
         }
         
@@ -373,7 +373,7 @@ public class AdminController {
         }
         
         // Start scanning media
-        mediaScannerService.startMediaScanning(mediaFolders);
+        scannerService.startMediaScanning(mediaFolders);
         
         return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
     }
@@ -381,13 +381,13 @@ public class AdminController {
     @RequestMapping(value="/media/scan/count", method=RequestMethod.GET)
     public ResponseEntity<Long> getMediaScanCount()
     {   
-        return new ResponseEntity<>(mediaScannerService.getScanCount(), HttpStatus.OK);
+        return new ResponseEntity<>(scannerService.getScanCount(), HttpStatus.OK);
     }
     
     @RequestMapping(value="/playlist/scan", method=RequestMethod.GET)
     public ResponseEntity<String> scanPlaylist(@RequestParam(value = "id", required = false) UUID id) {        
         // Check a scanning process is not already active
-        if (mediaScannerService.isScanning()) {
+        if (scannerService.isScanning()) {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
         }
         
@@ -412,7 +412,7 @@ public class AdminController {
         }
         
         // Start scanning playlists
-        mediaScannerService.startPlaylistScanning(playlists);
+        scannerService.startPlaylistScanning(playlists);
         
         return new ResponseEntity<>("Playlist scanning started.", HttpStatus.OK);
     }
