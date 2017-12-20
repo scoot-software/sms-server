@@ -4,12 +4,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AudioTranscode {
-    private final String codec;
-    private final Integer quality;
-    private final Integer sampleRate;
-    private final boolean downmix;
+    private Integer id;
+    private String codec;
+    private Integer quality, sampleRate;
+    private boolean downmix;
 
-    public AudioTranscode(String codec, Integer quality, Integer sampleRate, boolean downmix) {
+    public AudioTranscode(Integer id, String codec, Integer quality, Integer sampleRate, boolean downmix) {
+        this.id = id;
         this.codec = codec;
         this.quality = quality;
         this.sampleRate = sampleRate;
@@ -18,27 +19,52 @@ public class AudioTranscode {
 
     @Override
     public String toString() {
-        return String.format("{Codec=%s, Quality=%s, Sample Rate=%s, Downmix=%s}",
+        return String.format("{ID=%s, Codec=%s, Quality=%s, Sample Rate=%s, Downmix=%s}",
+                id == null ? "null" : id.toString(),
                 codec == null ? "null" : codec,
                 quality == null ? "null" : quality.toString(),
                 sampleRate == null ? "null" : sampleRate.toString(),
                 String.valueOf(downmix));
     }
+    
+    public Integer getId() {
+        return id;
+    }
+    
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
     public String getCodec() {
         return codec;
+    }
+    
+    public void setCodec(String codec) {
+        this.codec = codec;
     }
 
     public Integer getQuality() {
         return quality;
     }
+    
+    public void setQuality(Integer quality) {
+        this.quality = quality;
+    }
 
     public Integer getSampleRate() {
         return sampleRate;
     }
+    
+    public void setSampleRate(Integer sampleRate) {
+        this.sampleRate = sampleRate;
+    }
 
     public boolean isDownmixed() {
         return downmix;
+    }
+    
+    public void setDownmixed(boolean downmix) {
+        this.downmix = downmix;
     }
     
     public static class AudioQuality {

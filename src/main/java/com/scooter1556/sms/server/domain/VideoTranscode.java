@@ -6,11 +6,13 @@ import java.awt.Dimension;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class VideoTranscode {
+    private Integer id;
     private String codec;
     private Dimension resolution;
     private Integer quality;
 
-    public VideoTranscode(String codec, Dimension resolution, Integer quality) {
+    public VideoTranscode(Integer id, String codec, Dimension resolution, Integer quality) {
+        this.id = id;
         this.codec = codec;
         this.resolution = resolution;
         this.quality = quality;
@@ -18,10 +20,19 @@ public class VideoTranscode {
 
     @Override
     public String toString() {
-        return String.format("{Codec=%s, Resolution=%s, Quality=%s}",
+        return String.format("{ID=%s, Codec=%s, Resolution=%s, Quality=%s}",
+                id == null ? "null" : id.toString(),
                 codec == null ? "null" : codec,
                 resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height),
                 quality == null ? "null" : quality.toString());
+    }
+    
+    public Integer getId() {
+        return id;
+    }
+    
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getCodec() {

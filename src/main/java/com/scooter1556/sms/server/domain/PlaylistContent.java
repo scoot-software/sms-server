@@ -30,11 +30,11 @@ import java.util.UUID;
 public class PlaylistContent implements Serializable {
     
     private UUID id;
-    private List<Long> media;
+    private List<UUID> media;
     
     public PlaylistContent() {};
     
-    public PlaylistContent(UUID id, List<Long> media) {
+    public PlaylistContent(UUID id, List<UUID> media) {
         this.id = id;
         this.media = media;
     }
@@ -55,11 +55,11 @@ public class PlaylistContent implements Serializable {
         this.id = id;
     }
     
-    public List<Long> getMedia() {
+    public List<UUID> getMedia() {
         return this.media;
     }
     
-    public void setMedia(List<Long> media) {
+    public void setMedia(List<UUID> media) {
         this.media =  media;
     }
 }

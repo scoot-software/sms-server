@@ -26,9 +26,13 @@ package com.scooter1556.sms.server.service;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.DirectoryMediaType;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.domain.MediaFolder.ContentType;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
@@ -65,7 +69,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class MediaScannerService {
+public class ScannerService {
 
     private static final String CLASS_NAME = "MediaScannerService";
 
@@ -117,7 +121,7 @@ public class MediaScannerService {
     //
     // Scans media in a separate thread.
     //
-    public synchronized void startScanning(List<MediaFolder> folders) {
+    public synchronized void startMediaScanning(List<MediaFolder> folders) {
         // Check if media is already being scanned
         if (isScanning()) {
             return;
@@ -143,6 +147,57 @@ public class MediaScannerService {
         scanningThreads.shutdown();
     }
     
+    //
+    // Scans playlist in a separate thread.
+    //
+    public synchronized void startPlaylistScanning(List<Playlist> playlists) {
+        // Check if media is already being scanned
+        if (isScanning()) {
+            return;
+        }
+        
+        // Create media scanning threads
+        scanningThreads = Executors.newFixedThreadPool(playlists.size());
+
+        // Submit processing jobs for each playlist
+        for (final Playlist playlist : playlists) {
+            scanningThreads.submit(new Runnable() {
+                @Override
+                public void run() {
+                    scanPlaylist(playlist);
+                }
+            });
+        }
+
+        // Shutdown thread pool so no further threads can be added
+        scanningThreads.shutdown();
+    }
+    
+    private void scanPlaylist(Playlist playlist) {
+        // Check this is a file based playlist
+        if(playlist.getPath() == null || playlist.getPath().isEmpty()) {
+            return;
+        }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning playlist " + playlist.getPath(), null);
+        
+        // Remove existing playlist content
+        mediaDao.removePlaylistContent(playlist.getID());
+
+        // Parse playlist
+        List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
+
+        if(mediaElements == null || mediaElements.isEmpty()) {
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "No content found for playlist " + playlist.getPath(), null);
+            return;
+        }
+
+        // Update playlist content
+        mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning playlist " + playlist.getPath() + " (Found " + mediaElements.size() + " items)", null);
+    }
+    
     private void scanMediaFolder(MediaFolder folder) {
         Path path = FileSystems.getDefault().getPath(folder.getPath());
         ParseFiles fileParser = new ParseFiles(folder);
@@ -151,12 +206,6 @@ public class MediaScannerService {
             // Start Scan directory
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
             Files.walkFileTree(path, fileParser);
-
-            // Update folder statistics
-            folder.setFolders(fileParser.getFolders());
-            folder.setFiles(fileParser.getFiles());
-            folder.setLastScanned(fileParser.getScanTime());
-            settingsDao.updateMediaFolder(folder);
 
             // Add new media elements in database
             if(!fileParser.getNewMediaElements().isEmpty()) {
@@ -168,51 +217,85 @@ public class MediaScannerService {
                 mediaDao.updateMediaElementsByID(fileParser.getUpdatedMediaElements());
             }
             
+            // Extract media streams from parsed media elements
+            List<VideoStream> vStreams = new ArrayList<>();
+            List<AudioStream> aStreams = new ArrayList<>();
+            List<SubtitleStream> sStreams = new ArrayList<>();
+            
+            for(MediaElement element : fileParser.getAllMediaElements()) {
+                if(element.getVideoStreams() != null) {
+                    vStreams.addAll(element.getVideoStreams());
+                }
+                
+                if(element.getAudioStreams() != null) {
+                    aStreams.addAll(element.getAudioStreams());
+                }
+                
+                if(element.getSubtitleStreams() != null) {
+                    sStreams.addAll(element.getSubtitleStreams());
+                }
+            }
+            
+            // Add media streams to database
+            mediaDao.createVideoStreams(vStreams);
+            mediaDao.createAudioStreams(aStreams);
+            mediaDao.createSubtitleStreams(sStreams);
+            
             // Add new playlists
             if(!fileParser.getNewPlaylists().isEmpty()) {
                 for(Playlist playlist : fileParser.getNewPlaylists()) {
-                    if(mediaDao.createPlaylist(playlist)) {
-                        //Parse playlist
-                        List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
-                        
-                        if(mediaElements == null || mediaElements.isEmpty()) {
-                            continue;
-                        }
-                        
-                        // Update playlist content
-                        mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
-                    }
+                    mediaDao.createPlaylist(playlist);
                 }
             }
             
             // Update existing playlists
-            if(!fileParser.getUpdatedPlaylists().isEmpty()) {
+            if(!fileParser.getUpdatedPlaylists().isEmpty()) {                
                 for(Playlist playlist : fileParser.getUpdatedPlaylists()) {
-                    if(mediaDao.updateLastScanned(playlist.getID(), fileParser.getScanTime())) {
-                        // Check if we need to update playlist contents
-                        if(playlist.getLastScanned() == null) {
-                            // Remove existing playlist content
-                            mediaDao.removePlaylistContent(playlist.getID());
-
-                            // Parse playlist
-                            List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
-
-                            if(mediaElements == null || mediaElements.isEmpty()) {
-                                continue;
-                            }
-
-                            // Update playlist content
-                            mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
-                        }
-                    }
+                    mediaDao.updatePlaylistLastScanned(playlist.getID(), fileParser.getScanTime());
                 }
             }
             
             // Remove files which no longer exist
             mediaDao.removeDeletedMediaElements(folder.getPath(), fileParser.getScanTime());
             mediaDao.removeDeletedPlaylists(folder.getPath(), fileParser.getScanTime());
+            
+            // Update folder statistics
+            folder.setFolders(fileParser.getFolders());
+            folder.setFiles(fileParser.getFiles());
+            folder.setLastScanned(fileParser.getScanTime());
+            
+            // Determine primary media type in folder
+            if(folder.getType() == null || folder.getType() == MediaFolder.ContentType.UNKNOWN) {
+                int audio = 0, video = 0, playlist;
+                
+                // Get number of playlists
+                playlist = fileParser.getAllPlaylists().size();
+                
+                // Iterate over media elements to determine number of each type
+                for(MediaElement element : fileParser.getAllMediaElements()) {
+                    switch(element.getType()) {
+                        case MediaElementType.AUDIO:
+                            audio++;
+                            break;
+                            
+                        case MediaElementType.VIDEO:
+                            video++;
+                            break;
+                    }
+                }
+                
+                if(audio == 0 && video == 0 && playlist > 0) {
+                    folder.setType(MediaFolder.ContentType.PLAYLIST);
+                } else if(audio > video) {
+                    folder.setType(MediaFolder.ContentType.AUDIO);
+                } else if(video > audio) {
+                    folder.setType(MediaFolder.ContentType.VIDEO);
+                }
+            }
+            
+            settingsDao.updateMediaFolder(folder);
 
-            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + " Folders Processed: " + fileParser.getFolders() + " Files Processed: " + fileParser.getFiles() + " Playlists Processed: " + fileParser.getPlaylists() + ")", null);
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + ", Folders: " + fileParser.getFolders() + ", Files: " + fileParser.getFiles() + ", Playlists: " + fileParser.getPlaylists() + ")", null);
         } catch (IOException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
         }       
@@ -272,7 +355,7 @@ public class MediaScannerService {
                 directory.setType(MediaElementType.DIRECTORY);
             }
 
-            if(directory.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
+            if(directoryChanged || directory.getLastScanned().equals(scanTime)) {
                 // Add directory to update list
                 directoriesToUpdate.add(dir);
                 
@@ -284,9 +367,6 @@ public class MediaScannerService {
                     directory.setExcluded(true);
                 }
             }
-
-            // Update timestamp
-            directory.setLastScanned(scanTime);
             
             // Add directory to list
             directories.add(directory);
@@ -313,7 +393,7 @@ public class MediaScannerService {
                 }
                 
                 // Determine if we need to process the file
-                if(mediaElement.getID() == null || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
+                if(folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned()) || mediaElement.getLastScanned().equals(scanTime)) {
                     LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG);
                     
                     // Add parent directory to update list
@@ -323,13 +403,10 @@ public class MediaScannerService {
                     mediaElement = parseFileName(file.getFileName(), mediaElement);
                     mediaElement.setSize(attr.size());
 
-                    // Parse Metadata
-                    mediaElement.resetStreams();
+                    // Remove existing media streams and parse Metadata
+                    mediaDao.removeStreamsByMediaElementId(mediaElement.getID());
                     metadataParser.parse(mediaElement);
                 }
-                
-                // Update timestamp
-                mediaElement.setLastScanned(scanTime);
                 
                 // Add media element to list
                 directoryElements.peekLast().add(mediaElement);
@@ -339,6 +416,7 @@ public class MediaScannerService {
                 
                 // Update statistics
                 total++;
+                files++;
                 playlists++;
                 
                 // Check if playlist already has an associated database entry
@@ -401,6 +479,7 @@ public class MediaScannerService {
                     // Test for file specific data
                     for(NFOData test : dirData) {
                         if(test.getPath().getFileName().toString().contains(element.getTitle())) {
+                            LogUtils.writeToLog(log, "Parsing NFO file " + test.getPath(), Level.DEBUG);
                             nfoParser.updateMediaElement(element, test);
                             dirData.remove(test);
                             dataFound = true;
@@ -410,16 +489,21 @@ public class MediaScannerService {
                     
                     // Use generic data for directory
                     if(!dataFound) {
-                        nfoParser.updateMediaElement(element, dirData.getFirst());
+                        NFOData data = dirData.getFirst();
+                        LogUtils.writeToLog(log, "Parsing NFO file " + data.getPath(), Level.DEBUG);
+                        nfoParser.updateMediaElement(element, data);
                     }
                 }
                 
                 // Set media elements to add or update
-                if(element.getID() == null) {
+                if(element.getLastScanned().equals(scanTime)) {
                     newElements.add(element);
                 } else {
+                    element.setLastScanned(scanTime);
                     updatedElements.add(element);
-                }                
+                }
+                
+                LogUtils.writeToLog(log, element.toString(), Level.INSANE);
             }
             
             // Update directory element if necessary
@@ -486,13 +570,16 @@ public class MediaScannerService {
                     // Exclude directories from categorised lists which do not directly contain media
                     directory.setExcluded(true);
                 }
+                
+                LogUtils.writeToLog(log, directory.toString(), Level.INSANE);
             }
             
             // Set media elements to add or update
             if(directory != null) {
-                if(directory.getID() == null) {
+                if(directory.getLastScanned().equals(scanTime)) {
                     newElements.add(directory);
                 } else {
+                    directory.setLastScanned(scanTime);
                     updatedElements.add(directory);
                 }                
             }
@@ -536,6 +623,9 @@ public class MediaScannerService {
         private MediaElement getMediaElementFromPath(Path path) {
             MediaElement mediaElement = new MediaElement();
 
+            // Set ID
+            mediaElement.setID(UUID.randomUUID());
+            
             // Set common attributes
             mediaElement.setPath(path.toString());
             mediaElement.setParentPath(path.getParent().toString());
@@ -748,12 +838,30 @@ public class MediaScannerService {
             return updatedElements;
         }
         
+        public List<MediaElement> getAllMediaElements() {
+            List<MediaElement> all = new ArrayList<>();
+            
+            all.addAll(newElements);
+            all.addAll(updatedElements);
+            
+            return all;
+        }
+        
         public List<Playlist> getNewPlaylists() {
             return newPlaylists;
         }
         
         public List<Playlist> getUpdatedPlaylists() {
             return updatedPlaylists;
+        }
+        
+        public List<Playlist> getAllPlaylists() {
+            List<Playlist> all = new ArrayList<>();
+            
+            all.addAll(newPlaylists);
+            all.addAll(updatedPlaylists);
+            
+            return all;
         }
     }
 }

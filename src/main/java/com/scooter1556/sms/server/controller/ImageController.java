@@ -31,6 +31,7 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.ImageService;
 import java.io.File;
 import java.util.List;
+import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -61,7 +62,7 @@ public class ImageController {
     
     @RequestMapping(value="/{id}/cover", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
-    public void getCoverArt(@PathVariable("id") Long id, 
+    public void getCoverArt(@PathVariable("id") UUID id, 
                             @RequestParam(value = "scale", required = false) Integer scale,
                             @RequestParam(value = "folder", required = false) Boolean isFolder,
                             HttpServletResponse response) {
@@ -82,7 +83,6 @@ public class ImageController {
                 mediaElement = mediaDao.getMediaElementByID(id);
             }
             
-
             if(mediaElement == null && folder == null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve media "+ (isFolder ? "folder" : "element") + "with id " + id + ".");
                 return;
@@ -95,7 +95,7 @@ public class ImageController {
             
             // Get cover art
             if(folder != null) {
-                image = imageService.getCoverArt(folder);
+                image = imageService.findCoverArt(new File(folder.getPath()));
             } else if(mediaElement != null) {
                 image = imageService.getCoverArt(mediaElement);
             }
@@ -115,7 +115,7 @@ public class ImageController {
     
     @RequestMapping(value="/{id}/random", method=RequestMethod.GET, produces = "image/jpeg")
     @ResponseBody
-    public void getRandomCoverArt(@PathVariable("id") Long id,
+    public void getRandomCoverArt(@PathVariable("id") UUID id,
                                   @RequestParam(value = "scale", required = false) Integer scale,
                                   @RequestParam(value = "folder", required = false) Boolean isFolder,
                                   HttpServletResponse response) {
@@ -187,7 +187,7 @@ public class ImageController {
     
     @RequestMapping(value="/{id}/fanart", method=RequestMethod.GET)
     @ResponseBody
-    public void getFanArt(@PathVariable("id") Long id,
+    public void getFanArt(@PathVariable("id") UUID id,
                           @RequestParam(value = "scale", required = false) Integer scale,
                           @RequestParam(value = "folder", required = false) Boolean isFolder,
                           HttpServletResponse response) {
@@ -221,7 +221,7 @@ public class ImageController {
 
             // Get fan art
             if(folder != null) {
-                image = imageService.getFanArt(folder);
+                image = imageService.findFanArt(new File(folder.getPath()));
             } else if(mediaElement != null) {
                 image = imageService.getFanArt(mediaElement);
             }
@@ -241,7 +241,7 @@ public class ImageController {
     
     @RequestMapping(value="/{id}/thumbnail", method=RequestMethod.GET)
     @ResponseBody
-    public void getThumbnail(@PathVariable("id") Long id,
+    public void getThumbnail(@PathVariable("id") UUID id,
                              @RequestParam(value = "scale", required = false) Integer scale,
                              @RequestParam(value = "offset", required = false) Integer offset,
                              HttpServletResponse response) {

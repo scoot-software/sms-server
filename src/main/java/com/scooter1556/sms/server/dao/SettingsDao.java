@@ -28,6 +28,7 @@ import com.scooter1556.sms.server.domain.MediaFolder;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jca.cci.InvalidResultSetAccessException;
@@ -47,8 +48,8 @@ public class SettingsDao {
     //
     public boolean createMediaFolder(MediaFolder mediaFolder) {
         try {
-            settingsDatabase.getJdbcTemplate().update("INSERT INTO MediaFolder (Name,Type,Path) "
-                    + "VALUES (?,?,?)", new Object[]{mediaFolder.getName(), mediaFolder.getType(), mediaFolder.getPath()});
+            settingsDatabase.getJdbcTemplate().update("INSERT INTO MediaFolder (ID,Name,Path) "
+                    + "VALUES (?,?,?)", new Object[]{mediaFolder.getID(), mediaFolder.getName(), mediaFolder.getPath()});
         } catch (InvalidResultSetAccessException e) {
             return false;
         } catch (DataAccessException e) {
@@ -58,7 +59,7 @@ public class SettingsDao {
         return true;
     }
 
-    public boolean removeMediaFolder(Long id) {
+    public boolean removeMediaFolder(UUID id) {
         try {
             settingsDatabase.getJdbcTemplate().update("DELETE FROM MediaFolder WHERE ID=?", id);
         } catch (InvalidResultSetAccessException e) {
@@ -100,7 +101,7 @@ public class SettingsDao {
         }
     }
 
-    public MediaFolder getMediaFolderByID(Long id) {
+    public MediaFolder getMediaFolderByID(UUID id) {
         MediaFolder mediaFolder = null;
 
         try {
@@ -147,7 +148,7 @@ public class SettingsDao {
         @Override
         public MediaFolder mapRow(ResultSet rs, int rowNum) throws SQLException {
             MediaFolder mediaFolder = new MediaFolder();
-            mediaFolder.setID(rs.getLong("ID"));
+            mediaFolder.setID(UUID.fromString(rs.getString("ID")));
             mediaFolder.setName(rs.getString("Name"));
             mediaFolder.setType(rs.getByte("Type"));
             mediaFolder.setPath(rs.getString("Path"));

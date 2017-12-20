@@ -34,7 +34,7 @@ public final class SettingsDatabase extends Database {
     private static final String CLASS_NAME = "SettingsDatabase";
     
     public static final String DB_NAME = "Settings";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 2;
     
     public SettingsDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -55,9 +55,9 @@ public final class SettingsDatabase extends Database {
         try {
             // Media Folders
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS MediaFolder ("
-                    + "ID IDENTITY NOT NULL,"
+                    + "ID UUID NOT NULL,"
                     + "Name VARCHAR(50) NOT NULL,"
-                    + "Type TINYINT NOT NULL,"
+                    + "Type TINYINT,"
                     + "Path VARCHAR NOT NULL,"
                     + "Folders BIGINT,"
                     + "Files BIGINT,"
@@ -73,6 +73,10 @@ public final class SettingsDatabase extends Database {
     @Override
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+    
+        if(newVersion == 2) {
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaFolder");
+        }
     }
     
     @Override

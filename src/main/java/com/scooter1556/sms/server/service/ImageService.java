@@ -30,6 +30,7 @@ import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.io.ImageProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
@@ -67,19 +68,6 @@ public class ImageService {
         return imageFile;
     }
     
-    public File getCoverArt(MediaFolder folder) {
-        File imageFile;
-        
-        imageFile = findCoverArt(new File(folder.getPath()));
-        
-        // If cover art is not found return.
-        if(imageFile == null) {
-            return null;
-        }
-        
-        return imageFile;
-    }
-    
     public File getFanArt(MediaElement element) {
         File imageFile;
         
@@ -98,12 +86,7 @@ public class ImageService {
         return imageFile;
     }
     
-    public File getFanArt(MediaFolder folder) {
-        File imageFile = findFanArt(new File(folder.getPath()));
-        return imageFile;
-    }
-    
-    private File findCoverArt(File directory) {
+    public File findCoverArt(File directory) {
         if(!directory.isDirectory()) {
             return null;
         }
@@ -119,7 +102,7 @@ public class ImageService {
         return null;
     }
     
-    private File findFanArt(File directory) {
+    public File findFanArt(File directory) {
         if(!directory.isDirectory()) {
             return null;
         }

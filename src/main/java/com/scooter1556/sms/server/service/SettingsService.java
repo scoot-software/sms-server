@@ -43,6 +43,7 @@ public final class SettingsService {
     
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
+    public static final String CONFIG_PARSER_PATH = "parser.path";
     Properties config;
     
     private static final SettingsService INSTANCE = new SettingsService();
@@ -188,8 +189,14 @@ public final class SettingsService {
             return;
         }
         
+        // Transcode Path
         if(!config.containsKey(CONFIG_TRANSCODE_PATH)) {
             config.setProperty(CONFIG_TRANSCODE_PATH, "");
+        }
+        
+        // Parser Path
+        if(!config.containsKey(CONFIG_PARSER_PATH)) {
+            config.setProperty(CONFIG_PARSER_PATH, "");
         }
     }
     
@@ -239,5 +246,28 @@ public final class SettingsService {
         
         saveConfig();
     }
-
+    
+    public String getParserPath() {
+        if(config == null) {
+            return null;
+        }
+        
+        String value = config.getProperty(CONFIG_PARSER_PATH);
+        
+        if(value == null || value.isEmpty()) {
+            return null;
+        } else {
+            return value;
+        }
+    }
+    
+    public void setParserPath(String value) {
+        if(config == null || value == null) {
+            return;
+        }
+        
+        config.setProperty(CONFIG_PARSER_PATH, value);
+        
+        saveConfig();
+    }
 }

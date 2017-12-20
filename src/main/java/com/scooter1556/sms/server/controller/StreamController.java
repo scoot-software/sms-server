@@ -102,7 +102,7 @@ public class StreamController {
     @RequestMapping(value="/initialise/{session}/{id}", method=RequestMethod.GET)
     @ResponseBody
     public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("session") UUID sessionId,
-                                                             @PathVariable("id") Long id,
+                                                             @PathVariable("id") UUID id,
                                                              @RequestParam(value = "client", required = false) String client,
                                                              @RequestParam(value = "files", required = false) String files,
                                                              @RequestParam(value = "codecs", required = true) String codecs,
@@ -111,8 +111,9 @@ public class StreamController {
                                                              @RequestParam(value = "quality", required = true) Integer quality,
                                                              @RequestParam(value = "samplerate", required = false) Integer maxSampleRate,
                                                              @RequestParam(value = "bitrate", required = false) Integer maxBitRate,
-                                                             @RequestParam(value = "atrack", required = false) Integer audioTrack,
-                                                             @RequestParam(value = "strack", required = false) Integer subtitleTrack,
+                                                             @RequestParam(value = "vstream", required = false) Integer videoStream,
+                                                             @RequestParam(value = "astream", required = false) Integer audioStream,
+                                                             @RequestParam(value = "sstream", required = false) Integer subtitleStream,
                                                              @RequestParam(value = "direct", required = false) Boolean directPlay,
                                                              @RequestParam(value = "update", required = false) Boolean update,
                                                              HttpServletRequest request) {
@@ -161,11 +162,14 @@ public class StreamController {
             }
         }
         
-        // Determine job type & validate quality
+        // Determine job type, validate quality and fetch available streams
         if(mediaElement.getType() == MediaElementType.AUDIO && AudioQuality.isValid(quality)) {
             jobType = JobType.AUDIO_STREAM;
+            mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(id));
         } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(quality)) {
             jobType = JobType.VIDEO_STREAM;
+            mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(id));
+            mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(id));
         } else {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode request.", null);
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -262,20 +266,29 @@ public class StreamController {
             profile.setMchCodecs(mchCodecs.split(","));
         }
         
-        if(audioTrack != null) {
-            if(TranscodeUtils.isAudioStreamAvailable(audioTrack, mediaElement)) {
-                profile.setAudioTrack(audioTrack);
+        if(videoStream != null) {
+            if(TranscodeUtils.isValidVideoStream(profile.getMediaElement().getVideoStreams(), videoStream)) {
+                profile.setVideoStream(videoStream);
             } else {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + audioTrack + " is not available for media element " + mediaElement.getID() + ".", null);
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Video stream " + videoStream + " is not available for media element " + mediaElement.getID() + ".", null);
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+        }
+        
+        if(audioStream != null) {
+            if(TranscodeUtils.isValidAudioStream(profile.getMediaElement().getAudioStreams(), audioStream)) {
+                profile.setAudioStream(audioStream);
+            } else {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + audioStream + " is not available for media element " + mediaElement.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }
             
-        if(subtitleTrack != null) {
-            if(TranscodeUtils.isSubtitleStreamAvailable(subtitleTrack, mediaElement)) {
-                profile.setSubtitleTrack(subtitleTrack);
+        if(subtitleStream != null) {
+            if(TranscodeUtils.isValidSubtitleStream(profile.getMediaElement().getSubtitleStreams(), subtitleStream)) {
+                profile.setSubtitleStream(subtitleStream);
             } else {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + subtitleTrack + " is not available for media element " + mediaElement.getID() + ".", null);
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + subtitleStream + " is not available for media element " + mediaElement.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }

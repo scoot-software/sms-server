@@ -32,7 +32,7 @@ public class Job implements Serializable {
     private UUID id;
     private Byte type;
     private String username;
-    private Long mediaElement;
+    private UUID mediaElement;
     private Timestamp startTime;
     private Timestamp endTime;
     private Timestamp lastActivity;
@@ -42,7 +42,7 @@ public class Job implements Serializable {
 
     public Job() {};
     
-    public Job(UUID id, Byte type, String username, Long mediaElement, Timestamp startTime, Timestamp endTime, Timestamp lastActivity, Long bytesTransferred)
+    public Job(UUID id, Byte type, String username, UUID mediaElement, Timestamp startTime, Timestamp endTime, Timestamp lastActivity, Long bytesTransferred)
     {
         this.id = id;
         this.type = type;
@@ -85,11 +85,11 @@ public class Job implements Serializable {
         this.username = username;
     }
     
-    public Long getMediaElement()  {
+    public UUID getMediaElement()  {
         return mediaElement;
     }
     
-    public void setMediaElement(Long mediaElement) {
+    public void setMediaElement(UUID mediaElement) {
         this.mediaElement = mediaElement;
     }
     

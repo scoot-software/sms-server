@@ -49,8 +49,6 @@ public class NFOParser {
             return null;
         }
 
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Parsing NFO file " + nfoFile.getPath(), null);
-
         // Parse File
         NFOData data = new NFOData();
         

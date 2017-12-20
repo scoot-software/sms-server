@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -69,7 +70,7 @@ public class MediaController {
     }
 
     @RequestMapping(value="/folder/{id}", method=RequestMethod.GET)
-    public ResponseEntity<MediaFolder> getMediaFolder(@PathVariable("id") Long id)
+    public ResponseEntity<MediaFolder> getMediaFolder(@PathVariable("id") UUID id)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
@@ -81,7 +82,7 @@ public class MediaController {
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
-    public ResponseEntity<MediaElement> getMediaElement(@PathVariable("id") Long id)
+    public ResponseEntity<MediaElement> getMediaElement(@PathVariable("id") UUID id)
     {
         MediaElement mediaElement = mediaDao.getMediaElementByID(id);
         
@@ -105,7 +106,7 @@ public class MediaController {
     }
 
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") Long id)
+    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") UUID id)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
@@ -124,7 +125,7 @@ public class MediaController {
     }
     
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") Long id) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") UUID id) {
         MediaElement element = mediaDao.getMediaElementByID(id);
         
         if(element == null) {

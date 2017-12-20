@@ -157,8 +157,12 @@ public class TranscodeService {
                 }
                 
                 // Check for hardcoded subtitles
-                if(profile.getSubtitleTrack() != null) {
-                    hardcodedSubtitles = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded();
+                if(profile.getSubtitleStream() != null) {
+                    SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(profile.getSubtitleTranscodes(), profile.getSubtitleStream());
+                    
+                    if(transcode != null) {
+                        hardcodedSubtitles = transcode.isHardcoded();
+                    }
                 }
                 
                 // Populate filters
@@ -173,7 +177,7 @@ public class TranscodeService {
                     
                     // Burn in subtitles if required
                     if(hardcodedSubtitles) {
-                        commands.get(i).getFilters().get(v).add("[0:s:" + profile.getSubtitleTrack() + "]overlay");
+                        commands.get(i).getFilters().get(v).add("[0:s:" + profile.getSubtitleStream() + "]overlay");
                     }
                     
                     if(hardwareAccelerator == null) {
@@ -558,9 +562,11 @@ public class TranscodeService {
         }
         
         // Check video codec
-        if(profile.getMediaElement().getVideoStream() != null) {
-            if(isTranscodeRequired(profile, profile.getMediaElement().getVideoStream())) {
-                return true;
+        if(profile.getMediaElement().getVideoStreams() != null) {
+            for(VideoStream stream : profile.getMediaElement().getVideoStreams()) {
+                if(isTranscodeRequired(profile, stream)) {
+                    return true;
+                }
             }
         }
         
@@ -576,7 +582,7 @@ public class TranscodeService {
         // Check subtitle streams
         if(profile.getMediaElement().getSubtitleStreams() != null) {
             for(SubtitleStream stream : profile.getMediaElement().getSubtitleStreams()) {
-                if(!TranscodeUtils.isSupported(profile.getCodecs(), stream.getFormat())) {
+                if(!TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec())) {
                     return true;
                 }
             }
@@ -617,7 +623,7 @@ public class TranscodeService {
     
     public static boolean isTranscodeRequired(TranscodeProfile profile, AudioStream stream) {
         // Check audio codec
-        if(TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) > 2) {
+        if(stream.getChannels() > 2) {
             if(profile.getMchCodecs() == null || !TranscodeUtils.isSupported(profile.getMchCodecs(), stream.getCodec())) {
                 return true;
             }
@@ -636,7 +642,7 @@ public class TranscodeService {
         if(!profile.isDirectPlayEnabled()) {
             // Check bitrate for audio elements
             if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
-                int bitrate = (TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
+                int bitrate = (stream.getChannels() * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
 
                 if(bitrate > 0 && profile.getMediaElement().getBitrate() > bitrate) {
                     return true;
@@ -670,10 +676,10 @@ public class TranscodeService {
             String codec = null;
             boolean hardcode = false;
             
-            if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getFormat()) && TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getFormat())) {
+            if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec()) && TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec())) {
                 codec = "copy";
-            } else if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, stream.getFormat())){
-                switch(stream.getFormat()) {
+            } else if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, stream.getCodec())) {
+                switch(stream.getCodec()) {
                     // Text Based
                     case "subrip": case "srt": case "webvtt":
                         codec = "webvtt";
@@ -681,7 +687,7 @@ public class TranscodeService {
 
                     // Picture Based
                     case "dvd_subtitle": case "dvb_subtitle": case "hdmv_pgs_subtitle":
-                        codec = stream.getFormat();
+                        codec = stream.getCodec();
                         hardcode = true;
                         break;
 
@@ -692,11 +698,11 @@ public class TranscodeService {
             }
             
             // Enable forced subtitles by default
-            if(stream.isForced() && profile.getSubtitleTrack() == null) {
-                profile.setSubtitleTrack(stream.getStream());
+            if(stream.isForced() && profile.getSubtitleStream() == null) {
+                profile.setSubtitleStream(stream.getStreamId());
             }
             
-            transcodes.add(new SubtitleTranscode(codec, hardcode));
+            transcodes.add(new SubtitleTranscode(stream.getStreamId(), codec, hardcode));
         }
         
         // Update profile
@@ -716,14 +722,16 @@ public class TranscodeService {
             return false;
         }
         
-        // Variables
-        int maxQuality = TranscodeUtils.getHighestVideoQuality(profile.getMediaElement());
-        int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
-        VideoStream stream = profile.getMediaElement().getVideoStream();
+        // Get first video stream
+        VideoStream stream = profile.getMediaElement().getVideoStreams().get(0);
         
         if(stream == null) {
             return false;
         }
+        
+        // Variables
+        int maxQuality = TranscodeUtils.getHighestVideoQuality(stream.getResolution());
+        int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
         
         // Process quality
         if(maxQuality < 0 || maxQuality < profile.getQuality()) {
@@ -749,8 +757,12 @@ public class TranscodeService {
         }
         
         // Check for hardcoded subtitles
-        if(profile.getSubtitleTrack() != null) {
-            transcodeRequired = profile.getSubtitleTranscodes()[profile.getSubtitleTrack()].isHardcoded();
+        if(profile.getSubtitleStream() != null) {
+            SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(profile.getSubtitleTranscodes(), profile.getSubtitleStream());
+            
+            if(transcode != null) {
+                transcodeRequired = transcode.isHardcoded();
+            }
         }
         
         // Process required number of video streams
@@ -782,7 +794,7 @@ public class TranscodeService {
 
                 // Get suitable resolution (use native resolution if direct play is enabled)
                 if(!profile.isDirectPlayEnabled()) {
-                    resolution = TranscodeUtils.getVideoResolution(profile.getMediaElement(), quality);      
+                    resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
                 }
             } else {
                 codec = "copy";
@@ -790,7 +802,7 @@ public class TranscodeService {
             }
             
             // Add video transcode to array
-            transcodes.add(new VideoTranscode(codec, resolution, quality));
+            transcodes.add(new VideoTranscode(stream.getStreamId(), codec, resolution, quality));
         }
         
         // Update profile with video transcode properties
@@ -811,9 +823,9 @@ public class TranscodeService {
         }
         
         // Set audio track if necessary
-        if(profile.getAudioTrack() == null) {
+        if(profile.getAudioStream() == null) {
             if(profile.getMediaElement().getAudioStreams().size() > 0) {
-                profile.setAudioTrack(0);
+                profile.setAudioStream(profile.getMediaElement().getAudioStreams().get(0).getStreamId());
             } else {
                 return true;
             }
@@ -864,7 +876,7 @@ public class TranscodeService {
                 }
                 
                 // Check for multichannel codecs if this is a multichannel stream
-                if(TranscodeUtils.getAudioChannelCount(stream.getConfiguration()) > 2) {
+                if(stream.getChannels() > 2) {
                     // Try to get a suitable multichannel codec
                     if(profile.getMchCodecs() != null) {
                         for(String test : profile.getMchCodecs()) {
@@ -931,7 +943,7 @@ public class TranscodeService {
             }
             
             // Add transcode properties to array
-            transcodes.add(new AudioTranscode(codec, quality, sampleRate, downmix));
+            transcodes.add(new AudioTranscode(stream.getStreamId(), codec, quality, sampleRate, downmix));
         }
         
         // Update profile with audio transcode properties

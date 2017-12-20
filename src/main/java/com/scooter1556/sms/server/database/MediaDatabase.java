@@ -33,7 +33,7 @@ public class MediaDatabase extends Database {
     private static final String CLASS_NAME = "MediaDatabase";
     
     public static final String DB_NAME = "Media";
-    public static final int DB_VERSION = 3;
+    public static final int DB_VERSION = 4;
     
     public MediaDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -54,7 +54,7 @@ public class MediaDatabase extends Database {
         try {
             // Media Elements
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS MediaElement ("
-                    + "ID IDENTITY NOT NULL,"
+                    + "ID UUID NOT NULL,"
                     + "Type TINYINT NOT NULL,"
                     + "DirectoryType TINYINT,"
                     + "Path VARCHAR NOT NULL,"
@@ -65,26 +65,14 @@ public class MediaDatabase extends Database {
                     + "Excluded BOOLEAN DEFAULT 0 NOT NULL,"
                     + "Format VARCHAR(20),"
                     + "Size BIGINT,"
-                    + "Duration INT,"
+                    + "Duration DOUBLE,"
                     + "Bitrate INT,"
-                    + "VideoWidth SMALLINT,"
-                    + "VideoHeight SMALLINT,"
-                    + "VideoCodec VARCHAR(20),"
-                    + "AudioName VARCHAR,"
-                    + "AudioCodec VARCHAR,"
-                    + "AudioSampleRate VARCHAR,"
-                    + "AudioConfiguration VARCHAR,"
-                    + "AudioLanguage VARCHAR,"
-                    + "SubtitleName VARCHAR,"
-                    + "SubtitleLanguage VARCHAR,"
-                    + "SubtitleFormat VARCHAR,"
-                    + "SubtitleForced VARCHAR,"
                     + "Title VARCHAR NOT NULL,"
                     + "Artist VARCHAR,"
                     + "AlbumArtist VARCHAR,"
                     + "Album VARCHAR,"
                     + "Year SMALLINT,"
-                    + "DiscNumber TINYINT,"
+                    + "DiscNumber SMALLINT,"
                     + "DiscSubtitle VARCHAR,"
                     + "TrackNumber SMALLINT,"
                     + "Genre VARCHAR,"
@@ -95,6 +83,57 @@ public class MediaDatabase extends Database {
                     + "Collection VARCHAR,"
                     + "PRIMARY KEY (ID))");
             
+            // Video Streams
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS VideoStream ("
+                    + "MEID UUID NOT NULL,"
+                    + "SID INT NOT NULL,"
+                    + "Title VARCHAR,"
+                    + "Codec VARCHAR,"
+                    + "Profile VARCHAR,"
+                    + "Width INT,"
+                    + "Height INT,"
+                    + "PixelFormat VARCHAR,"
+                    + "ColorSpace VARCHAR,"
+                    + "ColorTransfer VARCHAR,"
+                    + "ColorPrimaries VARCHAR,"
+                    + "Interlaced BOOLEAN DEFAULT 0,"
+                    + "FPS DOUBLE,"
+                    + "Bitrate INT,"
+                    + "MaxBitrate INT,"
+                    + "BPS INT,"
+                    + "Language VARCHAR,"
+                    + "Default BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "Forced BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "PRIMARY KEY (MEID,SID),"
+                    + "FOREIGN KEY (MEID) REFERENCES MediaElement (ID) ON DELETE CASCADE)");
+            
+            // Audio Streams
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS AudioStream ("
+                    + "MEID UUID NOT NULL,"
+                    + "SID INT NOT NULL,"
+                    + "Title VARCHAR,"
+                    + "Codec VARCHAR,"
+                    + "SampleRate INT,"
+                    + "Channels INT,"
+                    + "Bitrate INT,"
+                    + "BPS INT,"
+                    + "Language VARCHAR,"
+                    + "Default BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "Forced BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "PRIMARY KEY (MEID,SID),"
+                    + "FOREIGN KEY (MEID) REFERENCES MediaElement (ID) ON DELETE CASCADE)");
+            
+            // Subtitle Streams
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS SubtitleStream ("
+                    + "MEID UUID NOT NULL,"
+                    + "SID INT NOT NULL,"
+                    + "Title VARCHAR,"
+                    + "Codec VARCHAR,"
+                    + "Language VARCHAR,"
+                    + "Default BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "Forced BOOLEAN DEFAULT 0 NOT NULL,"
+                    + "PRIMARY KEY (MEID,SID),"
+                    + "FOREIGN KEY (MEID) REFERENCES MediaElement (ID) ON DELETE CASCADE)");
             
             // Playlists
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS Playlist ("
@@ -110,7 +149,7 @@ public class MediaDatabase extends Database {
             // Playlist Contents
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS PlaylistContent ("
                     + "PID UUID NOT NULL,"
-                    + "MEID BIGINT NOT NULL,"
+                    + "MEID UUID NOT NULL,"
                     + "PRIMARY KEY (PID,MEID),"
                     + "FOREIGN KEY (MEID) REFERENCES MediaElement (ID) ON DELETE CASCADE,"
                     + "FOREIGN KEY (PID) REFERENCES Playlist (ID) ON DELETE CASCADE)");
@@ -132,9 +171,12 @@ public class MediaDatabase extends Database {
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
     
-        if(newVersion == 2) {
-            // Delete table and re-create
-            getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Element");
+        if(newVersion == 2 || newVersion == 4) {
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaElement");
+        }
+        
+        if(newVersion == 4) {
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS PlaylistContent");
         }
         
         create();
@@ -146,6 +188,9 @@ public class MediaDatabase extends Database {
         
         // Delete table and re-create
         getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaElement");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS VideoStream");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS AudioStream");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS SubtitleStream");
         getJdbcTemplate().execute("DROP TABLE IF EXISTS Playlist");
         getJdbcTemplate().execute("DROP TABLE IF EXISTS PlaylistContent");
         

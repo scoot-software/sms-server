@@ -25,7 +25,10 @@ package com.scooter1556.sms.server.dao;
 
 import com.scooter1556.sms.server.database.MediaDatabase;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.service.LogService;
 import java.sql.PreparedStatement;
@@ -54,50 +57,39 @@ public class MediaDao {
     //
     
     public boolean createMediaElements(final List<MediaElement> mediaElements) {
-        String sql = "INSERT INTO MediaElement (Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,VideoWidth,VideoHeight,VideoCodec,AudioName,AudioCodec,AudioSampleRate,AudioConfiguration,AudioLanguage,SubtitleName,SubtitleLanguage,SubtitleFormat,SubtitleForced,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection) " +
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO MediaElement (ID,Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
                 @Override
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
                     MediaElement mediaElement = mediaElements.get(i);
-                    ps.setByte(1, mediaElement.getType());
-                    ps.setByte(2, mediaElement.getDirectoryType());
-                    ps.setString(3, mediaElement.getPath());
-                    ps.setString(4, mediaElement.getParentPath());
-                    ps.setTimestamp(5, mediaElement.getLastScanned());
-                    ps.setBoolean(6, mediaElement.getExcluded());
-                    ps.setString(7, mediaElement.getFormat());
-                    ps.setLong(8, mediaElement.getSize());
-                    ps.setInt(9, mediaElement.getDuration());
-                    ps.setInt(10, mediaElement.getBitrate());
-                    ps.setShort(11, mediaElement.getVideoWidth());
-                    ps.setShort(12, mediaElement.getVideoHeight());
-                    ps.setString(13, mediaElement.getVideoCodec());
-                    ps.setString(14, mediaElement.getAudioName());
-                    ps.setString(15, mediaElement.getAudioCodec());
-                    ps.setString(16, mediaElement.getAudioSampleRate());
-                    ps.setString(17, mediaElement.getAudioConfiguration());
-                    ps.setString(18, mediaElement.getAudioLanguage());
-                    ps.setString(19, mediaElement.getSubtitleName());
-                    ps.setString(20, mediaElement.getSubtitleLanguage());
-                    ps.setString(21, mediaElement.getSubtitleFormat());
-                    ps.setString(22, mediaElement.getSubtitleForced());
-                    ps.setString(23, mediaElement.getTitle());
-                    ps.setString(24, mediaElement.getArtist());
-                    ps.setString(25, mediaElement.getAlbumArtist());
-                    ps.setString(26, mediaElement.getAlbum());
-                    ps.setShort(27, mediaElement.getYear());
-                    ps.setByte(28, mediaElement.getDiscNumber());
-                    ps.setString(29, mediaElement.getDiscSubtitle());
-                    ps.setShort(30,mediaElement.getTrackNumber());
-                    ps.setString(31, mediaElement.getGenre());
-                    ps.setFloat(32, mediaElement.getRating());
-                    ps.setString(33, mediaElement.getTagline());
-                    ps.setString(34, mediaElement.getDescription());
-                    ps.setString(35, mediaElement.getCertificate());
-                    ps.setString(36, mediaElement.getCollection());
+                    ps.setObject(1, mediaElement.getID());
+                    ps.setByte(2, mediaElement.getType());
+                    ps.setByte(3, mediaElement.getDirectoryType());
+                    ps.setString(4, mediaElement.getPath());
+                    ps.setString(5, mediaElement.getParentPath());
+                    ps.setTimestamp(6, mediaElement.getLastScanned());
+                    ps.setBoolean(7, mediaElement.getExcluded());
+                    ps.setString(8, mediaElement.getFormat());
+                    ps.setLong(9, mediaElement.getSize());
+                    ps.setDouble(10, mediaElement.getDuration());
+                    ps.setInt(11, mediaElement.getBitrate());
+                    ps.setString(12, mediaElement.getTitle());
+                    ps.setString(13, mediaElement.getArtist());
+                    ps.setString(14, mediaElement.getAlbumArtist());
+                    ps.setString(15, mediaElement.getAlbum());
+                    ps.setShort(16, mediaElement.getYear());
+                    ps.setShort(17, mediaElement.getDiscNumber());
+                    ps.setString(18, mediaElement.getDiscSubtitle());
+                    ps.setShort(19,mediaElement.getTrackNumber());
+                    ps.setString(20, mediaElement.getGenre());
+                    ps.setFloat(21, mediaElement.getRating());
+                    ps.setString(22, mediaElement.getTagline());
+                    ps.setString(23, mediaElement.getDescription());
+                    ps.setString(24, mediaElement.getCertificate());
+                    ps.setString(25, mediaElement.getCollection());
                 }
 
                 @Override
@@ -113,7 +105,7 @@ public class MediaDao {
         return true;
     }
     
-    public boolean removeMediaElement(Long id) {
+    public boolean removeMediaElement(UUID id) {
         try {
             mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ID=?", id);
         } catch (InvalidResultSetAccessException e) {
@@ -142,7 +134,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByID(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioName=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleName=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE ID=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE ID=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -153,35 +145,23 @@ public class MediaDao {
                     ps.setTimestamp(2, mediaElement.getLastScanned());
                     ps.setBoolean(3, mediaElement.getExcluded());
                     ps.setLong(4, mediaElement.getSize());
-                    ps.setInt(5, mediaElement.getDuration());
+                    ps.setDouble(5, mediaElement.getDuration());
                     ps.setInt(6, mediaElement.getBitrate());
-                    ps.setShort(7, mediaElement.getVideoWidth());
-                    ps.setShort(8, mediaElement.getVideoHeight());
-                    ps.setString(9, mediaElement.getVideoCodec());
-                    ps.setString(10, mediaElement.getAudioName());
-                    ps.setString(11, mediaElement.getAudioCodec());
-                    ps.setString(12, mediaElement.getAudioSampleRate());
-                    ps.setString(13, mediaElement.getAudioConfiguration());
-                    ps.setString(14, mediaElement.getAudioLanguage());
-                    ps.setString(15, mediaElement.getSubtitleName());
-                    ps.setString(16, mediaElement.getSubtitleLanguage());
-                    ps.setString(17, mediaElement.getSubtitleFormat());
-                    ps.setString(18, mediaElement.getSubtitleForced());
-                    ps.setString(19, mediaElement.getTitle());
-                    ps.setString(20, mediaElement.getArtist());
-                    ps.setString(21, mediaElement.getAlbumArtist());
-                    ps.setString(22, mediaElement.getAlbum());
-                    ps.setShort(23, mediaElement.getYear());
-                    ps.setByte(24, mediaElement.getDiscNumber());
-                    ps.setString(25, mediaElement.getDiscSubtitle());
-                    ps.setShort(26,mediaElement.getTrackNumber());
-                    ps.setString(27, mediaElement.getGenre());
-                    ps.setFloat(28, mediaElement.getRating());
-                    ps.setString(29, mediaElement.getTagline());
-                    ps.setString(30, mediaElement.getDescription());
-                    ps.setString(31, mediaElement.getCertificate());
-                    ps.setString(32, mediaElement.getCollection());
-                    ps.setLong(33, mediaElement.getID());
+                    ps.setString(7, mediaElement.getTitle());
+                    ps.setString(8, mediaElement.getArtist());
+                    ps.setString(9, mediaElement.getAlbumArtist());
+                    ps.setString(10, mediaElement.getAlbum());
+                    ps.setShort(11, mediaElement.getYear());
+                    ps.setShort(12, mediaElement.getDiscNumber());
+                    ps.setString(13, mediaElement.getDiscSubtitle());
+                    ps.setShort(14,mediaElement.getTrackNumber());
+                    ps.setString(15, mediaElement.getGenre());
+                    ps.setFloat(16, mediaElement.getRating());
+                    ps.setString(17, mediaElement.getTagline());
+                    ps.setString(18, mediaElement.getDescription());
+                    ps.setString(19, mediaElement.getCertificate());
+                    ps.setString(20, mediaElement.getCollection());
+                    ps.setObject(21, mediaElement.getID());
                 }
 
                 @Override
@@ -190,7 +170,7 @@ public class MediaDao {
                 }
             });
         } catch (DataAccessException e) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create media element for file", e);
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to update media element!", e);
             return false;
         }
         
@@ -198,7 +178,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByPath(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,VideoWidth=?,VideoHeight=?,VideoCodec=?,AudioName=?,AudioCodec=?,AudioSampleRate=?,AudioConfiguration=?,AudioLanguage=?,SubtitleName=?,SubtitleLanguage=?,SubtitleFormat=?,SubtitleForced=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -209,35 +189,23 @@ public class MediaDao {
                     ps.setTimestamp(2, mediaElement.getLastScanned());
                     ps.setBoolean(3, mediaElement.getExcluded());
                     ps.setLong(4, mediaElement.getSize());
-                    ps.setInt(5, mediaElement.getDuration());
+                    ps.setDouble(5, mediaElement.getDuration());
                     ps.setInt(6, mediaElement.getBitrate());
-                    ps.setShort(7, mediaElement.getVideoWidth());
-                    ps.setShort(8, mediaElement.getVideoHeight());
-                    ps.setString(9, mediaElement.getVideoCodec());
-                    ps.setString(10, mediaElement.getAudioName());
-                    ps.setString(11, mediaElement.getAudioCodec());
-                    ps.setString(12, mediaElement.getAudioSampleRate());
-                    ps.setString(13, mediaElement.getAudioConfiguration());
-                    ps.setString(14, mediaElement.getAudioLanguage());
-                    ps.setString(15, mediaElement.getSubtitleName());
-                    ps.setString(16, mediaElement.getSubtitleLanguage());
-                    ps.setString(17, mediaElement.getSubtitleFormat());
-                    ps.setString(18, mediaElement.getSubtitleForced());
-                    ps.setString(19, mediaElement.getTitle());
-                    ps.setString(20, mediaElement.getArtist());
-                    ps.setString(21, mediaElement.getAlbumArtist());
-                    ps.setString(22, mediaElement.getAlbum());
-                    ps.setShort(23, mediaElement.getYear());
-                    ps.setByte(24, mediaElement.getDiscNumber());
-                    ps.setString(25, mediaElement.getDiscSubtitle());
-                    ps.setShort(26,mediaElement.getTrackNumber());
-                    ps.setString(27, mediaElement.getGenre());
-                    ps.setFloat(28, mediaElement.getRating());
-                    ps.setString(29, mediaElement.getTagline());
-                    ps.setString(30, mediaElement.getDescription());
-                    ps.setString(31, mediaElement.getCertificate());
-                    ps.setString(32, mediaElement.getCollection());
-                    ps.setString(33, mediaElement.getPath());
+                    ps.setString(7, mediaElement.getTitle());
+                    ps.setString(8, mediaElement.getArtist());
+                    ps.setString(9, mediaElement.getAlbumArtist());
+                    ps.setString(10, mediaElement.getAlbum());
+                    ps.setShort(11, mediaElement.getYear());
+                    ps.setShort(12, mediaElement.getDiscNumber());
+                    ps.setString(13, mediaElement.getDiscSubtitle());
+                    ps.setShort(14, mediaElement.getTrackNumber());
+                    ps.setString(15, mediaElement.getGenre());
+                    ps.setFloat(16, mediaElement.getRating());
+                    ps.setString(17, mediaElement.getTagline());
+                    ps.setString(18, mediaElement.getDescription());
+                    ps.setString(19, mediaElement.getCertificate());
+                    ps.setString(20, mediaElement.getCollection());
+                    ps.setString(21, mediaElement.getPath());
                 }
 
                 @Override
@@ -246,14 +214,14 @@ public class MediaDao {
                 }
             });
         } catch (DataAccessException e) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create media element for file", e);
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to update media element!", e);
             return false;
         }
         
         return true;
     }
     
-    public boolean updateLastPlayed(Long id) {
+    public boolean updateLastPlayed(UUID id) {
         try{
             mediaDatabase.getJdbcTemplate().update("UPDATE MediaElement SET LastPlayed=NOW() WHERE ID=?", 
                                 new Object[] {id});
@@ -264,7 +232,7 @@ public class MediaDao {
         return true;
     }
     
-    public boolean updateLastScanned(Long id, Timestamp lastScanned) {
+    public boolean updateLastScanned(UUID id, Timestamp lastScanned) {
         try {
             mediaDatabase.getJdbcTemplate().update("UPDATE MediaElement SET LastScanned=? WHERE ID=?", 
                                 new Object[] {lastScanned, id});
@@ -284,7 +252,7 @@ public class MediaDao {
         }
     }
     
-    public MediaElement getMediaElementByID(Long id) {
+    public MediaElement getMediaElementByID(UUID id) {
         MediaElement mediaElement = null;
 
         try {
@@ -558,7 +526,7 @@ public class MediaDao {
         @Override
         public MediaElement mapRow(ResultSet rs, int rowNum) throws SQLException {
             MediaElement mediaElement = new MediaElement();
-            mediaElement.setID(rs.getLong("ID"));
+            mediaElement.setID((UUID)rs.getObject("ID"));
             mediaElement.setType(rs.getByte("Type"));
             mediaElement.setDirectoryType(rs.getByte("DirectoryType"));
             mediaElement.setPath(rs.getString("Path"));
@@ -569,26 +537,14 @@ public class MediaDao {
             mediaElement.setExcluded(rs.getBoolean("Excluded"));
             mediaElement.setFormat(rs.getString("Format"));
             mediaElement.setSize(rs.getLong("Size"));
-            mediaElement.setDuration(rs.getInt("Duration"));
+            mediaElement.setDuration(rs.getDouble("Duration"));
             mediaElement.setBitrate(rs.getInt("Bitrate"));
-            mediaElement.setVideoWidth(rs.getShort("VideoWidth"));
-            mediaElement.setVideoHeight(rs.getShort("VideoHeight"));
-            mediaElement.setVideoCodec(rs.getString("VideoCodec"));
-            mediaElement.setAudioName(rs.getString("AudioName"));
-            mediaElement.setAudioCodec(rs.getString("AudioCodec"));
-            mediaElement.setAudioSampleRate(rs.getString("AudioSampleRate"));
-            mediaElement.setAudioConfiguration(rs.getString("AudioConfiguration"));
-            mediaElement.setAudioLanguage(rs.getString("AudioLanguage"));
-            mediaElement.setSubtitleName(rs.getString("SubtitleName"));
-            mediaElement.setSubtitleLanguage(rs.getString("SubtitleLanguage"));
-            mediaElement.setSubtitleFormat(rs.getString("SubtitleFormat"));
-            mediaElement.setSubtitleForced(rs.getString("SubtitleForced"));
             mediaElement.setTitle(rs.getString("Title"));
             mediaElement.setArtist(rs.getString("Artist"));
             mediaElement.setAlbumArtist(rs.getString("AlbumArtist"));
             mediaElement.setAlbum(rs.getString("Album"));
             mediaElement.setYear(rs.getShort("Year"));
-            mediaElement.setDiscNumber(rs.getByte("DiscNumber"));
+            mediaElement.setDiscNumber(rs.getShort("DiscNumber"));
             mediaElement.setDiscSubtitle(rs.getString("DiscSubtitle"));
             mediaElement.setTrackNumber(rs.getShort("TrackNumber"));
             mediaElement.setGenre(rs.getString("Genre"));
@@ -602,6 +558,281 @@ public class MediaDao {
         }
     }
     
+    //
+    // Video Stream
+    //
+    
+    public boolean createVideoStreams(final List<VideoStream> videoStreams) {
+        String sql = "INSERT INTO VideoStream (MEID,SID,Title,Codec,Profile,Width,Height,PixelFormat,ColorSpace,ColorTransfer,ColorPrimaries,Interlaced,FPS,Bitrate,MaxBitrate,BPS,Language,Default,Forced) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        
+        try {
+            mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {                    
+                    VideoStream videoStream = videoStreams.get(i);
+                    ps.setString(1, videoStream.getMediaElementId().toString());
+                    ps.setInt(2, videoStream.getStreamId());
+                    ps.setString(3, videoStream.getTitle());
+                    ps.setString(4, videoStream.getCodec());
+                    ps.setString(5, videoStream.getProfile());
+                    ps.setInt(6, videoStream.getWidth());
+                    ps.setInt(7, videoStream.getHeight());
+                    ps.setString(8, videoStream.getPixelFormat());
+                    ps.setString(9, videoStream.getColorSpace());
+                    ps.setString(10, videoStream.getColorTransfer());
+                    ps.setString(11, videoStream.getColorPrimaries());
+                    ps.setBoolean(12, videoStream.isInterlaced());
+                    ps.setDouble(13, videoStream.getFPS());
+                    ps.setInt(14, videoStream.getBitrate());
+                    ps.setInt(15, videoStream.getMaxBitrate());
+                    ps.setInt(16, videoStream.getBPS());
+                    ps.setString(17, videoStream.getLanguage());
+                    ps.setBoolean(18, videoStream.isDefault());
+                    ps.setBoolean(19, videoStream.isForced());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return videoStreams.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to add video stream to database!", e);
+            return false;
+        }
+                
+        return true;
+    }
+    
+    public boolean removeAllVideoStreams() {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream");
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public void removeVideoStreamsByMediaElementId(UUID mediaElementId) {            
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
+    }
+    
+    public List<VideoStream> getVideoStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            List<VideoStream> videoStreams;
+            videoStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM VideoStream WHERE MEID=?", new VideoStreamMapper(), new Object[] {mediaElementId});
+            
+            return videoStreams;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    private static final class VideoStreamMapper implements RowMapper {
+        @Override
+        public VideoStream mapRow(ResultSet rs, int rowNum) throws SQLException {
+            VideoStream videoStream = new VideoStream();
+            videoStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
+            videoStream.setStreamId(rs.getInt("SID"));
+            videoStream.setTitle(rs.getString("Title"));
+            videoStream.setCodec(rs.getString("Codec"));
+            videoStream.setProfile(rs.getString("Profile"));
+            videoStream.setWidth(rs.getInt("Width"));
+            videoStream.setHeight(rs.getInt("Height"));
+            videoStream.setPixelFormat(rs.getString("PixelFormat"));
+            videoStream.setColorSpace(rs.getString("ColorSpace"));
+            videoStream.setColorTransfer(rs.getString("ColorTransfer"));
+            videoStream.setColorPrimaries(rs.getString("ColorPrimaries"));
+            videoStream.setInterlaced(rs.getBoolean("Interlaced"));
+            videoStream.setFPS(rs.getDouble("FPS"));
+            videoStream.setBitrate(rs.getInt("Bitrate"));
+            videoStream.setMaxBitrate(rs.getInt("MaxBitrate"));
+            videoStream.setBPS(rs.getInt("BPS"));
+            videoStream.setLanguage(rs.getString("Language"));
+            videoStream.setDefault(rs.getBoolean("Default"));
+            videoStream.setForced(rs.getBoolean("Forced"));
+            
+            return videoStream;
+        }
+    }
+    
+    //
+    // Audio Stream
+    //
+    
+    public boolean createAudioStreams(final List<AudioStream> audioStreams) {
+        String sql = "INSERT INTO AudioStream (MEID,SID,Title,Codec,SampleRate,Channels,Bitrate,BPS,Language,Default,Forced) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+        
+        try {
+            mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {                    
+                    AudioStream audioStream = audioStreams.get(i);
+                    ps.setString(1, audioStream.getMediaElementId().toString());
+                    ps.setInt(2, audioStream.getStreamId());
+                    ps.setString(3, audioStream.getTitle());
+                    ps.setString(4, audioStream.getCodec());
+                    ps.setInt(5, audioStream.getSampleRate());
+                    ps.setInt(6, audioStream.getChannels());
+                    ps.setInt(7, audioStream.getBitrate());
+                    ps.setInt(8, audioStream.getBPS());
+                    ps.setString(9, audioStream.getLanguage());
+                    ps.setBoolean(10, audioStream.isDefault());
+                    ps.setBoolean(11, audioStream.isForced());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return audioStreams.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to add audio stream to database!", e);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removeAllAudioStreams() {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream");
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public void removeAudioStreamsByMediaElementId(UUID mediaElementId) {            
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
+    }
+    
+    public List<AudioStream> getAudioStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            List<AudioStream> audioStreams;
+            audioStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM AudioStream WHERE MEID=?", new AudioStreamMapper(), new Object[] {mediaElementId});
+            
+            return audioStreams;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    private static final class AudioStreamMapper implements RowMapper {
+        @Override
+        public AudioStream mapRow(ResultSet rs, int rowNum) throws SQLException {
+            AudioStream audioStream = new AudioStream();
+            audioStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
+            audioStream.setStreamId(rs.getInt("SID"));
+            audioStream.setTitle(rs.getString("Title"));
+            audioStream.setCodec(rs.getString("Codec"));
+            audioStream.setSampleRate(rs.getInt("SampleRate"));
+            audioStream.setChannels(rs.getInt("Channels"));
+            audioStream.setBitrate(rs.getInt("Bitrate"));
+            audioStream.setBPS(rs.getInt("BPS"));
+            audioStream.setLanguage(rs.getString("Language"));
+            audioStream.setDefault(rs.getBoolean("Default"));
+            audioStream.setForced(rs.getBoolean("Forced"));
+            
+            return audioStream;
+        }
+    }
+    
+    //
+    // Subtitle Stream
+    //
+    
+    public boolean createSubtitleStreams(final List<SubtitleStream> subtitleStreams) {
+        String sql = "INSERT INTO SubtitleStream (MEID,SID,Title,Codec,Language,Default,Forced) " +
+                                "VALUES (?,?,?,?,?,?,?)";
+        
+        try {
+            mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
+                @Override
+                public void setValues(PreparedStatement ps, int i) throws SQLException {
+                    SubtitleStream subtitleStream = subtitleStreams.get(i);
+                    ps.setString(1, subtitleStream.getMediaElementId().toString());
+                    ps.setInt(2, subtitleStream.getStreamId());
+                    ps.setString(3, subtitleStream.getTitle());
+                    ps.setString(4, subtitleStream.getCodec());
+                    ps.setString(5, subtitleStream.getLanguage());
+                    ps.setBoolean(6, subtitleStream.isDefault());
+                    ps.setBoolean(7, subtitleStream.isForced());
+                }
+
+                @Override
+                public int getBatchSize() {
+                    return subtitleStreams.size();
+                }
+            });
+        } catch (DataAccessException e) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to add subtitle stream to database!", e);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removeAllSubtitleStreams() {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream");
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public void removeSubtitleStreamsByMediaElementId(UUID mediaElementId) {            
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+    }
+    
+    public List<SubtitleStream> getSubtitleStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            List<SubtitleStream> subtitleStreams;
+            subtitleStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM SubtitleStream WHERE MEID=?", new SubtitleStreamMapper(), new Object[] {mediaElementId});
+            
+            return subtitleStreams;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    private static final class SubtitleStreamMapper implements RowMapper {
+        @Override
+        public SubtitleStream mapRow(ResultSet rs, int rowNum) throws SQLException {
+            SubtitleStream subtitleStream = new SubtitleStream();
+            subtitleStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
+            subtitleStream.setStreamId(rs.getInt("SID"));
+            subtitleStream.setTitle(rs.getString("Title"));
+            subtitleStream.setCodec(rs.getString("Codec"));
+            subtitleStream.setLanguage(rs.getString("Language"));
+            subtitleStream.setDefault(rs.getBoolean("Default"));
+            subtitleStream.setForced(rs.getBoolean("Forced"));
+            
+            return subtitleStream;
+        }
+    }
+    
+    //
+    // Streams
+    //
+    
+    public void removeStreamsByMediaElementId(UUID mediaElementId) {
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+    }
     
     //
     // Playlists
@@ -656,7 +887,7 @@ public class MediaDao {
         return true;
     }
     
-    public boolean updateLastScanned(UUID id, Timestamp lastScanned) {
+    public boolean updatePlaylistLastScanned(UUID id, Timestamp lastScanned) {
         try {
             mediaDatabase.getJdbcTemplate().update("UPDATE Playlist SET LastScanned=? WHERE ID=?", 
                                 new Object[] {lastScanned, id});
@@ -733,7 +964,7 @@ public class MediaDao {
         }
     }
     
-    public boolean setPlaylistContentFromIds(final UUID id, final List<Long> mediaElementIds) {
+    public boolean setPlaylistContentFromIds(final UUID id, final List<UUID> mediaElementIds) {
         String sql = "INSERT INTO PlaylistContent (PID,MEID) " +
                                 "VALUES (?,?)";
         
@@ -741,9 +972,9 @@ public class MediaDao {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
                 @Override
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
-                    Long mediaElementId = mediaElementIds.get(i);
+                    UUID mediaElementId = mediaElementIds.get(i);
                     ps.setString(1, id.toString());
-                    ps.setLong(2, mediaElementId);
+                    ps.setString(2, mediaElementId.toString());
                 }
 
                 @Override
@@ -768,7 +999,7 @@ public class MediaDao {
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
                     MediaElement mediaElement = mediaElements.get(i);
                     ps.setString(1, id.toString());
-                    ps.setLong(2, mediaElement.getID());
+                    ps.setString(2, mediaElement.getID().toString());
                 }
 
                 @Override

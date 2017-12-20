@@ -26,10 +26,11 @@ package com.scooter1556.sms.server.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.UUID;
 
 public class MediaFolder implements Serializable {
     
-    private Long id;
+    private UUID id;
     private String name;
     private Byte type;
     private String path; 
@@ -41,7 +42,7 @@ public class MediaFolder implements Serializable {
 
     public MediaFolder() {};
     
-    public MediaFolder(Long id, String name, Byte type, String path, Long folders, Long files, Timestamp lastScanned, boolean enabled)
+    public MediaFolder(UUID id, String name, Byte type, String path, Long folders, Long files, Timestamp lastScanned, boolean enabled)
     {
         this.id = id;
         this.name = name;
@@ -60,11 +61,11 @@ public class MediaFolder implements Serializable {
                 id == null ? "?" : id.toString(), name == null ? "N/A" : name, type == null ? "N/A" : type.toString(), path == null ? "N/A" : path, folders == null ? "N/A" : folders.toString(), files == null ? "N/A" : files.toString(), enabled == null ? "?" : enabled.toString());
     }
 
-    public Long getID()  {
+    public UUID getID()  {
         return id;
     }
     
-    public void setID(Long id) {
+    public void setID(UUID id) {
         this.id = id;
     }
     
@@ -126,8 +127,9 @@ public class MediaFolder implements Serializable {
     }
     
     public static class ContentType {
-        public static final byte AUDIO = 0;
-        public static final byte VIDEO = 1;
-        public static final byte PLAYLIST = 2;
+        public static final byte UNKNOWN = 0;
+        public static final byte AUDIO = 1;
+        public static final byte VIDEO = 2;
+        public static final byte PLAYLIST = 3;
     }
 }

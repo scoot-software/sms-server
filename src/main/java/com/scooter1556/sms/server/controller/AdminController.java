@@ -29,20 +29,20 @@ import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaFolder;
-import com.scooter1556.sms.server.domain.MediaFolder.ContentType;
+import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
-import com.scooter1556.sms.server.service.MediaScannerService;
+import com.scooter1556.sms.server.service.ScannerService;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -71,7 +71,7 @@ public class AdminController {
     private JobDao jobDao;
     
     @Autowired
-    private MediaScannerService mediaScannerService;
+    private ScannerService mediaScannerService;
     
     //
     // User
@@ -222,7 +222,7 @@ public class AdminController {
     public ResponseEntity<String> createMediaFolder(@RequestBody MediaFolder mediaFolder)
     {
         // Check mandatory fields.
-        if(mediaFolder.getName() == null || mediaFolder.getType() == null || mediaFolder.getPath() == null)
+        if(mediaFolder.getName() == null || mediaFolder.getPath() == null)
         {
             return new ResponseEntity<>("Missing required parameter.", HttpStatus.BAD_REQUEST);
         }
@@ -245,6 +245,9 @@ public class AdminController {
         // Ensure path is formatted correctly
         mediaFolder.setPath(file.getPath());
         
+        // Generate ID
+        mediaFolder.setID(UUID.randomUUID());
+        
         // Add Media Folder to the database.
         if(!settingsDao.createMediaFolder(mediaFolder))
         {
@@ -258,7 +261,7 @@ public class AdminController {
 
     @RequestMapping(value="/media/folder/{id}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMediaFolder(@PathVariable("id") Long id) {
+    public void deleteMediaFolder(@PathVariable("id") UUID id) {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed media folder with ID '" + id.toString() + "'.", null);
         settingsDao.removeMediaFolder(id);
     }
@@ -322,7 +325,7 @@ public class AdminController {
     
     @RequestMapping(value="/media/{id}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMediaElement(@PathVariable("id") Long id) {
+    public void deleteMediaElement(@PathVariable("id") UUID id) {
         mediaDao.removeMediaElement(id);
     }
 
@@ -332,59 +335,27 @@ public class AdminController {
         mediaDao.removeAllMediaElements();
     }
     
-    @RequestMapping(value="/{type}/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> scanMedia(@PathVariable("type") String type,
-                                            @RequestParam(value = "id", required = false) Long id,
+    @RequestMapping(value="/media/scan", method=RequestMethod.GET)
+    public ResponseEntity<String> scanMedia(@RequestParam(value = "id", required = false) UUID id,
                                             @RequestParam(value = "forcerescan", required = false) Boolean forceRescan) {        
         // Check a media scanning process is not already active
         if (mediaScannerService.isScanning()) {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
         }
         
-        // If an ID is specified check it is valid
-        if(id != null) {
-            if(settingsDao.getMediaFolderByID(id) == null) {
-                return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
-            }
-        }
-        
         // List of media folders to scan
         List<MediaFolder> mediaFolders = new ArrayList<>();
         
-        // Determine whether to scan media or playlist folders
-        switch (type) {
-            case "media":
-                if(id == null) {
-                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.AUDIO));
-                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.VIDEO));
-                } else {
-                    MediaFolder folder = settingsDao.getMediaFolderByID(id);
-                    
-                    if(folder.getType() == ContentType.PLAYLIST) {
-                        return new ResponseEntity<>("Media folder type is 'playlist'. Use a playlist scan request for this media folder.", HttpStatus.BAD_REQUEST);
-                    } else {
-                        mediaFolders.add(folder);
-                    }
-                }
-                
-                break;
-                
-            case "playlist":
-                if(id == null) {
-                    mediaFolders.addAll(settingsDao.getMediaFolders(ContentType.PLAYLIST));
-                } else {
-                    MediaFolder folder = settingsDao.getMediaFolderByID(id);
-                    
-                    if(folder.getType() == ContentType.PLAYLIST) {
-                        mediaFolders.add(folder);
-                    } else {
-                        return new ResponseEntity<>("Media folder type is not 'playlist'. Use a media scan request for this media folder.", HttpStatus.BAD_REQUEST);
-                    }
-                }
-                break;
-                
-            default:
-                return new ResponseEntity<>("Scan request must be for 'media' or 'playlist'.", HttpStatus.BAD_REQUEST);
+        if(id == null) {
+            mediaFolders.addAll(settingsDao.getMediaFolders(null));
+        } else {
+            MediaFolder folder = settingsDao.getMediaFolderByID(id);
+            
+            if(folder == null) {
+                return new ResponseEntity<>("Media folder does not exist.", HttpStatus.BAD_REQUEST);
+            } else {
+                mediaFolders.add(folder);
+            }
         }
         
         // Check we have media folders to scan
@@ -402,15 +373,48 @@ public class AdminController {
         }
         
         // Start scanning media
-        mediaScannerService.startScanning(mediaFolders);
+        mediaScannerService.startMediaScanning(mediaFolders);
         
-        return new ResponseEntity<>(StringUtils.capitalize(type) + " scanning started.", HttpStatus.OK);
+        return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
     }
     
     @RequestMapping(value="/media/scan/count", method=RequestMethod.GET)
     public ResponseEntity<Long> getMediaScanCount()
     {   
         return new ResponseEntity<>(mediaScannerService.getScanCount(), HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/playlist/scan", method=RequestMethod.GET)
+    public ResponseEntity<String> scanPlaylist(@RequestParam(value = "id", required = false) UUID id) {        
+        // Check a scanning process is not already active
+        if (mediaScannerService.isScanning()) {
+            return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
+        }
+        
+        // List of playlists to scan
+        List<Playlist> playlists = new ArrayList<>();
+        
+        if(id == null) {
+            playlists.addAll(mediaDao.getPlaylists());
+        } else {
+            Playlist playlist = mediaDao.getPlaylistByID(id);
+            
+            if(playlist == null) {
+                return new ResponseEntity<>("Playlist does not exist.", HttpStatus.BAD_REQUEST);
+            } else {
+                playlists.add(playlist);
+            }
+        }
+        
+        // Check we have media folders to scan
+        if(playlists.isEmpty()) {
+            return new ResponseEntity<>("No playlists to scan for this request.", HttpStatus.NOT_FOUND);
+        }
+        
+        // Start scanning playlists
+        mediaScannerService.startPlaylistScanning(playlists);
+        
+        return new ResponseEntity<>("Playlist scanning started.", HttpStatus.OK);
     }
     
     //

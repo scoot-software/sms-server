@@ -140,7 +140,7 @@ public class JobDao {
             job.setID(UUID.fromString(rs.getString("ID")));
             job.setType(rs.getByte("Type"));
             job.setUsername(rs.getString("Username"));
-            job.setMediaElement(rs.getLong("MediaElement"));
+            job.setMediaElement(UUID.fromString(rs.getString("MediaElement")));
             job.setStartTime(rs.getTimestamp("StartTime"));
             job.setEndTime(rs.getTimestamp("EndTime"));
             job.setLastActivity(rs.getTimestamp("LastActivity"));

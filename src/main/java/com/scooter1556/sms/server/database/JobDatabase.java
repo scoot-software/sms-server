@@ -34,7 +34,7 @@ public final class JobDatabase extends Database {
     private static final String CLASS_NAME = "JobDatabase";
     
     public static final String DB_NAME = "Job";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 2;
         
     public JobDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -58,7 +58,7 @@ public final class JobDatabase extends Database {
                     + "ID UUID NOT NULL,"
                     + "Type TINYINT NOT NULL,"
                     + "Username VARCHAR(50) NOT NULL,"
-                    + "MediaElement BIGINT NOT NULL,"
+                    + "MediaElement UUID NOT NULL,"
                     + "StartTime TIMESTAMP DEFAULT NOW() NOT NULL,"
                     + "EndTime TIMESTAMP,"
                     + "LastActivity TIMESTAMP DEFAULT NOW() NOT NULL,"
@@ -73,6 +73,10 @@ public final class JobDatabase extends Database {
     @Override
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+        
+        if(newVersion == 2) {
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME);
+        }
     }
     
     @Override

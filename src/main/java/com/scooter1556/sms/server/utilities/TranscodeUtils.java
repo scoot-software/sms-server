@@ -1,7 +1,13 @@
 package com.scooter1556.sms.server.utilities;
 
+import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
+import com.scooter1556.sms.server.domain.MediaElement.Stream;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
+import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.io.NullStream;
@@ -246,14 +252,9 @@ public class TranscodeUtils {
     /*
      * Returns a suitable video resolution based on the video quality requested.
      */
-    public static Dimension getVideoResolution(MediaElement element, int quality) {
+    public static Dimension getVideoResolution(Dimension resolution, int quality) {
         // Check variables
-        if(element == null || !VideoTranscode.VideoQuality.isValid(quality)) {
-            return null;
-        }
-        
-        // Check this is a video element
-        if(element.getType() != MediaElement.MediaElementType.VIDEO) {
+        if(resolution == null || !VideoTranscode.VideoQuality.isValid(quality)) {
             return null;
         }
         
@@ -261,19 +262,17 @@ public class TranscodeUtils {
         Dimension requested = TranscodeUtils.VIDEO_QUALITY_RESOLUTION[quality];
 
         // Make sure we managed to set a resolution based on the requested quality
-        if(requested == null || element.getVideoHeight() == null || element.getVideoWidth() == null) {
+        if(requested == null) {
             return null;
         }
         
         // If the original resolution is less than or equal to the requested resolution we don't need to continue
-        Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
-        
-        if (original.width <= requested.width || original.height <= requested.height) {
+        if (resolution.width <= requested.width || resolution.height <= requested.height) {
             return null;
         }
 
         // Calculate the aspect ratio of the original video.
-        double aspectRatio = new Integer(original.width).doubleValue() / new Integer(original.height).doubleValue();
+        double aspectRatio = new Integer(resolution.width).doubleValue() / new Integer(resolution.height).doubleValue();
         requested.height = (int) Math.round(requested.width / aspectRatio);
 
         return new Dimension(even(requested.width), even(requested.height));
@@ -290,14 +289,11 @@ public class TranscodeUtils {
     /*
      * Returns the highest possible transcode quality for a given video element
      */
-    public static int getHighestVideoQuality(MediaElement element) {
+    public static int getHighestVideoQuality(Dimension resolution) {
         // Check required variables
-        if(element == null || element.getType() != MediaElement.MediaElementType.VIDEO || element.getVideoHeight() == null || element.getVideoWidth() == null) {
+        if(resolution == null) {
             return -1;
         }
-        
-        // Get original resolution
-        Dimension original = new Dimension(element.getVideoWidth(), element.getVideoHeight());
         
         // Loop through possible qualities until we find the highest
         for(int i = VideoTranscode.VideoQuality.getMax(); i >= 0; i--) {
@@ -306,7 +302,7 @@ public class TranscodeUtils {
             
             if(requested != null) {
                 // Check if this is the closest match to the original resolution
-                if (requested.width <= original.width || requested.height <= original.height) {
+                if (requested.width <= resolution.width || requested.height <= resolution.height) {
                     return i;
                 }
             }
@@ -333,50 +329,15 @@ public class TranscodeUtils {
         return 0;
     }
     
-    public static boolean isAudioStreamAvailable(int streamNum, MediaElement element) {        
-        // Get list of audio streams for element
-        List<MediaElement.AudioStream> audioStreams = element.getAudioStreams();
-        
-        if(audioStreams == null) {
-            return false;
-        }
-        
-        return audioStreams.size() >= streamNum;
-    }
-    
-    public static boolean isSubtitleStreamAvailable(int streamNum, MediaElement element) {
-        // Check this is a video element
-        if(element.getType() != MediaElement.MediaElementType.VIDEO) {
-            return false;
-        }
-        
-        // Get list of subtitle streams for video file
-        List<MediaElement.SubtitleStream> subtitles = element.getSubtitleStreams();
-        
-        if(subtitles == null) {
-            return false;
-        }
-        
-        return subtitles.size() >= streamNum;
-    }
-    
-    public static Integer getForcedSubtitleIndex(MediaElement element) {
-        // Check this is a video element
-        if(element.getType() != MediaElement.MediaElementType.VIDEO) {
-            return null;
-        }
-        
-        // Get list of subtitle streams for video file
-        List<MediaElement.SubtitleStream> subtitles = element.getSubtitleStreams();
-        
-        if(subtitles == null) {
+    public static Integer getForcedSubtitleId(List<SubtitleStream> streams) {
+        if(streams == null) {
             return null;
         }
         
         // Scan subtitles for forced streams
-        for(MediaElement.SubtitleStream subtitle : subtitles) {
-            if(subtitle.isForced()) {
-                return subtitle.getStream();
+        for(SubtitleStream stream : streams) {
+            if(stream.isForced()) {
+                return stream.getStreamId();
             }
         }
         
@@ -512,6 +473,106 @@ public class TranscodeUtils {
         for (String[] map : AUDIO_CODEC_MAX_SAMPLE_RATE) {
             if (codec.contains(map[0])) {
                 return Integer.valueOf(map[1]);
+            }
+        }
+        
+        return null;
+    }
+    
+    public static boolean isValidVideoStream(List<VideoStream> videoStreams, int streamId) {
+        if(videoStreams == null || videoStreams.isEmpty()) {
+            return false;
+        }
+        
+        List<Stream> streams = new ArrayList<>();
+        
+        for(VideoStream stream : videoStreams) {
+            streams.add(stream);
+        }
+        
+        return isValidStream(streams, streamId);
+    }
+    
+    public static boolean isValidAudioStream(List<AudioStream> audioStreams, int streamId) {
+        if(audioStreams == null || audioStreams.isEmpty()) {
+            return false;
+        }
+        
+        List<Stream> streams = new ArrayList<>();
+        
+        for(AudioStream stream : audioStreams) {
+            streams.add(stream);
+        }
+        
+        return isValidStream(streams, streamId);
+    }
+    
+    public static boolean isValidSubtitleStream(List<SubtitleStream> subtitleStreams, int streamId) {
+        if(subtitleStreams == null || subtitleStreams.isEmpty()) {
+            return false;
+        }
+        
+        List<Stream> streams = new ArrayList<>();
+        
+        for(SubtitleStream stream : subtitleStreams) {
+            streams.add(stream);
+        }
+        
+        return isValidStream(streams, streamId);
+    }
+    
+    public static boolean isValidStream(List<Stream> streams, int streamId) {
+        for(Stream stream : streams) {
+            Integer id = stream.getStreamId();
+            
+            if(id == null) {
+                continue;
+            }
+            
+            if(stream.getStreamId() == streamId) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public static VideoTranscode getVideoTranscodeById(VideoTranscode[] transcodes, int id) {
+        if(transcodes == null || transcodes.length == 0) {
+            return null;
+        }
+        
+        for(VideoTranscode transcode : transcodes) {
+            if(transcode.getId() == id) {
+                return transcode;
+            }
+        }
+        
+        return null;
+    }
+    
+    public static AudioTranscode getAudioTranscodeById(AudioTranscode[] transcodes, int id) {
+        if(transcodes == null || transcodes.length == 0) {
+            return null;
+        }
+        
+        for(AudioTranscode transcode : transcodes) {
+            if(transcode.getId() == id) {
+                return transcode;
+            }
+        }
+        
+        return null;
+    }
+    
+    public static SubtitleTranscode getSubtitleTranscodeById(SubtitleTranscode[] transcodes, int id) {
+        if(transcodes == null || transcodes.length == 0) {
+            return null;
+        }
+        
+        for(SubtitleTranscode transcode : transcodes) {
+            if(transcode.getId() == id) {
+                return transcode;
             }
         }
         

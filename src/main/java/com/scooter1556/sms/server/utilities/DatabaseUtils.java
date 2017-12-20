@@ -44,7 +44,7 @@ public class DatabaseUtils {
         
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("org.h2.jdbcx.JdbcDataSource");
-        dataSource.setUrl("jdbc:h2:" + SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS");
+        dataSource.setUrl("jdbc:h2:" + SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + version + ";" + "MV_STORE=FALSE;MVCC=FALSE;FILE_LOCK=FS;IGNORECASE=TRUE;DATABASE_TO_UPPER=FALSE;");
         
         return dataSource;
     }

@@ -28,13 +28,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class MediaElement implements Serializable {
     
-    private Long id;
+    private UUID id;
     private Byte type;
     private Byte directoryType = -1;
     private String path;
@@ -45,38 +45,30 @@ public class MediaElement implements Serializable {
     private Boolean excluded = false;
     private String format;
     private Long size = 0L;
-    private Integer duration = 0;
+    private Double duration = 0d;
     private Integer bitrate = 0;
-    private Short videoWidth = 0;
-    private Short videoHeight = 0;
-    private String videoCodec;
-    private String audioName;
-    private String audioCodec;
-    private String audioSampleRate;
-    private String audioConfiguration;
-    private String audioLanguage;
-    private String subtitleName;
-    private String subtitleLanguage;
-    private String subtitleFormat;
-    private String subtitleForced;
     private String title;
     private String artist;
     private String albumArtist;
     private String album;
     private Short year = 0;
-    private Byte discNumber = 0;
+    private Short discNumber = 0;
     private String discSubtitle;
     private Short trackNumber = 0;
     private String genre;
-    private Float rating = 0F;
+    private Float rating = 0f;
     private String tagline;
     private String description;
     private String certificate;
     private String collection;
+    
+    List<VideoStream> videoStreams;
+    List<AudioStream> audioStreams;
+    List<SubtitleStream> subtitleStreams;
 
     public MediaElement() {};
     
-    public MediaElement(Long id,
+    public MediaElement(UUID id,
                         Byte type,
                         Byte directoryType,
                         String path,
@@ -87,26 +79,14 @@ public class MediaElement implements Serializable {
                         Boolean excluded,
                         String format,
                         Long size,
-                        Integer duration,
+                        Double duration,
                         Integer bitrate,
-                        Short videoWidth,
-                        Short videoHeight,
-                        String videoCodec,
-                        String audioName,
-                        String audioCodec,
-                        String audioSampleRate,
-                        String audioConfiguration,
-                        String audioLanguage,
-                        String subtitleName,
-                        String subtitleLanguage,
-                        String subtitleFormat,
-                        String subtitleForced,
                         String title,
                         String artist,
                         String albumArtist,
                         String album,
                         Short year,
-                        Byte discNumber,
+                        Short discNumber,
                         String discSubtitle,
                         Short trackNumber,
                         String genre,
@@ -114,8 +94,7 @@ public class MediaElement implements Serializable {
                         String tagline,
                         String description,
                         String certificate,
-                        String collection)
-    {
+                        String collection) {
         this.id = id;
         this.type = type;
         this.directoryType = directoryType;
@@ -129,18 +108,6 @@ public class MediaElement implements Serializable {
         this.size = size;
         this.duration = duration;
         this.bitrate = bitrate;
-        this.videoWidth = videoWidth;
-        this.videoHeight = videoHeight;
-        this.videoCodec = videoCodec;
-        this.audioName = audioName;
-        this.audioCodec = audioCodec;
-        this.audioSampleRate = audioSampleRate;
-        this.audioConfiguration = audioConfiguration;
-        this.audioLanguage = audioLanguage;
-        this.subtitleName = subtitleName;
-        this.subtitleLanguage = subtitleLanguage;
-        this.subtitleFormat = subtitleFormat;
-        this.subtitleForced = subtitleForced;
         this.title = title;
         this.artist = artist;
         this.albumArtist = albumArtist;
@@ -161,25 +128,57 @@ public class MediaElement implements Serializable {
     public String toString() {
         
         // Return 'type' specific string
-        if(type != null)
-        {
-            if(type == MediaElementType.DIRECTORY)
-            {
+        if(type != null) {
+            if(type == MediaElementType.DIRECTORY) {
                 return String.format(
                     "DirectoryElement[ID=%s, Directory Type=%s, Title=%s, Path=%s, Excluded=%s, Created=%s, LastPlayed=%s]",
-                    id == null ? "?" : id.toString(), directoryType.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, excluded.toString(), created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString());
-            }
-            else if(type == MediaElementType.VIDEO)
-            {
+                    id == null ? "?" : id.toString(),
+                    directoryType.toString(),
+                    title == null ? "N/A" : title,
+                    path == null ? "N/A" : path,
+                    excluded.toString(),
+                    created == null ? "Unknown" : created.toString(),
+                    lastPlayed == null ? "Never" : lastPlayed.toString());
+            } else if(type == MediaElementType.VIDEO) {
                 return String.format(
-                    "VideoElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Resolution=%sx%s, Video Codec=%s, Audios=%s, Audio Languages=%s, Audio Codecs=%s, Audio Configurations=%s, Subtitles=%s, Subtitle Languages=%s, Subtitle Formats=%s, Year=%s, Genre=%s, Rating=%s, Tagline=%s, Description=%s, Certificate=%s, Collection=%s]",
-                    id == null ? "?" : id.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString(), duration.toString(), bitrate.toString(), videoWidth.toString(), videoHeight.toString(), videoCodec == null ? "N/A" : videoCodec, audioName == null ? "N/A" : audioName, audioLanguage == null ? "N/A" : audioLanguage, audioCodec == null ? "N/A" : audioCodec, audioConfiguration == null ? "N/A" : audioConfiguration, subtitleName == null ? "N/A" : subtitleName, subtitleLanguage == null ? "N/A" : subtitleLanguage, subtitleFormat == null ? "N/A" : subtitleFormat, year.toString(), genre == null ? "N/A" : genre, rating.toString(), tagline == null ? "N/A" : tagline, description == null ? "N/A" : description, certificate == null ? "N/A" : certificate, collection == null ? "N/A" : collection);
-            }
-            else if(type == MediaElementType.AUDIO)
-            {
+                    "VideoElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Year=%s, Genre=%s, Rating=%s, Tagline=%s, Description=%s, Certificate=%s, Collection=%s, Video Streams=%s, Audio Streams=%s, Subtitle Streams=%s]",
+                    id == null ? "?" : id.toString(),
+                    title == null ? "N/A" : title,
+                    path == null ? "N/A" : path,
+                    created == null ? "Unknown" : created.toString(),
+                    lastPlayed == null ? "Never" : lastPlayed.toString(),
+                    duration.toString(),
+                    bitrate.toString(),
+                    year.toString(),
+                    genre == null ? "N/A" : genre,
+                    rating.toString(),
+                    tagline == null ? "N/A" : tagline,
+                    description == null ? "N/A" : description,
+                    certificate == null ? "N/A" : certificate,
+                    collection == null ? "N/A" : collection,
+                    videoStreams == null ? "N/A" : videoStreams.toString(),
+                    audioStreams == null ? "N/A" : audioStreams.toString(),
+                    subtitleStreams == null ? "N/A" : subtitleStreams.toString());
+            } else if(type == MediaElementType.AUDIO) {
                 return String.format(
-                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Audio Codecs=%s, Sample Rate=%s Hz, Audio Configurations=%s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s]",
-                    id == null ? "?" : id.toString(), title == null ? "N/A" : title, path == null ? "N/A" : path, created == null ? "Unknown" : created.toString(), lastPlayed == null ? "Never" : lastPlayed.toString(), duration.toString(), bitrate.toString(), audioCodec == null ? "N/A" : audioCodec, audioSampleRate == null ? "?" : audioSampleRate, audioConfiguration == null ? "N/A" : audioConfiguration, artist == null ? "N/A" : artist, albumArtist == null ? "N/A" : albumArtist, album == null ? "N/A" : album, trackNumber.toString(), discNumber.toString(), discSubtitle == null ? "N/A" : discSubtitle, year.toString(), genre == null ? "N/A" : genre, description == null ? "N/A" : description);
+                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s, Audio Streams=%s]",
+                    id == null ? "?" : id.toString(),
+                    title == null ? "N/A" : title,
+                    path == null ? "N/A" : path,
+                    created == null ? "Unknown" : created.toString(),
+                    lastPlayed == null ? "Never" : lastPlayed.toString(),
+                    duration.toString(),
+                    bitrate.toString(),
+                    artist == null ? "N/A" : artist,
+                    albumArtist == null ? "N/A" : albumArtist,
+                    album == null ? "N/A" : album,
+                    trackNumber.toString(),
+                    discNumber.toString(),
+                    discSubtitle == null ? "N/A" : discSubtitle,
+                    year.toString(),
+                    genre == null ? "N/A" : genre,
+                    description == null ? "N/A" : description,
+                    audioStreams == null ? "N/A" : audioStreams.toString());
             }
         }
         
@@ -189,11 +188,11 @@ public class MediaElement implements Serializable {
                 id == null ? "?" : id.toString(), path == null ? "N/A" : path, created == null ? "Unknown" : created.toString());
     }
 
-    public Long getID()  {
+    public UUID getID()  {
         return id;
     }
     
-    public void setID(Long id) {
+    public void setID(UUID id) {
         this.id = id;
     }
     
@@ -285,11 +284,11 @@ public class MediaElement implements Serializable {
         this.size = size;
     }
     
-    public Integer getDuration() {
+    public Double getDuration() {
         return duration;
     }
     
-    public void setDuration(Integer duration) {
+    public void setDuration(Double duration) {
         this.duration = duration;
     }
     
@@ -300,114 +299,6 @@ public class MediaElement implements Serializable {
     
     public void setBitrate(Integer bitrate) {
         this.bitrate = bitrate;
-    }
-    
-    @JsonIgnore
-    public Short getVideoWidth() {
-        return videoWidth;
-    }
-    
-    public void setVideoWidth(Short videoWidth) {
-        this.videoWidth = videoWidth;
-    }
-    
-    @JsonIgnore
-    public Short getVideoHeight() {
-        return videoHeight;
-    }
-    
-    public void setVideoHeight(Short videoHeight) {
-        this.videoHeight = videoHeight;
-    }
-    
-    @JsonIgnore
-    public String getVideoCodec() {
-        return videoCodec;
-    }
-    
-    public void setVideoCodec(String videoCodec) {
-        this.videoCodec = videoCodec;
-    }
-    
-    @JsonIgnore
-    public String getAudioName() {
-        return audioName;
-    }
-    
-    public void setAudioName(String audioName) {
-        this.audioName = audioName;
-    }
-    
-    @JsonIgnore
-    public String getAudioCodec() {
-        return audioCodec;
-    }
-    
-    public void setAudioCodec(String audioCodec) {
-        this.audioCodec = audioCodec;
-    }
-    
-    @JsonIgnore
-    public String getAudioSampleRate() {
-        return audioSampleRate;
-    }
-    
-    public void setAudioSampleRate(String audioSampleRate) {
-        this.audioSampleRate = audioSampleRate;
-    }
-    
-    @JsonIgnore
-    public String getAudioConfiguration() {
-        return audioConfiguration;
-    }
-    
-    public void setAudioConfiguration(String audioConfiguration) {
-        this.audioConfiguration = audioConfiguration;
-    }
-    
-    @JsonIgnore
-    public String getAudioLanguage() {
-        return audioLanguage;
-    }
-    
-    public void setAudioLanguage(String audioLanguage) {
-        this.audioLanguage = audioLanguage;
-    }
-    
-    @JsonIgnore
-    public String getSubtitleName() {
-        return subtitleName;
-    }
-    
-    public void setSubtitleName(String subtitleName) {
-        this.subtitleName = subtitleName;
-    }
-    
-    @JsonIgnore
-    public String getSubtitleLanguage() {
-        return subtitleLanguage;
-    }
-    
-    public void setSubtitleLanguage(String subtitleLanguage) {
-        this.subtitleLanguage = subtitleLanguage;
-    }
-    
-    @JsonIgnore
-    public String getSubtitleFormat() {
-        return subtitleFormat;
-    }
-    
-    public void setSubtitleFormat(String subtitleFormat) {
-        this.subtitleFormat = subtitleFormat;
-    }
-    
-    @JsonIgnore
-    public String getSubtitleForced() {
-        return subtitleForced;
-    }
-    
-    public void setSubtitleForced(String subtitleForced) {
-        this.subtitleForced = subtitleForced;
     }
     
     public String getTitle() {
@@ -450,11 +341,11 @@ public class MediaElement implements Serializable {
         this.year = year;
     }
     
-    public Byte getDiscNumber() {
+    public Short getDiscNumber() {
         return discNumber;
     }
     
-    public void setDiscNumber(Byte discNumber) {
+    public void setDiscNumber(Short discNumber) {
         this.discNumber = discNumber;
     }
     
@@ -522,237 +413,381 @@ public class MediaElement implements Serializable {
         this.collection = collection;
     }
     
-    //
-    // Helper Functions
-    //
-    
-    // Clear all attributes relating to Audio and Subtitle streams
-    public void resetStreams()
-    {
-        this.audioName = null;
-        this.audioCodec = null;
-        this.audioConfiguration = null;
-        this.audioLanguage = null;
-        this.audioSampleRate = null;
-        
-        this.subtitleName = null;
-        this.subtitleForced = null;
-        this.subtitleFormat = null;
-        this.subtitleLanguage = null;
+    public List<VideoStream> getVideoStreams() {
+        return videoStreams;
     }
     
-    @JsonIgnore
-    public VideoStream getVideoStream() {
-        // Check parameters are available
-        if(videoCodec == null || videoWidth == null || videoHeight == null) { 
-            return null;
-        }
-        
-        return new VideoStream(videoCodec, videoWidth, videoHeight);
+    public void setVideoStreams(List<VideoStream> videoStreams) {
+        this.videoStreams = videoStreams;
     }
     
-    @JsonIgnore
     public List<AudioStream> getAudioStreams() {
-        // Check parameters are available
-        if(audioCodec == null || audioSampleRate == null || audioConfiguration == null) { 
-            return null;
-        }
-        
-        String[] audioNames = null;
-        String[] audioLanguages = null;
-        String[] audioCodecs;
-        String[] audioSampleRates;
-        String[] audioConfigurations;
-        
-        // Retrieve parameters as arrays
-        if(audioLanguage != null) {
-             audioLanguages = getAudioLanguage().split(",");
-        }
-        
-        if(audioName != null) {
-            audioNames = getAudioName().split(",");
-        }
-        
-        audioCodecs = getAudioCodec().split(",");
-        audioSampleRates = getAudioSampleRate().split(",");
-        audioConfigurations = getAudioConfiguration().split(",");
-        
-        // Get the number of audio streams
-        Integer streams = audioCodecs.length;
-        
-        // Check parameters are present for all streams
-        if(audioSampleRates.length != streams || audioConfigurations.length != streams) {
-            return null;
-        }
-        
-        if(audioLanguages != null && audioLanguages.length != streams) {
-            return null;
-        }
-        
-        if(audioNames != null && audioNames.length != streams) {
-            return null;
-        }
-        
-        // Accumalate list of audio streams
-        int count = 0;
-        List<AudioStream> audioStreams = new ArrayList<>();
-        
-        while(count < streams) {
-            audioStreams.add(new AudioStream(count, audioNames == null ? "null" : audioNames[count], audioLanguages == null ? "null" : audioLanguages[count], audioCodecs[count], Integer.parseInt(audioSampleRates[count]), audioConfigurations[count]));
-            count ++;
-        }
-        
         return audioStreams;
     }
     
-    @JsonIgnore
+    public void setAudioStreams(List<AudioStream> audioStreams) {
+        this.audioStreams = audioStreams;
+    }
+    
     public List<SubtitleStream> getSubtitleStreams() {
-        // Check parameters are available
-        if(subtitleLanguage == null || subtitleFormat == null || subtitleForced == null) { 
-            return null;
-        }
-        
-        String[] subtitleNames = null;
-        String[] subtitleLanguages;
-        String[] subtitleFormats;
-        String[] subtitleForcedFlags;
-        
-        // Retrieve parameters as arrays
-        if(subtitleName != null) {
-            subtitleNames = getSubtitleName().split(",");
-        }
-        
-        subtitleLanguages = getSubtitleLanguage().split(",");
-        subtitleFormats = getSubtitleFormat().split(",");
-        subtitleForcedFlags = getSubtitleForced().split(",");
-        
-        // Get the number of subtitle streams
-        Integer streams = subtitleLanguages.length;
-        
-        // Check parameters are present for all streams
-        if(subtitleFormats.length != streams || subtitleForcedFlags.length != streams) {
-            return null;
-        }
-        
-        if(subtitleNames != null && subtitleNames.length != streams) {
-            return null;
-        }
-        
-        // Accumalate list of subtitle streams
-        int count = 0;
-        List<SubtitleStream> subtitleStreams = new ArrayList<>();
-        
-        while(count < streams) {
-            subtitleStreams.add(new SubtitleStream(count, subtitleNames == null ? "null" : subtitleNames[count], subtitleLanguages[count], subtitleFormats[count], Boolean.parseBoolean(subtitleForcedFlags[count])));
-            count ++;
-        }
-        
         return subtitleStreams;
     }
     
-    public static class VideoStream {
-        private final String codec;
-        private final short width, height;
+    public void setSubtitleStreams(List<SubtitleStream> subtitleStreams) {
+        this.subtitleStreams = subtitleStreams;
+    }
+    
+    public static class Stream {
+        UUID mediaElementId;
+        Integer streamId;
+        String title, codec, language;
+        Boolean isDefault, isForced;
         
-        public VideoStream(String codec, short width, short height) {
-            this.codec = codec;
-            this.width = width;
-            this.height = height;
+        public Stream() {};
+        
+        public UUID getMediaElementId() {
+            return mediaElementId;
         }
-
+        
+        public void setMediaElementId(UUID mediaElementId) {
+            this.mediaElementId = mediaElementId;
+        }
+        
+        public Integer getStreamId() {
+            return streamId;
+        }
+        
+        public void setStreamId(Integer streamId) {
+            this.streamId = streamId;
+        }
+        
+        public String getTitle() {
+            return title;
+        }
+        
+        public void setTitle(String title) {
+            this.title = title;
+        }
+        
         public String getCodec() {
             return codec;
         }
         
-        public short getWidth() {
+        public void setCodec(String codec) {
+            this.codec = codec;
+        }
+        
+        public String getLanguage() {
+            return language;
+        }
+        
+        public void setLanguage(String language) {
+            this.language = language;
+        }
+        
+        public Boolean isDefault() {
+            return isDefault;
+        }
+        
+        public void setDefault(Boolean isDefault) {
+            this.isDefault = isDefault;
+        }
+        
+        public Boolean isForced() {
+            return isForced;
+        }
+        
+        public void setForced(Boolean isForced) {
+            this.isForced = isForced;
+        }
+    }
+    
+    public static class VideoStream extends Stream {
+        private String profile, pixelFormat, colorSpace, colorTransfer, colorPrimaries;
+        private Double fps;
+        private Integer width, height, bitrate, maxBitrate, bps;
+        private Boolean interlaced;
+        
+        public VideoStream() {};
+        
+        public VideoStream(UUID mediaElementId,
+                           Integer streamId,
+                           String title,
+                           String codec,
+                           String profile,
+                           Integer width,
+                           Integer height,
+                           String pixelFormat,
+                           String colorSpace,
+                           String colorTransfer,
+                           String colorPrimaries,
+                           Boolean interlaced,
+                           Double fps,
+                           Integer bitrate,
+                           Integer maxBitrate,
+                           Integer bps,
+                           String language,
+                           Boolean isDefault,
+                           Boolean isForced) {
+            this.mediaElementId = mediaElementId;
+            this.streamId = streamId;
+            this.title = title;
+            this.codec = codec;
+            this.profile = profile;
+            this.width = width;
+            this.height = height;
+            this.pixelFormat = pixelFormat;
+            this.colorSpace = colorSpace;
+            this.colorTransfer = colorTransfer;
+            this.colorPrimaries = colorPrimaries;
+            this.interlaced = interlaced;
+            this.fps = fps;
+            this.bitrate = bitrate;
+            this.maxBitrate = maxBitrate;
+            this.bps = bps;
+            this.language = language;
+            this.isDefault = isDefault;
+            this.isForced = isForced;
+        }
+        
+        @Override
+        public String toString() {
+            return String.format(
+                        "VideoStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s, Max Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s]",
+                        mediaElementId == null ? "N/A" : mediaElementId.toString(),
+                        streamId == null ? "N/A" : streamId.toString(),
+                        title == null ? "N/A" : title,
+                        codec == null ? "N/A" : codec,
+                        profile == null ? "N/A" : profile,
+                        width == null ? "N/A" : width.toString(),
+                        height == null ? "N/A" : height.toString(),
+                        pixelFormat == null ? "N/A" : pixelFormat,
+                        colorSpace == null ? "N/A" : colorSpace,
+                        colorTransfer == null ? "N/A" : colorTransfer,
+                        colorPrimaries == null ? "N/A" : colorPrimaries,
+                        interlaced == null ? "N/A" : interlaced.toString(),
+                        fps == null ? "N/A" : fps.toString(),
+                        bitrate == null ? "N/A" : bitrate.toString(),
+                        maxBitrate == null ? "N/A" : maxBitrate.toString(),
+                        bps == null ? "N/A" : bps.toString(),
+                        language == null ? "N/A" : language,
+                        isDefault == null ? "False" : isDefault.toString(),
+                        isForced == null ? "False" : isForced.toString());
+        }
+        
+        public String getProfile() {
+            return profile;
+        }
+        
+        public void setProfile(String profile) {
+            this.profile = profile;
+        }
+        
+        public Integer getWidth() {
             return width;
         }
         
-        public short getHeight() {
+        public void setWidth(Integer width) {
+            this.width = width;
+        }
+        
+        public Integer getHeight() {
             return height;
+        }
+        
+        public void setHeight(Integer height) {
+            this.height = height;
         }
         
         public Dimension getResolution() {
             return new Dimension(width, height);
         }
+        
+        public String getPixelFormat() {
+            return pixelFormat;
+        }
+        
+        public void setPixelFormat(String pixelFormat) {
+            this.pixelFormat = pixelFormat;
+        }
+        
+        public String getColorSpace() {
+            return colorSpace;
+        }
+        
+        public void setColorSpace(String colorSpace) {
+            this.colorSpace = colorSpace;
+        }
+        
+        public String getColorTransfer() {
+            return colorTransfer;
+        }
+        
+        public void setColorTransfer(String colorTransfer) {
+            this.colorTransfer = colorTransfer;
+        }
+        
+        public String getColorPrimaries() {
+            return colorPrimaries;
+        }
+        
+        public void setColorPrimaries(String colorPrimaries) {
+            this.colorPrimaries = colorPrimaries;
+        }
+        
+        public Boolean isInterlaced() {
+            return interlaced;
+        }
+        
+        public void setInterlaced(Boolean interlaced) {
+            this.interlaced = interlaced;
+        }
+        
+        public Double getFPS() {
+            return fps;
+        }
+        
+        public void setFPS(Double fps) {
+            this.fps = fps;
+        }
+        
+        public Integer getBitrate() {
+            return bitrate;
+        }
+        
+        public void setBitrate(Integer bitrate) {
+            this.bitrate = bitrate;
+        }
+        
+        public Integer getMaxBitrate() {
+            return maxBitrate;
+        }
+        
+        public void setMaxBitrate(Integer maxBitrate) {
+            this.maxBitrate = maxBitrate;
+        }
+        
+        public Integer getBPS() {
+            return bps;
+        }
+        
+        public void setBPS(Integer bps) {
+            this.bps = bps;
+        }
     }
     
-    public static class AudioStream {
-        private final int stream;
-        private final String name;
-        private final String language;
-        private final String codec;
-        private final int sampleRate;
-        private final String configuration;
+    public static class AudioStream extends Stream {
+        private Integer sampleRate, channels, bitrate, bps;
         
-        public AudioStream(int stream, String name, String language, String codec, int sampleRate, String configuration) {
-            this.stream = stream;
-            this.name = name;
-            this.language = language;
+        public AudioStream() {};
+        
+        public AudioStream(UUID mediaElementId,
+                           Integer streamId,
+                           String title,
+                           String codec,
+                           Integer sampleRate,
+                           Integer channels,
+                           Integer bitrate,
+                           Integer bps,
+                           String language,
+                           Boolean isDefault,
+                           Boolean isForced) {
+            
+            this.mediaElementId = mediaElementId;
+            this.streamId = streamId;
+            this.title = title;
             this.codec = codec;
             this.sampleRate = sampleRate;
-            this.configuration = configuration;
-        }
-
-        public int getStream() {
-            return stream;
-        }
-        
-        public String getName() {
-            return name;
+            this.channels = channels;
+            this.bitrate = bitrate;
+            this.bps = bps;
+            this.language = language;
+            this.isDefault = isDefault;
+            this.isForced = isForced;
         }
         
-        public String getLanguage() {
-            return language;
-        }
-
-        public String getCodec() {
-            return codec;
+        @Override
+        public String toString() {
+            return String.format(
+                        "AudioStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Sample Rate=%s, Channels=%s, Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s]",
+                        mediaElementId == null ? "N/A" : mediaElementId.toString(),
+                        streamId == null ? "N/A" : streamId.toString(),
+                        title == null ? "N/A" : title,
+                        codec == null ? "N/A" : codec,
+                        sampleRate == null ? "N/A" : sampleRate.toString(),
+                        channels == null ? "N/A" : channels.toString(),
+                        bitrate == null ? "N/A" : bitrate.toString(),
+                        bps == null ? "N/A" : bps.toString(),
+                        language == null ? "N/A" : language,
+                        isDefault == null ? "False" : isDefault.toString(),
+                        isForced == null ? "False" : isForced.toString());
         }
         
-        public int getSampleRate() {
+        public Integer getSampleRate() {
             return sampleRate;
         }
         
-        public String getConfiguration() {
-            return configuration;
-        }      
+        public void setSampleRate(Integer sampleRate) {
+            this.sampleRate = sampleRate;
+        }
+        
+        public Integer getChannels() {
+            return channels;
+        }
+        
+        public void setChannels(Integer channels) {
+            this.channels = channels;
+        }
+        
+        public Integer getBitrate() {
+            return bitrate;
+        }
+        
+        public void setBitrate(Integer bitrate) {
+            this.bitrate = bitrate;
+        }
+        
+        public Integer getBPS() {
+            return bps;
+        }
+        
+        public void setBPS(Integer bps) {
+            this.bps = bps;
+        }
     }
     
-    public static class SubtitleStream {
-        private final int stream;
-        private final String name;
-        private final String language;
-        private final String format;
-        private final boolean forced;
+    public static class SubtitleStream extends Stream {
         
-        public SubtitleStream(int stream, String name, String language, String format, boolean forced) {
-            this.stream = stream;
-            this.name = name;
+        public SubtitleStream() {};
+        
+        public SubtitleStream(UUID mediaElementId,
+                              Integer streamId,
+                              String title,
+                              String codec,
+                              String language,
+                              Boolean isDefault,
+                              Boolean isForced) {
+            this.mediaElementId = mediaElementId;
+            this.streamId = streamId;
+            this.title = title;
+            this.codec = codec;
             this.language = language;
-            this.format = format;
-            this.forced = forced;
-        }
-
-        public int getStream() {
-            return stream;
+            this.isDefault = isDefault;
+            this.isForced = isForced;
         }
         
-        public String getName() {
-            return name;
+        @Override
+        public String toString() {
+            return String.format(
+                        "SubtitleStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Language=%s, Default=%s, Forced=%s]",
+                        mediaElementId == null ? "N/A" : mediaElementId.toString(),
+                        streamId == null ? "N/A" : streamId.toString(),
+                        title == null ? "N/A" : title,
+                        codec == null ? "N/A" : codec,
+                        language == null ? "N/A" : language,
+                        isDefault == null ? "False" : isDefault.toString(),
+                        isForced == null ? "False" : isForced.toString());
         }
-        
-        public String getLanguage() {
-            return language;
-        }
-
-        public String getFormat() {
-            return format;
-        }
-        
-        public boolean isForced() {
-            return forced;
-        }       
     }
 
     public static class MediaElementType {

@@ -30,6 +30,7 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
@@ -270,22 +271,23 @@ public class AdaptiveStreamingService {
             if(profile.getAudioTranscodes() != null) {
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
-                    AudioStream stream = mediaElement.getAudioStreams().get(a);
+                    List<AudioStream> audioStreams = mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID());
+                    AudioStream stream = audioStreams.get(a);
                     String selected = "NO";
                     
-                    if(profile.getAudioTrack() != null) {
-                        if(profile.getAudioTrack().equals(a)) {
+                    if(profile.getAudioStream() != null) {
+                        if(profile.getAudioStream().equals(a)) {
                             selected = "YES";
                         }
                     }
 
                     if(transcode.getCodec().equals("copy")) {
-                        audio = TranscodeUtils.getIsoSpecForAudioCodec(mediaElement.getAudioStreams().get(a).getCodec());
+                        audio = TranscodeUtils.getIsoSpecForAudioCodec(audioStreams.get(a).getCodec());
                     } else {
                         audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
                 }                
             }
             
@@ -311,6 +313,9 @@ public class AdaptiveStreamingService {
             */
             
             for(int i = 0; i < profile.getVideoTranscodes().length; i++) {
+                // Get video streams
+                List<VideoStream> videoStreams = mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID());
+                VideoStream videoStream = videoStreams.get(0);
                 // Determine bitrate
                 int bitrate = profile.getMediaElement().getBitrate();
                 
@@ -322,7 +327,7 @@ public class AdaptiveStreamingService {
                 Dimension resolution = profile.getVideoTranscodes()[i].getResolution();
                 
                 if(resolution == null) {
-                    resolution = new Dimension(profile.getMediaElement().getVideoWidth(), profile.getMediaElement().getVideoHeight());
+                    resolution = videoStream.getResolution();
                 }
                 
                 StringBuilder builder = new StringBuilder();
@@ -394,9 +399,9 @@ public class AdaptiveStreamingService {
         }   
 
         // Determine the duration of the final segment.
-        Integer remainder = mediaElement.getDuration() % HLS_SEGMENT_DURATION;
+        Double remainder = mediaElement.getDuration() % HLS_SEGMENT_DURATION;
         if (remainder > 0) {
-            int i = mediaElement.getDuration() / HLS_SEGMENT_DURATION;
+            long i = Math.round(mediaElement.getDuration() / HLS_SEGMENT_DURATION);
             
             playlist.add("#EXTINF:" + remainder.floatValue() + ",");
             playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);

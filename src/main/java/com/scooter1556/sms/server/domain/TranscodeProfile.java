@@ -16,7 +16,7 @@ public class TranscodeProfile {
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
-    private Integer audioTrack, subtitleTrack;
+    private Integer videoStream, audioStream, subtitleStream;
     private Integer offset = 0;
     private boolean directPlay = false;
     private boolean active = true;
@@ -29,7 +29,7 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Audio Track=%s, Subtitle Track=%s, Offset=%s, Direct Play=%s",
+        return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Direct Play=%s",
                 id == null ? "null" : id.toString(),
                 String.valueOf(type),
                 element == null ? "null" : element.getID().toString(),
@@ -45,8 +45,9 @@ public class TranscodeProfile {
                 videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
                 audioTranscodes == null ? "null" : Arrays.toString(audioTranscodes),
                 subtitleTranscodes == null ? "null" : Arrays.toString(subtitleTranscodes),
-                audioTrack == null ? "null" : audioTrack.toString(),
-                subtitleTrack == null ? "null" : subtitleTrack.toString(),
+                videoStream == null ? "null" : videoStream.toString(),
+                audioStream == null ? "null" : audioStream.toString(),
+                subtitleStream == null ? "null" : subtitleStream.toString(),
                 offset == null ? "null" : offset.toString(),
                 String.valueOf(directPlay));
     }
@@ -182,23 +183,32 @@ public class TranscodeProfile {
     public void setQuality(int quality) {
         this.quality = quality;
     }
+    
+    @JsonIgnore
+    public Integer getVideStream() {
+        return videoStream;
+    }
+
+    public void setVideoStream(Integer videoStream) {
+        this.videoStream = videoStream;
+    }
 
     @JsonIgnore
-    public Integer getAudioTrack() {
-        return audioTrack;
+    public Integer getAudioStream() {
+        return audioStream;
     }
 
-    public void setAudioTrack(Integer audioTrack) {
-        this.audioTrack = audioTrack;
+    public void setAudioStream(Integer audioStream) {
+        this.audioStream = audioStream;
     }
 
     @JsonIgnore
-    public Integer getSubtitleTrack() {
-        return subtitleTrack;
+    public Integer getSubtitleStream() {
+        return subtitleStream;
     }
 
-    public void setSubtitleTrack(Integer subtitleTrack) {
-        this.subtitleTrack = subtitleTrack;
+    public void setSubtitleStream(Integer subtitleStream) {
+        this.subtitleStream = subtitleStream;
     }
 
     @JsonIgnore

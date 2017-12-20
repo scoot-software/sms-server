@@ -118,13 +118,13 @@ public class PlaylistController {
         }
         
         // Remove duplicate entries
-        LinkedHashSet<Long> tmp = new LinkedHashSet<>();
+        LinkedHashSet<UUID> tmp = new LinkedHashSet<>();
         tmp.addAll(content.getMedia());
         content.getMedia().clear();
         content.getMedia().addAll(tmp);
         
         // Check media elements
-        for(Long mediaElement : content.getMedia()) {
+        for(UUID mediaElement : content.getMedia()) {
             if(mediaDao.getMediaElementByID(mediaElement) == null) {
                 content.getMedia().remove(mediaElement);
             }
