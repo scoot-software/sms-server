@@ -76,6 +76,7 @@ public final class SettingsDatabase extends Database {
     
         if(newVersion == 2) {
             getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaFolder");
+            create();
         }
     }
     

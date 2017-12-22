@@ -413,6 +413,7 @@ public class MediaElement implements Serializable {
         this.collection = collection;
     }
     
+    @JsonIgnore
     public List<VideoStream> getVideoStreams() {
         return videoStreams;
     }
@@ -421,6 +422,7 @@ public class MediaElement implements Serializable {
         this.videoStreams = videoStreams;
     }
     
+    @JsonIgnore
     public List<AudioStream> getAudioStreams() {
         return audioStreams;
     }
@@ -429,6 +431,7 @@ public class MediaElement implements Serializable {
         this.audioStreams = audioStreams;
     }
     
+    @JsonIgnore
     public List<SubtitleStream> getSubtitleStreams() {
         return subtitleStreams;
     }

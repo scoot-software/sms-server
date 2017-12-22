@@ -215,7 +215,7 @@ public class StreamController {
                     isLocal = remote.toString().contains(ip);
                 }
             }
-        } catch (UnknownHostException | SocketException ex) {
+        } catch (SocketException | UnknownHostException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
         }
         
@@ -225,6 +225,26 @@ public class StreamController {
         } else if(directPlay) {
             directPlay = isLocal;
         }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG,
+                                             CLASS_NAME, 
+                                             "Initialise Stream: [" 
+                                                     +"Session=" + session 
+                                                     + ", Job ID=" + id 
+                                                     + ", Client=" + client 
+                                                     + ", Files=" + files 
+                                                     + ", Codecs=" + codecs 
+                                                     +  ", Mch Codecs=" + mchCodecs 
+                                                     + ", Format=" + format 
+                                                     + ", Quality=" + quality 
+                                                     + ", Max Sample Rate=" + maxSampleRate 
+                                                     + ", Max Bit Rate=" + maxBitRate
+                                                     + ", Video Stream=" + videoStream
+                                                     + ", Audio Stream=" + audioStream
+                                                     + ", Subtitle Stream=" + subtitleStream
+                                                     + ", Direct Play=" + directPlay
+                                                     + ", Update Stats=" + update,
+                                             null);
         
         //
         // Create transcode profile for job

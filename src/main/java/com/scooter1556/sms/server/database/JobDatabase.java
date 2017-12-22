@@ -76,6 +76,7 @@ public final class JobDatabase extends Database {
         
         if(newVersion == 2) {
             getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME);
+            create();
         }
     }
     
