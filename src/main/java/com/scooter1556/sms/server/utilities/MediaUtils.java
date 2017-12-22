@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.utilities;
 
+import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
@@ -107,6 +108,21 @@ public class MediaUtils {
         }
         
         return null;
+    }
+    
+    // Returns a max bitrate for a given media element
+    public static int getMaxBitrate(VideoStream stream, int defaultValue) {
+        // Return max bitrate if it is available
+        if(stream.getMaxBitrate() != null && stream.getMaxBitrate() > 0) {
+            return stream.getMaxBitrate();
+        }
+        
+        // Return double the average bitrate by default
+        if(stream.getBitrate() != null && stream.getBitrate() > 0) {
+            return stream.getBitrate() * 2;
+        }
+        
+        return defaultValue * 2;
     }
     
 }

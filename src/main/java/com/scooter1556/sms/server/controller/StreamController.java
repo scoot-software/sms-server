@@ -315,6 +315,13 @@ public class StreamController {
         }
         
         profile.setDirectPlayEnabled(directPlay);
+        
+        // Populate max bitrate
+        if(maxBitRate != null) {
+            profile.setMaxBitRate(maxBitRate);
+        } else if(!isLocal) {
+            profile.setMaxBitRate(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[quality]);
+        }
                 
         // Test if we can stream the file directly without transcoding
         if(profile.getFiles() != null) {
@@ -330,11 +337,6 @@ public class StreamController {
                     profile.setMimeType(TranscodeUtils.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
                 }
             }
-        }
-        
-        // Populate max bitrate after determining if direct streaming is possible
-        if(maxBitRate != null) {
-            profile.setMaxBitRate(maxBitRate);
         }
         
         // If necessary process all streams ready for streaming and/or transcoding

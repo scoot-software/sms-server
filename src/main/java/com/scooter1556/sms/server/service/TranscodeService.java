@@ -38,6 +38,7 @@ import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.parser.TranscoderParser;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.File;
@@ -600,10 +601,8 @@ public class TranscodeService {
         }
         
         // Check maximum bitrate
-        // We are comparing against the original streams average bitrate 
-        // so to allow for this we unscientifically half the max bitrate for comparison
         if(profile.getMaxBitRate() != null) {
-            if(profile.getMediaElement().getBitrate() > (profile.getMaxBitRate() * 0.5)) {
+            if(MediaUtils.getMaxBitrate(stream, profile.getMediaElement().getBitrate()) > profile.getMaxBitRate()) {
                 return true;
             }
         }
