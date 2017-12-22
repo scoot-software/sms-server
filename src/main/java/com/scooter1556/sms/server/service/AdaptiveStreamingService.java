@@ -275,12 +275,10 @@ public class AdaptiveStreamingService {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
                     List<AudioStream> audioStreams = mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID());
                     AudioStream stream = audioStreams.get(a);
-                    String selected = "NO";
+                    String isDefault = "NO";
                     
-                    if(profile.getAudioStream() != null) {
-                        if(profile.getAudioStream().equals(a)) {
-                            selected = "YES";
-                        }
+                    if(stream.isDefault()) {
+                        isDefault = "YES";
                     }
 
                     if(transcode.getCodec().equals("copy")) {
@@ -289,7 +287,7 @@ public class AdaptiveStreamingService {
                         audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
                 }                
             }
             
