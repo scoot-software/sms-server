@@ -125,7 +125,7 @@ public class TranscodeService {
     
     public String[][] getTranscodeCommand(TranscodeProfile profile) {
         ArrayList<TranscodeCommand> commands = new ArrayList<>();
-        List<HardwareAccelerator> accelerators = transcoder.getHardwareAcceleratorOptions(profile.getType() == TranscodeProfile.StreamType.REMOTE);
+        List<HardwareAccelerator> accelerators = transcoder.getHardwareAcceleratorOptions(profile.getType() == TranscodeProfile.StreamType.REMOTE || profile.getMaxBitRate() != null);
         
         // Determine number of potential transcode commands to generate
         int transcodeCommands = 1; 
@@ -763,11 +763,7 @@ public class TranscodeService {
             }
             
             // Test if transcoding is necessary
-            boolean transcodeRequired = profile.getType() != TranscodeProfile.StreamType.DIRECT;
-
-            if(!transcodeRequired) {
-                transcodeRequired = isTranscodeRequired(profile, stream);
-            }
+            boolean transcodeRequired = transcodeRequired = isTranscodeRequired(profile, stream);
 
             if(!transcodeRequired) {
                 transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
@@ -808,7 +804,7 @@ public class TranscodeService {
                     }
 
                     // Get suitable resolution (use native resolution if direct play is enabled)
-                    if(profile.getType() != TranscodeProfile.StreamType.DIRECT) {
+                    if(!profile.isDirectPlayEnabled()) {
                         resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
                     }
                     
