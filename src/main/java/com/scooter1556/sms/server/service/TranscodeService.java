@@ -125,12 +125,13 @@ public class TranscodeService {
     
     public String[][] getTranscodeCommand(TranscodeProfile profile) {
         ArrayList<TranscodeCommand> commands = new ArrayList<>();
+        List<HardwareAccelerator> accelerators = transcoder.getHardwareAcceleratorOptions(profile.getType() == TranscodeProfile.StreamType.REMOTE);
         
         // Determine number of potential transcode commands to generate
         int transcodeCommands = 1; 
         
         if(profile.getVideoTranscodes() != null) {
-            transcodeCommands += transcoder.getHardwareAccelerators().length;
+            transcodeCommands += accelerators.size();
         }
         
         for(int i = 0; i < transcodeCommands; i++) {
@@ -150,11 +151,10 @@ public class TranscodeService {
             if(profile.getVideoTranscodes() != null && profile.getVideoStream() != null) {
                 HardwareAccelerator hardwareAccelerator = null;
                 boolean hardcodedSubtitles = false;
-                boolean hardwareEncoding = !hardcodedSubtitles && profile.getMaxBitRate() == null;
             
                 // Software or hardware based transcoding
-                if(transcoder.getHardwareAccelerators().length > i) {
-                    hardwareAccelerator = transcoder.getHardwareAccelerators()[i];
+                if(accelerators.size() > i) {
+                    hardwareAccelerator = accelerators.get(i);
                 }
                 
                 // Check for hardcoded subtitles
@@ -163,6 +163,11 @@ public class TranscodeService {
                     
                     if(transcode != null) {
                         hardcodedSubtitles = transcode.isHardcoded();
+                        
+                        // Don't decode in hardware if burning in subtitles
+                        if(hardwareAccelerator != null) {
+                            hardwareAccelerator.setDecodingSupported(!hardcodedSubtitles);
+                        }
                     }
                 }
                 
@@ -184,7 +189,7 @@ public class TranscodeService {
                         commands.get(i).getFilters().get(v).add("[0:" + profile.getSubtitleStream() + "]overlay");
                     }
                     
-                    if(hardwareAccelerator == null) {
+                    if(hardwareAccelerator == null || !hardwareAccelerator.isEncodingSupported()) {
                         commands.get(i).getFilters().get(v).addAll(getSoftwareVideoEncodingFilters(vTranscodes.get(v).getResolution()));
                     } else {
                         commands.get(i).getFilters().get(v).addAll(getHardwareVideoEncodingFilters(vTranscodes.get(v).getResolution(), hardwareAccelerator));
@@ -193,7 +198,7 @@ public class TranscodeService {
                 
                 // Hardware decoding
                 if(hardwareAccelerator != null) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, hardwareEncoding));
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator));
                 }
                 
                 // Input media file
@@ -209,22 +214,24 @@ public class TranscodeService {
                 commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getFilters()));
                 
                 for(int v = 0; v < vTranscodes.size(); v++) {
+                    VideoTranscode transcode = vTranscodes.get(v);
+                    
                     // Stream copy
-                    if(vTranscodes.get(v).getCodec().equals("copy")) {
+                    if(transcode.getCodec().equals("copy")) {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
-                        commands.get(i).getCommands().add("0:" + vTranscodes.get(v).getId());
+                        commands.get(i).getCommands().add("0:" + transcode.getId());
                         
                         // Codec
-                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(vTranscodes.get(v).getCodec(), profile.getMaxBitRate()));
+                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(transcode.getCodec(), transcode.getMaxBitrate()));
                     } else {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        if(hardwareAccelerator == null || !hardwareEncoding) {
-                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(vTranscodes.get(v).getCodec(), profile.getMaxBitRate()));
+                        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodingSupported()) {
+                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(transcode.getCodec(), transcode.getMaxBitrate()));
                         } else {
                             commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator));
                         }
@@ -324,25 +331,28 @@ public class TranscodeService {
         return commands;
     }
     
-    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, boolean decode) {
+    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator) {
         Collection<String> commands = new LinkedList<>();
 
         switch(hardwareAccelerator.getName()) {
             case "vaapi":
-                if(decode) {
+                if(hardwareAccelerator.isDecodingSupported()) {
                     commands.add("-hwaccel");
                     commands.add(hardwareAccelerator.getName());
+                 
                     commands.add("-hwaccel_output_format");
                     commands.add("vaapi");
                 }
                 
-                commands.add("-vaapi_device");
-                commands.add(hardwareAccelerator.getDevice().toString());
+                if(hardwareAccelerator.isDecodingSupported() || hardwareAccelerator.isEncodingSupported()) {
+                    commands.add("-vaapi_device");
+                    commands.add(hardwareAccelerator.getDevice().toString());
+                }
                 
                 break;
 
             case "cuvid":
-                if(decode) {
+                if(hardwareAccelerator.isDecodingSupported()) {
                     commands.add("-hwaccel");
                     commands.add(hardwareAccelerator.getName());
                 }
@@ -746,14 +756,14 @@ public class TranscodeService {
             }
             
             // Determine number of streams to transcode
-            if(profile.isDirectPlayEnabled() || maxQuality == 0) {
+            if(profile.getType() < TranscodeProfile.StreamType.REMOTE || maxQuality == 0) {
                 streamCount = 1;
             } else if(streamCount > profile.getQuality()) {
                 streamCount = maxQuality;
             }
             
             // Test if transcoding is necessary
-            boolean transcodeRequired = streamCount > 1;
+            boolean transcodeRequired = profile.getType() != TranscodeProfile.StreamType.DIRECT;
 
             if(!transcodeRequired) {
                 transcodeRequired = isTranscodeRequired(profile, stream);
@@ -776,6 +786,7 @@ public class TranscodeService {
                 String codec = null;
                 Dimension resolution = null;
                 Integer quality = maxQuality;
+                Integer maxBitrate = profile.getMaxBitRate();
 
                 if(transcodeRequired) {
                     // Determine quality for transcode
@@ -797,20 +808,24 @@ public class TranscodeService {
                     }
 
                     // Get suitable resolution (use native resolution if direct play is enabled)
-                    if(!profile.isDirectPlayEnabled()) {
+                    if(profile.getType() != TranscodeProfile.StreamType.DIRECT) {
                         resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
+                    }
+                    
+                    // For remote streams set our default max bitrate
+                    if(profile.getType() == TranscodeProfile.StreamType.REMOTE) {
+                        maxBitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[quality];
                     }
                 } else {
                     codec = "copy";
                     quality = null;
+                    maxBitrate = null;
                 }
 
                 // Add video transcode to array
-                transcodes.add(new VideoTranscode(stream.getStreamId(), codec, resolution, quality));
+                transcodes.add(new VideoTranscode(stream.getStreamId(), codec, resolution, quality, maxBitrate));
             }
         }
-        
-        
         
         // Update profile with video transcode properties
         profile.setVideoTranscodes(transcodes.toArray(new VideoTranscode[transcodes.size()]));

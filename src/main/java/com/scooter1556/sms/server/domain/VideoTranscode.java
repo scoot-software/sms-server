@@ -6,25 +6,26 @@ import java.awt.Dimension;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class VideoTranscode {
-    private Integer id;
+    private Integer id, quality, maxBitrate;
     private String codec;
     private Dimension resolution;
-    private Integer quality;
 
-    public VideoTranscode(Integer id, String codec, Dimension resolution, Integer quality) {
+    public VideoTranscode(Integer id, String codec, Dimension resolution, Integer quality, Integer maxBitrate) {
         this.id = id;
         this.codec = codec;
         this.resolution = resolution;
         this.quality = quality;
+        this.maxBitrate = maxBitrate;
     }
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Codec=%s, Resolution=%s, Quality=%s}",
+        return String.format("{ID=%s, Codec=%s, Resolution=%s, Quality=%s, Max Bitrate=%s}",
                 id == null ? "null" : id.toString(),
                 codec == null ? "null" : codec,
                 resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height),
-                quality == null ? "null" : quality.toString());
+                quality == null ? "null" : quality.toString(),
+                maxBitrate == null ? "null" : maxBitrate);
     }
     
     public Integer getId() {
@@ -58,6 +59,14 @@ public class VideoTranscode {
 
     public void setQuality(int quality) {
         this.quality = quality;
+    }
+    
+    public Integer getMaxBitrate() {
+        return this.maxBitrate;
+    }
+
+    public void setMaxBitrate(int maxBitrate) {
+        this.maxBitrate = maxBitrate;
     }
     
     public static class VideoQuality {
