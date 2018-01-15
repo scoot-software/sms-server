@@ -28,6 +28,7 @@ import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.Job;
+import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.User;
@@ -415,6 +416,40 @@ public class AdminController {
         scannerService.startPlaylistScanning(playlists);
         
         return new ResponseEntity<>("Playlist scanning started.", HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/deep/scan", method=RequestMethod.GET)
+    public ResponseEntity<String> deepScan() {        
+        // Check a scanning process is not already active
+        if (scannerService.isScanning() || scannerService.isDeepScanning()) {
+            return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
+        }
+        
+        // List of streams to scan
+        List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
+        
+        // Check we have video streams to scan
+        if(streams.isEmpty()) {
+            return new ResponseEntity<>("No streams to scan for this request.", HttpStatus.NOT_FOUND);
+        }
+        
+        // Start scanning playlists
+        scannerService.startDeepScan(streams);
+        
+        return new ResponseEntity<>("Deep scanning started.", HttpStatus.OK);
+    }
+    
+    @RequestMapping(value="/deep/scan/stop", method=RequestMethod.GET)
+    @ResponseStatus(HttpStatus.OK)
+    public void deepScanStop()
+    {   
+        scannerService.stopDeepScan();
+    }
+    
+    @RequestMapping(value="/deep/scan/count", method=RequestMethod.GET)
+    public ResponseEntity<Long> getDeepScanCount()
+    {   
+        return new ResponseEntity<>(scannerService.getDeepScanCount(), HttpStatus.OK);
     }
     
     //

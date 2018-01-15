@@ -32,9 +32,9 @@ import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.MediaFolder;
-import com.scooter1556.sms.server.domain.MediaFolder.ContentType;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.service.LogService.Level;
+import com.scooter1556.sms.server.service.parser.FrameParser;
 import com.scooter1556.sms.server.service.parser.MetadataParser;
 import com.scooter1556.sms.server.service.parser.NFOParser;
 import com.scooter1556.sms.server.service.parser.NFOParser.NFOData;
@@ -64,12 +64,13 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FilenameUtils;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.stereotype.Service;
 
 @Service
-public class ScannerService {
+public class ScannerService implements DisposableBean {
 
     private static final String CLASS_NAME = "MediaScannerService";
 
@@ -86,6 +87,9 @@ public class ScannerService {
     private NFOParser nfoParser;
     
     @Autowired
+    private FrameParser frameParser;
+    
+    @Autowired
     private PlaylistService playlistService;
 
     private static final String[] INFO_FILE_TYPES = {"nfo"};
@@ -93,10 +97,23 @@ public class ScannerService {
 
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
-    private long total = 0;
+    private long mTotal = 0, dTotal = 0;
     
     // Media scanning thread pool
     ExecutorService scanningThreads = null;
+    
+    // Deep scan executor
+    ExecutorService deepScanExecutor = null;
+    
+    // End scanning jobs on application exit
+    @Override
+    public void destroy() {
+        if(isScanning()) {
+            scanningThreads.shutdownNow();
+        }
+        
+        stopDeepScan();
+    }
 
     //
     // Returns whether media folders are currently being scanned.
@@ -110,12 +127,30 @@ public class ScannerService {
         // Check if scanning threads have terminated
         return !scanningThreads.isTerminated();
     }
+    
+    //
+    // Returns whether deep scan is in progress.
+    //
+    public synchronized boolean isDeepScanning() {
+        if(deepScanExecutor == null) {
+            return false;
+        }
+        
+        return !deepScanExecutor.isTerminated();
+    }
 
     //
     // Returns the number of files scanned so far.
     //
     public long getScanCount() {
-        return total;
+        return mTotal;
+    }
+    
+    //
+    // Returns the number of streams scanned so far.
+    //
+    public long getDeepScanCount() {
+        return dTotal;
     }
 
     //
@@ -127,8 +162,11 @@ public class ScannerService {
             return;
         }
         
+        // Stop deep scanning if in progress
+        stopDeepScan();
+        
         // Reset scan count
-        total = 0;
+        mTotal = 0;
         
         // Create media scanning threads
         scanningThreads = Executors.newFixedThreadPool(folders.size());
@@ -171,6 +209,55 @@ public class ScannerService {
 
         // Shutdown thread pool so no further threads can be added
         scanningThreads.shutdown();
+    }
+    
+    //
+    // Performs a deep scan of media streams
+    //
+    public synchronized void startDeepScan(final List<VideoStream> streams) {
+        // Check if media is already being scanned
+        if (isScanning()) {
+            return;
+        }
+        
+        // Create log file
+        Timestamp scanTime = new Timestamp(new Date().getTime());
+        final String log = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";
+        
+        // Reset counter
+        dTotal = 0;
+        
+        // Create media scanning threads
+        deepScanExecutor = Executors.newSingleThreadExecutor();
+
+        deepScanExecutor.submit(new Runnable() {
+            @Override
+            public void run() {
+                LogUtils.writeToLog(log, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
+                
+                for(VideoStream stream : streams) {
+                    dTotal ++;
+                    
+                    LogUtils.writeToLog(log, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+
+                    VideoStream update = frameParser.parse(stream);
+                    
+                    if(update != null) {
+                        mediaDao.updateVideoStream(update);
+                        LogUtils.writeToLog(log, stream.toString(), Level.DEBUG);
+                    }
+                    
+                    LogUtils.writeToLog(log, "Finished Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                }
+            }
+        });
+    }
+    
+    public void stopDeepScan() {
+        if(deepScanExecutor != null && !deepScanExecutor.isTerminated()) {
+            deepScanExecutor.shutdownNow();
+            frameParser.stop();
+        }
     }
     
     private void scanPlaylist(Playlist playlist) {
@@ -381,7 +468,7 @@ public class ScannerService {
                 LogUtils.writeToLog(log, "Parsing file " + file.toString(), Level.DEBUG);
                 
                 // Update statistics
-                total++;
+                mTotal++;
                 files++;
                 
                 // Check if media file already has an associated media element
@@ -415,7 +502,7 @@ public class ScannerService {
                 LogUtils.writeToLog(log, "Parsing playlist " + file.toString(), Level.DEBUG);
                 
                 // Update statistics
-                total++;
+                mTotal++;
                 files++;
                 playlists++;
                 
@@ -449,7 +536,7 @@ public class ScannerService {
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
             // Update statistics
-            total++;
+            mTotal++;
             folders++;
             
             MediaElement directory = null;

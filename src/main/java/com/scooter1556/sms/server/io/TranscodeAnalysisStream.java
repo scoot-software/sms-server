@@ -23,7 +23,6 @@
  */
 package com.scooter1556.sms.server.io;
 
-import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.utilities.LogUtils;

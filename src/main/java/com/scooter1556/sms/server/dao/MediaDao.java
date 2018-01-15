@@ -605,6 +605,38 @@ public class MediaDao {
         return true;
     }
     
+    public boolean updateVideoStream(VideoStream stream) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("UPDATE VideoStream SET Title=?, Codec=?, Profile=?, Width=?, Height=?, PixelFormat=?, ColorSpace=?, ColorTransfer=?, ColorPrimaries=?, Interlaced=?, FPS=?, Bitrate=?, MaxBitrate=?, BPS=?, Language=?, Default=?, Forced=? WHERE MEID=? AND SID=?",
+                    new Object[]{stream.getTitle(),
+                                 stream.getCodec(),
+                                 stream.getProfile(),
+                                 stream.getWidth(),
+                                 stream.getHeight(),
+                                 stream.getPixelFormat(),
+                                 stream.getColorSpace(),
+                                 stream.getColorTransfer(),
+                                 stream.getColorPrimaries(),
+                                 stream.isInterlaced(),
+                                 stream.getFPS(),
+                                 stream.getBitrate(),
+                                 stream.getMaxBitrate(),
+                                 stream.getBPS(),
+                                 stream.getLanguage(),
+                                 stream.isDefault(),
+                                 stream.isForced(),
+                                 stream.getMediaElementId(),
+                                 stream.getStreamId(),
+                    });
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+
+        return true;
+    }
+    
     public boolean removeAllVideoStreams() {
         try {
             mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream");
@@ -625,6 +657,17 @@ public class MediaDao {
         try {
             List<VideoStream> videoStreams;
             videoStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM VideoStream WHERE MEID=?", new VideoStreamMapper(), new Object[] {mediaElementId});
+            
+            return videoStreams;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public List<VideoStream> getIncompleteVideoStreams() {
+        try {
+            List<VideoStream> videoStreams;
+            videoStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM VideoStream WHERE MaxBitrate=0", new VideoStreamMapper());
             
             return videoStreams;
         } catch (DataAccessException e) {

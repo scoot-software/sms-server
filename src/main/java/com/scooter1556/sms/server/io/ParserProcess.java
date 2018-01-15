@@ -23,19 +23,58 @@
  */
 package com.scooter1556.sms.server.io;
 
-import java.util.UUID;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
-public class SMSProcess {
-    UUID id;
+public class ParserProcess {
+    
+    private static final String CLASS_NAME = "ParserProcess";
+    
+    private static final int BUFFER_SIZE = 4096;  
+    
     Process process;
-    String[][] commands;
-    long bytesTransferred = 0;
+    String command[];
     boolean ended = false;
+    List<String> output;
+            
+    public ParserProcess() {};
     
-    public SMSProcess() {};
+    public ParserProcess(String[] command) {
+        this.command = command;
+    }
     
-    public void start() throws Exception {}
+    public void start() {
+        try {
+            // Start process
+            ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
 
+            process = processBuilder.start();
+            
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                output = new ArrayList<>();
+                String line;
+                while((line = reader.readLine()) != null) {
+                    line = line.trim();
+
+                    if (line.length() > 0) {
+                        output.add(line);
+                    }
+                }
+            } finally {
+                // Close streams
+                process.getInputStream().close();
+                ended = true;
+            }
+        } catch (IOException ex) {
+            if(process != null) {
+                process.destroy();
+            }
+        }
+    }
+    
     public void end()
     {
         if(process != null) {
@@ -45,32 +84,8 @@ public class SMSProcess {
         ended = true;
     }
     
-    public UUID getId()  {
-        return id;
-    }
-    
-    public void setId(UUID id) {
-        this.id = id;
-    }
-    
-    public long getBytesTransferred() {
-        return bytesTransferred;
-    }
-    
-    public void setBytesTransferred(long bytes) {
-        this.bytesTransferred = bytes;
-    }
-    
-    public String[][] getCommands() {
-        return this.commands;
-    }
-    
-    public void setCommands(String[][] commands) {
-        this.commands = commands;
-    }
-    
-    public boolean hasEnded() {
-        return ended;
+    public List<String> getOutput() {
+        return output;
     }
     
     public Process getProcess() {
