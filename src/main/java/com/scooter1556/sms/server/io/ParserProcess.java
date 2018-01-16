@@ -91,4 +91,8 @@ public class ParserProcess {
     public Process getProcess() {
         return process;
     }
+    
+    public boolean hasEnded() {
+        return ended;
+    }
 }

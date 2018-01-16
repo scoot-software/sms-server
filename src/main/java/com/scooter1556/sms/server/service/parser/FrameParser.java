@@ -83,6 +83,12 @@ public class FrameParser {
             // Wait for process to finish
             parserProcess.getProcess().waitFor();
             
+            // Do some checks to make sure we got some data
+            if(parserProcess == null || !parserProcess.hasEnded() || parserProcess.getOutput() == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to gather frame information for video stream!", null);
+                return stream;
+            }
+            
             // Retrieve output from process
             String[] data = parserProcess.getOutput().toArray(new String[0]);
             
@@ -106,11 +112,27 @@ public class FrameParser {
                     String durationStr = frame.asObject().getString("pkt_duration_time", "0");
                     double duration = Double.parseDouble(durationStr);
 
-                    if(size > 0) {
+                    if(size > 0 && duration > 0) {
                         int bitrate = Double.valueOf(size * 0.001 * stream.getBPS() * stream.getFPS()).intValue();
 
                         // Add to bitrate total
                         if(bitrate > 0) {
+                            // Check max bitrate
+                            // We accumulate at least 1 seconds worth of frames and compare the average bitrate
+                            // ensuring we are at a GOP boundary before processing
+                            if(intervalDuration > 1.0 && keyFrame > 0) {                            
+                                int test = intervalTotal / intervalCount;
+
+                                if(test > maxBitrate) {
+                                    maxBitrate = test;
+                                }
+                                
+                                // Reset variables
+                                intervalCount = 0;
+                                intervalDuration = 0;
+                                intervalTotal = 0;
+                            }
+
                             totalBitrate += bitrate;
                             intervalTotal += bitrate;
                             intervalDuration += duration;
@@ -118,20 +140,7 @@ public class FrameParser {
                             intervalCount++;
                         }
 
-                        // Check max bitrate
-                        // We accumulate 1 seconds worth of frames and compare the average bitrate
-                        if(intervalDuration > 1.0) {                            
-                            int test = intervalTotal / intervalCount;
-                            
-                            if(test > maxBitrate) {
-                                maxBitrate = test;
-                            }
-                            
-                            // Reset variables
-                            intervalCount = 0;
-                            intervalDuration = 0;
-                            intervalTotal = 0;
-                        }
+                        
                     }
                        
                     // Interlaced
