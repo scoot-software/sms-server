@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.util.Properties;
 import net.harawata.appdirs.AppDirs;
 import net.harawata.appdirs.AppDirsFactory;
+import org.springframework.scheduling.support.CronSequenceGenerator;
 
 public final class SettingsService {
     
@@ -44,6 +45,10 @@ public final class SettingsService {
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
     public static final String CONFIG_PARSER_PATH = "parser.path";
+    public static final String CONFIG_DEEPSCAN_SCHEDULE = "deepscan.schedule";
+    
+    // Default Values
+    public static final String DEFAULT_DEEPSCAN_SCHEDULE = "0 0 0 * * *";
     Properties config;
     
     private static final SettingsService INSTANCE = new SettingsService();
@@ -198,6 +203,11 @@ public final class SettingsService {
         if(!config.containsKey(CONFIG_PARSER_PATH)) {
             config.setProperty(CONFIG_PARSER_PATH, "");
         }
+        
+        // Deep Scan Schedule
+        if(!config.containsKey(CONFIG_DEEPSCAN_SCHEDULE)) {
+            config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, DEFAULT_DEEPSCAN_SCHEDULE);
+        }
     }
     
     private void saveConfig() {
@@ -268,6 +278,38 @@ public final class SettingsService {
         
         config.setProperty(CONFIG_PARSER_PATH, value);
         
+        saveConfig();
+    }
+    
+    public String getDeepScanSchedule() {
+        if(config == null) {
+            return null;
+        }
+        
+        String value = config.getProperty(CONFIG_PARSER_PATH);
+        
+        if(value != null && !value.isEmpty()) {
+            if(CronSequenceGenerator.isValidExpression(value)) {
+                return value;
+            } else {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, value + " is not a valid cron expression!", null);
+            }
+        }
+        
+        return DEFAULT_DEEPSCAN_SCHEDULE;
+    }
+    
+    public void setDeepScanSchedule(String value) {
+        if(config == null || value == null) {
+            return;
+        }
+        
+        if(!CronSequenceGenerator.isValidExpression(value)) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, value + " is not a valid cron expression!", null);
+            return;
+        }
+
+        config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, value);
         saveConfig();
     }
 }

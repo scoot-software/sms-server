@@ -66,10 +66,13 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import org.springframework.stereotype.Service;
 
 @Service
+@EnableScheduling
 public class ScannerService implements DisposableBean {
 
     private static final String CLASS_NAME = "MediaScannerService";
@@ -98,12 +101,15 @@ public class ScannerService implements DisposableBean {
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
     private long mTotal = 0, dTotal = 0;
-    
+        
     // Media scanning thread pool
     ExecutorService scanningThreads = null;
     
     // Deep scan executor
     ExecutorService deepScanExecutor = null;
+    
+    // Logs
+    String deepScanLog;
     
     // End scanning jobs on application exit
     @Override
@@ -113,6 +119,26 @@ public class ScannerService implements DisposableBean {
         }
         
         stopDeepScan();
+    }
+    
+    // Check for inactive jobs at midnight
+    @Scheduled(cron=SettingsService.DEFAULT_DEEPSCAN_SCHEDULE)
+    private void deepScan() {
+        // Check a scanning process is not already active
+        if (isScanning() || isDeepScanning()) {
+            return;
+        }
+        
+        // List of streams to scan
+        List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
+        
+        // Start scanning
+        if(!streams.isEmpty()) {
+            // Start scanning playlists
+            startDeepScan(streams);
+        }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started scheduled deep scan of media.", null);
     }
 
     //
@@ -216,13 +242,13 @@ public class ScannerService implements DisposableBean {
     //
     public synchronized void startDeepScan(final List<VideoStream> streams) {
         // Check if media is already being scanned
-        if (isScanning()) {
+        if (isScanning() || isDeepScanning()) {
             return;
         }
         
         // Create log file
         Timestamp scanTime = new Timestamp(new Date().getTime());
-        final String log = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";
+        deepScanLog = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";
         
         // Reset counter
         dTotal = 0;
@@ -233,30 +259,34 @@ public class ScannerService implements DisposableBean {
         deepScanExecutor.submit(new Runnable() {
             @Override
             public void run() {
-                LogUtils.writeToLog(log, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
+                LogUtils.writeToLog(deepScanLog, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
                 
                 for(VideoStream stream : streams) {
                     dTotal ++;
                     
-                    LogUtils.writeToLog(log, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                    LogUtils.writeToLog(deepScanLog, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
 
                     VideoStream update = frameParser.parse(stream);
                     
                     if(update != null) {
                         mediaDao.updateVideoStream(update);
-                        LogUtils.writeToLog(log, stream.toString(), Level.DEBUG);
+                        LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG);
                     }
                     
-                    LogUtils.writeToLog(log, "Finished Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                    LogUtils.writeToLog(deepScanLog, "Finished Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
                 }
             }
         });
+        
+        deepScanExecutor.shutdownNow();
     }
     
     public void stopDeepScan() {
         if(deepScanExecutor != null && !deepScanExecutor.isTerminated()) {
             deepScanExecutor.shutdownNow();
             frameParser.stop();
+            
+            LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG);
         }
     }
     
