@@ -425,6 +425,17 @@ public class AdminController {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
         }
         
+        // Check there are not currently jobs active
+        List<Job> jobs = jobDao.getActiveJobs();
+        
+        if (jobs != null) {
+            for(Job job : jobs) {
+                if(job.getType() == Job.JobType.VIDEO_STREAM) {
+                    return new ResponseEntity<>("Deep scan cannot run whilst there are active streaming jobs.", HttpStatus.NOT_ACCEPTABLE);
+                }
+            }
+        }
+        
         // List of streams to scan
         List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
         

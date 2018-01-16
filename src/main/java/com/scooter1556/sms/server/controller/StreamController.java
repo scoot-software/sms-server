@@ -40,6 +40,7 @@ import com.scooter1556.sms.server.service.AdaptiveStreamingService;
 import com.scooter1556.sms.server.service.JobService;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.NetworkService;
+import com.scooter1556.sms.server.service.ScannerService;
 import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.service.SessionService.Session;
 import com.scooter1556.sms.server.service.SettingsService;
@@ -97,6 +98,9 @@ public class StreamController {
     
     @Autowired
     private SessionService sessionService;
+    
+    @Autowired
+    private ScannerService scannerService;
 
     @CrossOrigin
     @RequestMapping(value="/initialise/{session}/{id}", method=RequestMethod.GET)
@@ -384,6 +388,12 @@ public class StreamController {
         // Add profile to transcode service
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, profile.toString(), null);
         transcodeService.addTranscodeProfile(profile);
+        
+        // Stop deep scan if necessary
+        if(job.getType() == Job.JobType.VIDEO_STREAM) {
+            scannerService.stopDeepScan();
+        }
+        
         return new ResponseEntity<>(profile, HttpStatus.OK);
     }
     

@@ -23,8 +23,10 @@
  */
 package com.scooter1556.sms.server.service;
 
+import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
+import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.DirectoryMediaType;
@@ -66,6 +68,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -83,6 +87,9 @@ public class ScannerService implements DisposableBean {
     @Autowired
     private MediaDao mediaDao;
 
+    @Autowired
+    private JobDao jobDao;
+    
     @Autowired
     private MetadataParser metadataParser;
 
@@ -127,6 +134,17 @@ public class ScannerService implements DisposableBean {
         // Check a scanning process is not already active
         if (isScanning() || isDeepScanning()) {
             return;
+        }
+        
+        // Check there are not currently jobs active
+        List<Job> jobs = jobDao.getActiveJobs();
+        
+        if (jobs != null) {
+            for(Job job : jobs) {
+                if(job.getType() == Job.JobType.VIDEO_STREAM) {
+                    return;
+                }
+            }
         }
         
         // List of streams to scan
