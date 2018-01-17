@@ -541,7 +541,7 @@ public class TranscodeService {
             
             // Add each filter chain in turn
             for(int i = 0; i < filters.size(); i++) {
-                filterBuilder.append("[0:" + streamId + "]");
+                filterBuilder.append("[0:").append(streamId).append("]");
                 
                 // If there are no filters to add utilise the 'null' filter
                 if(filters.get(i).isEmpty()) {
@@ -763,7 +763,7 @@ public class TranscodeService {
             }
             
             // Test if transcoding is necessary
-            boolean transcodeRequired = transcodeRequired = isTranscodeRequired(profile, stream);
+            boolean transcodeRequired = isTranscodeRequired(profile, stream);
 
             if(!transcodeRequired) {
                 transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
