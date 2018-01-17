@@ -166,9 +166,9 @@ public class FrameParser {
                 // Interlaced
                 stream.setInterlaced(interlaced);
             }
-        } catch (InterruptedException | NumberFormatException x) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to parse frames for file " + element.getPath(), x);
-        }
+        } catch(NumberFormatException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to parse frames for file " + element.getPath(), ex);
+        } catch(InterruptedException ex) {}
 
         return stream;
     }
