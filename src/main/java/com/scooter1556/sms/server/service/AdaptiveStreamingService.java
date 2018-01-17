@@ -41,6 +41,7 @@ import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -57,6 +58,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import org.apache.commons.math3.util.Precision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
@@ -399,17 +401,17 @@ public class AdaptiveStreamingService {
         playlist.add("#EXT-X-PLAYLIST-TYPE:VOD");
         
         // Get Video Segments
-        for (int i = 0; i < (mediaElement.getDuration() / HLS_SEGMENT_DURATION); i++) {
+        for (int i = 0; i < Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION); i++) {
             playlist.add("#EXTINF:" + HLS_SEGMENT_DURATION.floatValue() + ",");
             playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
         }   
 
         // Determine the duration of the final segment.
-        Double remainder = mediaElement.getDuration() % HLS_SEGMENT_DURATION;
+        double remainder = mediaElement.getDuration() % HLS_SEGMENT_DURATION;
         if (remainder > 0) {
-            long i = Math.round(mediaElement.getDuration() / HLS_SEGMENT_DURATION);
+            long i = Double.valueOf(Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION)).longValue();
             
-            playlist.add("#EXTINF:" + remainder.floatValue() + ",");
+            playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
             playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
         }
 
