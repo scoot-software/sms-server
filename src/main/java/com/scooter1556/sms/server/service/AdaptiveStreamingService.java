@@ -319,10 +319,14 @@ public class AdaptiveStreamingService {
                 VideoStream videoStream = MediaUtils.getVideoStreamById(profile.getMediaElement().getVideoStreams(), transcode.getId());
                 
                 // Determine bitrate
-                int bitrate = profile.getMediaElement().getBitrate();
+                Integer bitrate = videoStream.getBitrate();
                 
                 if(transcode.getQuality() != null) {
-                    bitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[transcode.getQuality()];
+                    bitrate = TranscodeUtils.VIDEO_QUALITY_BITRATE[transcode.getQuality()];
+                }
+                
+                if(bitrate == null || bitrate == 0) {
+                    bitrate = mediaElement.getBitrate();
                 }
                 
                 // Determine resolution
