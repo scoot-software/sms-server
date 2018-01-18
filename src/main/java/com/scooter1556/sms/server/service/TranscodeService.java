@@ -237,7 +237,7 @@ public class TranscodeService {
                         }
 
                         commands.get(i).getCommands().add("-force_key_frames");
-                        commands.get(i).getCommands().add("expr:gte(t,n_forced*" + AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString() + ")");
+                        commands.get(i).getCommands().add("expr:gte(t,n_forced*2");
                     }
                     
                     // Segment
