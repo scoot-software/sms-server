@@ -237,7 +237,7 @@ public class TranscodeService {
                         }
 
                         commands.get(i).getCommands().add("-force_key_frames");
-                        commands.get(i).getCommands().add("expr:gte(t,n_forced*2");
+                        commands.get(i).getCommands().add("expr:gte(t,n_forced*2)");
                     }
                     
                     // Segment
@@ -836,16 +836,25 @@ public class TranscodeService {
         }
         
         // If there are no audio streams to process we are done
-        if(profile.getMediaElement().getAudioStreams() == null) {
+        if(profile.getMediaElement().getAudioStreams() == null || profile.getMediaElement().getAudioStreams().isEmpty()) {
             return true;
         }
         
-        // Set audio track if necessary
+        // Set default audio stream if necessary
         if(profile.getAudioStream() == null) {
-            if(profile.getMediaElement().getAudioStreams().size() > 0) {
+            boolean streamFound = false;
+            
+            for(AudioStream stream : profile.getMediaElement().getAudioStreams()) {
+                if(stream.isDefault()) {
+                    profile.setAudioStream(stream.getStreamId());
+                    streamFound = true;
+                    break;
+                }
+            }
+            
+            // If we still don't have a default stream just pick the first...
+            if(!streamFound) {
                 profile.setAudioStream(profile.getMediaElement().getAudioStreams().get(0).getStreamId());
-            } else {
-                return true;
             }
         }
         

@@ -579,6 +579,20 @@ public class TranscodeUtils {
         return null;
     }
     
+    public static AudioStream getAudioStreamById(List<AudioStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(AudioStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
+    }
+    
     public static Path[] getRenderDevices() {
         List<Path> devices = new ArrayList<>();
         

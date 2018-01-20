@@ -275,16 +275,15 @@ public class AdaptiveStreamingService {
             if(profile.getAudioTranscodes() != null) {
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
-                    List<AudioStream> audioStreams = mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID());
-                    AudioStream stream = audioStreams.get(a);
+                    AudioStream stream = TranscodeUtils.getAudioStreamById(profile.getMediaElement().getAudioStreams(), transcode.getId());
                     String isDefault = "NO";
                     
-                    if(stream.isDefault()) {
+                    if(transcode.getId().equals(profile.getAudioStream())) {
                         isDefault = "YES";
                     }
 
                     if(transcode.getCodec().equals("copy")) {
-                        audio = TranscodeUtils.getIsoSpecForAudioCodec(audioStreams.get(a).getCodec());
+                        audio = TranscodeUtils.getIsoSpecForAudioCodec(stream.getCodec());
                     } else {
                         audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
                     }
@@ -321,14 +320,14 @@ public class AdaptiveStreamingService {
                 VideoStream videoStream = MediaUtils.getVideoStreamById(profile.getMediaElement().getVideoStreams(), transcode.getId());
                 
                 // Determine bitrate
-                Integer bitrate = videoStream.getBitrate();
+                int bitrate = 0;
                 
                 if(transcode.getQuality() != null) {
                     bitrate = TranscodeUtils.VIDEO_QUALITY_BITRATE[transcode.getQuality()];
                 }
                 
-                if(bitrate == null || bitrate == 0) {
-                    bitrate = mediaElement.getBitrate();
+                if(bitrate == 0) {
+                    bitrate = MediaUtils.getAverageBitrate(videoStream, mediaElement.getBitrate());
                 }
                 
                 // Determine resolution
