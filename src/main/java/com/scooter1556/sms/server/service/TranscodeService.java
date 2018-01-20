@@ -619,11 +619,6 @@ public class TranscodeService {
 
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
-            // Check bitrate
-            if(profile.getMediaElement().getBitrate() > TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[profile.getQuality()]) {
-                return true;
-            }
-
             // Check resolution
             if(TranscodeUtils.compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), TranscodeUtils.VIDEO_QUALITY_RESOLUTION[profile.getQuality()]) == 1) {
                 return true;
