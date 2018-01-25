@@ -37,11 +37,9 @@ import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService.Level;
-import com.scooter1556.sms.server.service.parser.TranscoderParser;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,7 +63,7 @@ public class TranscodeService {
     // Setup transcoder
     public TranscodeService() {
         // Attempt to find a transcoder
-        this.transcoder = getTranscoder();
+        this.transcoder = TranscodeUtils.getTranscoder();
         
         if(this.transcoder == null) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to find a suitable transcoder!", null);
@@ -79,33 +77,13 @@ public class TranscodeService {
         }
     }
     
-    public final Transcoder getTranscoder() {
-        // First check we haven't already found the transcoder
-        if(this.transcoder != null) {
-            return this.transcoder;
+    public Transcoder getTranscoder() {
+        if(this.transcoder == null) {
+            this.transcoder = TranscodeUtils.getTranscoder();
+            return transcoder;
         }
         
-        // Check user config transcode path
-        if(SettingsService.getInstance().getTranscodePath() != null){
-            File tFile = new File(SettingsService.getInstance().getTranscodePath());
-            
-            if(TranscodeUtils.isValidTranscoder(tFile)) {
-                return TranscoderParser.parse(new Transcoder(tFile.toPath()));
-            }
-        }
-        
-        // Search possible transcoder paths
-        for(String path : TranscodeUtils.getTranscoderPaths()) {
-            File test = new File(path);
-            
-            if(TranscodeUtils.isValidTranscoder(test)) {
-                SettingsService.getInstance().setTranscodePath(path);
-                return TranscoderParser.parse(new Transcoder(test.toPath()));
-            }
-        }
-        
-        // Out of ideas
-        return null;
+        return this.transcoder;
     }
     
     public static String[] getSupportedCodecs() {
@@ -140,7 +118,7 @@ public class TranscodeService {
             boolean initialised = false;
             
             // Transcoder path
-            commands.get(i).getCommands().add(getTranscoder().getPath().toString());
+            commands.get(i).getCommands().add(transcoder.getPath().toString());
             commands.get(i).getCommands().add("-y");
 
             // Seek
@@ -210,6 +188,9 @@ public class TranscodeService {
                 commands.get(i).getCommands().add("-map_metadata");
                 commands.get(i).getCommands().add("-1");
                 
+                // Copy Timestamps
+                commands.get(i).getCommands().add("-copyts");
+                
                 // Filter commands
                 commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getFilters()));
                 
@@ -241,7 +222,7 @@ public class TranscodeService {
                     }
                     
                     // Segment
-                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), null, "video-" + v, profile.getOffset()));
+                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), "video-" + v, profile.getOffset()));
                 }
             }
 
@@ -261,22 +242,11 @@ public class TranscodeService {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
                     String format = null;
                     
-                    if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
-                        switch(profile.getClient()) {
-                            case "chromecast":
-                                format = TranscodeUtils.getFormatForAudioCodec(transcode.getCodec());
-                                break;
-
-                            default:
-                                break; 
-                        }
-                    }
-                    
                     // Transcode commands
                     commands.get(i).getCommands().addAll(getAudioCommands(transcode));
                     
                     // Segment commands
-                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), format, "audio-" + a, profile.getOffset()));
+                    commands.get(i).getCommands().addAll(getHlsCommands(profile.getID(), "audio-" + a, profile.getOffset()));
                 }
             }
         }
@@ -291,7 +261,7 @@ public class TranscodeService {
         return result;
     }
     
-    private Collection<String> getHlsCommands(UUID id, String format, String name, Integer offset) {
+    private Collection<String> getHlsCommands(UUID id, String name, Integer offset) {
         if(id == null || name == null) {
             return null;
         }
@@ -299,34 +269,29 @@ public class TranscodeService {
         Collection<String> commands = new LinkedList<>();
         
         commands.add("-f");
-        commands.add("segment");
+        commands.add("hls");
 
-        commands.add("-segment_time");
+        commands.add("-hls_time");
         commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
 
-        commands.add("-segment_format");
-        
-        if(format == null) {
-            commands.add("mpegts");
-        } else {
-            commands.add(format);
-        }
+        commands.add("-hls_segment_type");
+        commands.add("mpegts");
 
         if(offset != null && offset > 0) {
-            commands.add("-segment_start_number");
+            commands.add("-start_number");
             commands.add(String.valueOf(offset / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
-
-            commands.add("-initial_offset");
-            commands.add(offset.toString());
         }
 
-        commands.add("-segment_list");
-        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + name + ".txt");
+        commands.add("-hls_list_size");
+        commands.add("0");
 
-        commands.add("-segment_list_type");
-        commands.add("flat");
+        commands.add("-hls_flags");
+        commands.add("temp_file");
 
+        commands.add("-hls_segment_filename");
         commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d-" + name);
+
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + name + ".m3u8");
         
         return commands;
     }

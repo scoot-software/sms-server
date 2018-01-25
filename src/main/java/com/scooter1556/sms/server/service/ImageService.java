@@ -25,16 +25,15 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
-import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.io.ImageProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
+import com.scooter1556.sms.server.service.LogService.Level;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import javax.servlet.http.HttpServletResponse;
 import static javax.servlet.http.HttpServletResponse.SC_PARTIAL_CONTENT;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -47,8 +46,17 @@ public class ImageService {
     private static final String COVER_ART = "folder,cover";
     private static final String FAN_ART = "fanart";
     
-    @Autowired
-    private TranscodeService transcodeService;
+    Transcoder transcoder = null;
+    
+    // Setup transcoder
+    public ImageService() {
+        // Attempt to find a transcoder
+        this.transcoder = TranscodeUtils.getTranscoder();
+        
+        if(this.transcoder == null) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to find a suitable image processing application!", null);
+        }
+    }
     
     public File getCoverArt(MediaElement element) {
         File imageFile;
@@ -132,10 +140,8 @@ public class ImageService {
         SMSProcess process;
         
         // Check transcoder exists
-        Transcoder transcoder = transcodeService.getTranscoder();
-
-        if(transcoder == null) {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
+        if(this.transcoder == null) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "No image processing application available.");
             return;
         }
 
@@ -170,10 +176,8 @@ public class ImageService {
         SMSProcess process;
         
         // Check transcoder exists
-        Transcoder transcoder = transcodeService.getTranscoder();
-
-        if(transcoder == null) {
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get image processor.");
+        if(this.transcoder == null) {
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "No image processing application available.");
             return;
         }
 

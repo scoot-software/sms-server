@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
+import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Job.JobType;
@@ -46,6 +47,7 @@ import com.scooter1556.sms.server.service.SessionService.Session;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.utilities.FileUtils;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
@@ -488,7 +490,7 @@ public class StreamController {
         TranscodeProfile profile;
         AdaptiveStreamingProcess transcodeProcess;
         SMSProcess process = null;
-        File segment;
+        File segment = null;
                 
         try {
             // Retrieve Job
@@ -519,7 +521,7 @@ public class StreamController {
             }
             
             String mimeType;
-                    
+            
             switch (profile.getFormat()) {
                 case "hls":
                     mimeType = "video/MP2T";
@@ -535,8 +537,34 @@ public class StreamController {
                     return;
             }
             
-            // Find Segment File
-            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
+            // Check for special cases such as Chromecast
+            if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
+                // Determine proper mimetype for audio
+                if(type.equals("audio")) {
+                    switch(profile.getClient()) {
+                        case "chromecast":
+                            AudioTranscode transcode = profile.getAudioTranscodes()[extra];
+                            String codec = transcode.getCodec();
+                            
+                            if(codec.equals("copy")) {
+                                codec = MediaUtils.getAudioStreamById(profile.getMediaElement().getAudioStreams(), transcode.getId()).getCodec();
+                            }
+                            
+                            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra + "." + TranscodeUtils.getFormatForAudioCodec(codec));
+                            
+                            mimeType = TranscodeUtils.getMimeType(codec, MediaElementType.AUDIO);
+                            break;
+
+                        default:
+                            break; 
+                    }
+                }
+            }
+            
+            // Set default segment if not already set
+            if(segment == null) {
+                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
+            }
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + id + " Segment=" + file + " Type=" + type + " Extra=" + extra, null);
             
@@ -553,63 +581,25 @@ public class StreamController {
                 }
             }
             
-            File segmentList = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + type + "-" + extra + ".txt");
-            
+            // Check how we detect the segment is available
             int count = 0;
             
-            // Wait for segment list to become available
-            while(!segmentList.exists() && count < 5) {
+            // Wait for segment to become available using necessary method
+            while(!segment.exists() && count < 20) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
                 }
 
-                count++;
-            }
-            
-            // Check if segment list is available
-            if(!segmentList.exists()) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Unable to get segment list for job " + id + ".", null);
-                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to get segment list.");
-                return;
-            }
-            
-            List<String> segments = FileUtils.readFileToList(segmentList);
-            
-            count = 0;
-
-            while(segments != null && !segments.contains(file + "-" + type + "-" + extra) && (count < 20)) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
-                }
-
-                // Update segment list
-                segments = FileUtils.readFileToList(segmentList);
                 count++;
             }
             
             // Check if segment is definitely available
-            if(count >= 20 || !segment.exists() || segments == null) {
+            if(count >= 20 || !segment.exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + id + ".", null);
                 response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                 return;
-            }
-            
-            if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
-                // Determine proper mimetype for audio
-                if(type.equals("audio")) {
-                    switch(profile.getClient()) {
-                        case "chromecast":
-                            mimeType = TranscodeUtils.getMimeType(profile.getAudioTranscodes()[extra].getCodec(), MediaElementType.AUDIO);
-                            break;
-
-                        default:
-                            break; 
-                    }
-                }
             }
             
             process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);

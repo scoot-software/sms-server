@@ -114,7 +114,24 @@ public class AdaptiveStreamingService {
             processes.add(process);
         }
         
+        // Update process with required information
         process.setCommands(commands);
+        process.setMediaElement(profile.getMediaElement());
+        process.setAudioTranscodes(profile.getAudioTranscodes());
+        process.setTranscoder(transcodeService.getTranscoder());
+        
+        // Check if post-processing of segments is required for client
+        if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
+            switch(profile.getClient()) {
+                case "chromecast":
+                    process.setPostProcessEnabled(true);
+                    break;
+
+                default:
+                    break; 
+            }
+        }
+            
         process.initialise();
         
         return process;

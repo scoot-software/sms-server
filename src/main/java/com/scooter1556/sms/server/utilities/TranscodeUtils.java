@@ -12,6 +12,8 @@ import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.io.NullStream;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.SettingsService;
+import com.scooter1556.sms.server.service.parser.TranscoderParser;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -184,6 +186,30 @@ public class TranscodeUtils {
             return TRANSCODER_PATH_LINUX;
         }
         
+        return null;
+    }
+    
+    public static Transcoder getTranscoder() {
+        // Check user config transcode path
+        if(SettingsService.getInstance().getTranscodePath() != null){
+            File tFile = new File(SettingsService.getInstance().getTranscodePath());
+            
+            if(TranscodeUtils.isValidTranscoder(tFile)) {
+                return TranscoderParser.parse(new Transcoder(tFile.toPath()));
+            }
+        }
+        
+        // Search possible transcoder paths
+        for(String path : TranscodeUtils.getTranscoderPaths()) {
+            File test = new File(path);
+            
+            if(TranscodeUtils.isValidTranscoder(test)) {
+                SettingsService.getInstance().setTranscodePath(path);
+                return TranscoderParser.parse(new Transcoder(test.toPath()));
+            }
+        }
+        
+        // Out of ideas
         return null;
     }
     
