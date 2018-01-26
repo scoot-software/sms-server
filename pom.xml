@@ -3,8 +3,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.srw</groupId>
-    <artifactId>sms-server</artifactId>
-    <version>0.5.1</version>
+    <artifactId>sms-server-dev</artifactId>
+    <version>0.5.2-SNAPSHOT</version>
     <packaging>war</packaging>
     
     <organization>
