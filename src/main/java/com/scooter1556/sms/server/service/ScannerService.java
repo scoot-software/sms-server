@@ -484,7 +484,7 @@ public class ScannerService implements DisposableBean {
             MediaElement directory = mediaDao.getMediaElementByPath(dir.toString());
 
             if (directory == null) {
-                directory = getMediaElementFromPath(dir);
+                directory = getMediaElementFromPath(dir, attr);
                 directory.setType(MediaElementType.DIRECTORY);
             }
 
@@ -521,7 +521,7 @@ public class ScannerService implements DisposableBean {
                 MediaElement mediaElement = mediaDao.getMediaElementByPath(file.toString());
 
                 if (mediaElement == null) {
-                    mediaElement = getMediaElementFromPath(file);
+                    mediaElement = getMediaElementFromPath(file, attr);
                     mediaElement.setFormat(MediaUtils.getFileExtension(file.getFileName()));
                 }
                 
@@ -753,13 +753,14 @@ public class ScannerService implements DisposableBean {
         }
 
         // Return a new media element object for a given file
-        private MediaElement getMediaElementFromPath(Path path) {
+        private MediaElement getMediaElementFromPath(Path path, BasicFileAttributes attr) {
             MediaElement mediaElement = new MediaElement();
 
             // Set ID
             mediaElement.setID(UUID.randomUUID());
             
             // Set common attributes
+            mediaElement.setCreated(new Timestamp(attr.creationTime().toMillis()));
             mediaElement.setPath(path.toString());
             mediaElement.setParentPath(path.getParent().toString());
             mediaElement.setLastScanned(scanTime);
