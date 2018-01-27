@@ -34,7 +34,9 @@ import java.util.Properties;
 import net.harawata.appdirs.AppDirs;
 import net.harawata.appdirs.AppDirsFactory;
 import org.springframework.scheduling.support.CronSequenceGenerator;
+import org.springframework.stereotype.Component;
 
+@Component("config")
 public final class SettingsService {
     
     private static final String CLASS_NAME = "SettingsService";
@@ -50,6 +52,11 @@ public final class SettingsService {
     // Default Values
     public static final String DEFAULT_DEEPSCAN_SCHEDULE = "0 0 0 * * *";
     Properties config;
+    
+    // Component values
+    private String transcodePath = "";
+    private String parserPath = "";
+    private String deepScanSchedule = DEFAULT_DEEPSCAN_SCHEDULE;
     
     private static final SettingsService INSTANCE = new SettingsService();
     
@@ -195,18 +202,27 @@ public final class SettingsService {
         }
         
         // Transcode Path
-        if(!config.containsKey(CONFIG_TRANSCODE_PATH)) {
-            config.setProperty(CONFIG_TRANSCODE_PATH, "");
+        if(config.containsKey(CONFIG_TRANSCODE_PATH)) {
+            transcodePath = config.getProperty(CONFIG_TRANSCODE_PATH);
+        } else {
+            config.setProperty(CONFIG_TRANSCODE_PATH, transcodePath);
         }
         
         // Parser Path
-        if(!config.containsKey(CONFIG_PARSER_PATH)) {
-            config.setProperty(CONFIG_PARSER_PATH, "");
+        if(config.containsKey(CONFIG_PARSER_PATH)) {
+            parserPath = config.getProperty(CONFIG_PARSER_PATH);
+        } else {
+            config.setProperty(CONFIG_PARSER_PATH, parserPath);
         }
         
         // Deep Scan Schedule
-        if(!config.containsKey(CONFIG_DEEPSCAN_SCHEDULE)) {
-            config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, DEFAULT_DEEPSCAN_SCHEDULE);
+        if(config.containsKey(CONFIG_DEEPSCAN_SCHEDULE)) {
+            String test = config.getProperty(CONFIG_DEEPSCAN_SCHEDULE);
+            if(CronSequenceGenerator.isValidExpression(test)) {
+                deepScanSchedule = test;
+            }
+        } else {
+            config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, deepScanSchedule);
         }
     }
     
@@ -234,17 +250,11 @@ public final class SettingsService {
     //
     
     public String getTranscodePath() {
-        if(config == null) {
+        if(transcodePath == null || transcodePath.isEmpty()) {
             return null;
         }
         
-        String value = config.getProperty(CONFIG_TRANSCODE_PATH);
-        
-        if(value == null || value.isEmpty()) {
-            return null;
-        } else {
-            return value;
-        }
+        return transcodePath;
     }
     
     public void setTranscodePath(String value) {
@@ -252,23 +262,18 @@ public final class SettingsService {
             return;
         }
         
+        transcodePath = value;
         config.setProperty(CONFIG_TRANSCODE_PATH, value);
         
         saveConfig();
     }
     
     public String getParserPath() {
-        if(config == null) {
+        if(parserPath == null || parserPath.isEmpty()) {
             return null;
         }
-        
-        String value = config.getProperty(CONFIG_PARSER_PATH);
-        
-        if(value == null || value.isEmpty()) {
-            return null;
-        } else {
-            return value;
-        }
+            
+        return parserPath;
     }
     
     public void setParserPath(String value) {
@@ -276,24 +281,15 @@ public final class SettingsService {
             return;
         }
         
+        parserPath = value;
         config.setProperty(CONFIG_PARSER_PATH, value);
         
         saveConfig();
     }
     
-    public String getDeepScanSchedule() {
-        if(config == null) {
-            return null;
-        }
-        
-        String value = config.getProperty(CONFIG_PARSER_PATH);
-        
-        if(value != null && !value.isEmpty()) {
-            if(CronSequenceGenerator.isValidExpression(value)) {
-                return value;
-            } else {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, value + " is not a valid cron expression!", null);
-            }
+    public String getDeepScanSchedule() {                
+        if(deepScanSchedule != null && !deepScanSchedule.isEmpty()) {
+            return deepScanSchedule;
         }
         
         return DEFAULT_DEEPSCAN_SCHEDULE;
@@ -309,7 +305,9 @@ public final class SettingsService {
             return;
         }
 
+        deepScanSchedule = value;
         config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, value);
+        
         saveConfig();
     }
 }

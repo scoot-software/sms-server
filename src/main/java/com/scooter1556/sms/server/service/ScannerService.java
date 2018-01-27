@@ -127,7 +127,7 @@ public class ScannerService implements DisposableBean {
     }
     
     // Check for inactive jobs at midnight
-    @Scheduled(cron=SettingsService.DEFAULT_DEEPSCAN_SCHEDULE)
+    @Scheduled(cron="#{config.deepScanSchedule}")
     private void deepScan() {
         // Check a scanning process is not already active
         if (isScanning() || isDeepScanning()) {
