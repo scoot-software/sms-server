@@ -118,9 +118,13 @@ public class MetadataParser {
                             
                             // Bit Rate
                             bitrate = stream.asObject().getString("bit_rate", "0");
-                            vStream.setBitrate(Integer.parseInt(bitrate));
+                            Double vBitrate = Integer.parseInt(bitrate) * 0.001;
+                            vStream.setBitrate(vBitrate.intValue());
+                            
+                            // Max Bitrate
                             String maxBitrate = stream.asObject().getString("max_bit_rate", "0");
-                            vStream.setMaxBitrate(Integer.parseInt(maxBitrate));
+                            Double vMaxBitrate = Integer.parseInt(maxBitrate) * 0.001;
+                            vStream.setMaxBitrate(vMaxBitrate.intValue());
                             
                             // Frame Rate
                             String strFps = stream.asObject().getString("r_frame_rate", "");
@@ -191,7 +195,8 @@ public class MetadataParser {
                             
                             // Bit Rate
                             bitrate = format.asObject().getString("bit_rate", "0");
-                            aStream.setBitrate(Integer.parseInt(bitrate));
+                            Double aBitrate = Integer.parseInt(bitrate) * 0.001;
+                            aStream.setBitrate(aBitrate.intValue());
                             
                             // Bits Per Sample
                             bps = stream.asObject().getString("bits_per_raw_sample", "0");
@@ -282,7 +287,8 @@ public class MetadataParser {
                 
                 // Bit Rate
                 String bitrate = format.asObject().getString("bit_rate", "0");
-                mediaElement.setBitrate(Integer.parseInt(bitrate));
+                Double fBitrate = Integer.parseInt(bitrate) * 0.001;
+                mediaElement.setBitrate(fBitrate.intValue());
                 
                 // Read tags for audio files
                 if(tags != null && mediaElement.getType() == MediaElementType.AUDIO) {

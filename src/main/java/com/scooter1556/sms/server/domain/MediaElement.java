@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -556,7 +557,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "VideoStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s, Max Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s]",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s, Max Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
@@ -712,7 +713,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "AudioStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Sample Rate=%s, Channels=%s, Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s]",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Sample Rate=%s, Channels=%s, Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
@@ -782,7 +783,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "SubtitleStream[Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Language=%s, Default=%s, Forced=%s]",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,

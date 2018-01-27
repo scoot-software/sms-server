@@ -29,10 +29,10 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[ID=%s, Type=%s, MediaElement=%s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Direct Play=%s",
+        return String.format("TranscodeProfile[ID=%s, Type=%s, %s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Direct Play=%s",
                 id == null ? "null" : id.toString(),
                 String.valueOf(type),
-                element == null ? "null" : element.getID().toString(),
+                element == null ? "null" : element.toString(),
                 client == null ? "null" : client,
                 files == null ? "null" : Arrays.toString(files),
                 codecs == null ? "null" : Arrays.toString(codecs),
