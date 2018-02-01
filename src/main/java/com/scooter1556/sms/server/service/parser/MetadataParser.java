@@ -194,7 +194,7 @@ public class MetadataParser {
                             aStream.setChannels(stream.asObject().getInt("channels", 0));
                             
                             // Bit Rate
-                            bitrate = format.asObject().getString("bit_rate", "0");
+                            bitrate = stream.asObject().getString("bit_rate", "0");
                             Double aBitrate = Integer.parseInt(bitrate) * 0.001;
                             aStream.setBitrate(aBitrate.intValue());
                             
