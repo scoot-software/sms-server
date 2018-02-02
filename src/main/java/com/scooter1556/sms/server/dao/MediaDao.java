@@ -649,8 +649,16 @@ public class MediaDao {
         return true;
     }
     
-    public void removeVideoStreamsByMediaElementId(UUID mediaElementId) {            
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
+    public boolean removeVideoStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
     }
     
     public List<VideoStream> getVideoStreamsByMediaElementId(UUID mediaElementId) {
@@ -754,8 +762,16 @@ public class MediaDao {
         return true;
     }
     
-    public void removeAudioStreamsByMediaElementId(UUID mediaElementId) {            
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
+    public boolean removeAudioStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
     }
     
     public List<AudioStream> getAudioStreamsByMediaElementId(UUID mediaElementId) {
@@ -836,8 +852,16 @@ public class MediaDao {
         return true;
     }
     
-    public void removeSubtitleStreamsByMediaElementId(UUID mediaElementId) {            
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+    public boolean removeSubtitleStreamsByMediaElementId(UUID mediaElementId) {            
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
     }
     
     public List<SubtitleStream> getSubtitleStreamsByMediaElementId(UUID mediaElementId) {
@@ -871,10 +895,18 @@ public class MediaDao {
     // Streams
     //
     
-    public void removeStreamsByMediaElementId(UUID mediaElementId) {
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
-        mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+    public boolean removeStreamsByMediaElementId(UUID mediaElementId) {
+        try {
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM VideoStream WHERE MEID=?", new Object[] {mediaElementId});
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM AudioStream WHERE MEID=?", new Object[] {mediaElementId});
+            mediaDatabase.getJdbcTemplate().update("DELETE FROM SubtitleStream WHERE MEID=?", new Object[] {mediaElementId});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
     }
     
     //
