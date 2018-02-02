@@ -223,7 +223,7 @@ public final class SettingsService {
             }
         } else {
             config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, deepScanSchedule);
-        }
+        }        
     }
     
     private void saveConfig() {

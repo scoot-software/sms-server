@@ -210,6 +210,9 @@ public class ScannerService implements DisposableBean {
         // Reset scan count
         mTotal = 0;
         
+        // Log
+        final String log = SettingsService.getInstance().getLogDirectory() + "/mediascanner-" + new Timestamp(new Date().getTime()) + ".log";
+        
         // Create media scanning threads
         scanningThreads = Executors.newFixedThreadPool(folders.size());
 
@@ -218,7 +221,7 @@ public class ScannerService implements DisposableBean {
             scanningThreads.submit(new Runnable() {
                 @Override
                 public void run() {
-                    scanMediaFolder(folder);
+                    scanMediaFolder(folder, log);
                 }
             });
         }
@@ -331,9 +334,9 @@ public class ScannerService implements DisposableBean {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning playlist " + playlist.getPath() + " (Found " + mediaElements.size() + " items)", null);
     }
     
-    private void scanMediaFolder(MediaFolder folder) {
+    private void scanMediaFolder(MediaFolder folder, String log) {
         Path path = FileSystems.getDefault().getPath(folder.getPath());
-        ParseFiles fileParser = new ParseFiles(folder);
+        ParseFiles fileParser = new ParseFiles(folder, log);
 
         try {
             // Start Scan directory
@@ -441,7 +444,7 @@ public class ScannerService implements DisposableBean {
         private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
         private final Deque<NFOData> nfoData = new ArrayDeque<>();
         private final HashSet<Path> directoriesToUpdate = new HashSet<>();
-        String log = SettingsService.getInstance().getLogDirectory() + "/mediascanner-" + scanTime + ".log";
+        String log;
         boolean directoryChanged = false;
 
         
@@ -452,8 +455,9 @@ public class ScannerService implements DisposableBean {
         
         private long files = 0, folders = 0, playlists = 0;
         
-        public ParseFiles(MediaFolder folder) {
+        public ParseFiles(MediaFolder folder, String log) {
             this.folder = folder;
+            this.log = log;
             folders = 0;
             files = 0;
             playlists = 0;
