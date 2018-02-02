@@ -17,7 +17,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>1.5.4.RELEASE</version>
+        <version>1.5.10.RELEASE</version>
     </parent>
 
     <dependencies>
@@ -75,7 +75,7 @@
         <dependency>
             <groupId>org.jhardware</groupId>
             <artifactId>jHardware</artifactId>
-            <version>0.8.4</version>
+            <version>0.8.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
