@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -127,10 +126,9 @@ public class MediaElement implements Serializable {
     
     @Override
     public String toString() {
-        
         // Return 'type' specific string
-        if(type != null) {
-            if(type == MediaElementType.DIRECTORY) {
+        switch(type) {
+            case MediaElementType.DIRECTORY:
                 return String.format(
                     "DirectoryElement[ID=%s, Directory Type=%s, Title=%s, Path=%s, Excluded=%s, Created=%s, LastPlayed=%s]",
                     id == null ? "?" : id.toString(),
@@ -140,7 +138,7 @@ public class MediaElement implements Serializable {
                     excluded.toString(),
                     created == null ? "Unknown" : created.toString(),
                     lastPlayed == null ? "Never" : lastPlayed.toString());
-            } else if(type == MediaElementType.VIDEO) {
+            case MediaElementType.VIDEO:
                 return String.format(
                     "VideoElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Year=%s, Genre=%s, Rating=%s, Tagline=%s, Description=%s, Certificate=%s, Collection=%s, Video Streams=%s, Audio Streams=%s, Subtitle Streams=%s]",
                     id == null ? "?" : id.toString(),
@@ -160,7 +158,7 @@ public class MediaElement implements Serializable {
                     videoStreams == null ? "N/A" : videoStreams.toString(),
                     audioStreams == null ? "N/A" : audioStreams.toString(),
                     subtitleStreams == null ? "N/A" : subtitleStreams.toString());
-            } else if(type == MediaElementType.AUDIO) {
+            case MediaElementType.AUDIO:
                 return String.format(
                     "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s, Audio Streams=%s]",
                     id == null ? "?" : id.toString(),
@@ -180,13 +178,12 @@ public class MediaElement implements Serializable {
                     genre == null ? "N/A" : genre,
                     description == null ? "N/A" : description,
                     audioStreams == null ? "N/A" : audioStreams.toString());
-            }
+                
+            default:
+                return String.format(
+                        "MediaElement[ID=%s, Path=%s, Created=%s]",
+                        id == null ? "?" : id.toString(), path == null ? "N/A" : path, created == null ? "Unknown" : created.toString());
         }
-        
-        // Default
-        return String.format(
-                "MediaElement[ID=%s, Path=%s, Created=%s]",
-                id == null ? "?" : id.toString(), path == null ? "N/A" : path, created == null ? "Unknown" : created.toString());
     }
 
     public UUID getID()  {
@@ -557,7 +554,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s, Max Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s kb/s, Max Bitrate=%s kb/s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
@@ -713,7 +710,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Sample Rate=%s, Channels=%s, Bitrate=%s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Sample Rate=%s Hz, Channels=%s, Bitrate=%s kb/s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
