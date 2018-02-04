@@ -135,4 +135,19 @@ public class MediaUtils {
         return defaultValue;
     }
     
+    public static int getStreamCount(MediaElement mediaElement) {
+        int count = 0;
+        
+        if(mediaElement != null) {
+            if(mediaElement.getVideoStreams() != null) {
+                count += mediaElement.getVideoStreams().size();
+            }
+            
+            if(mediaElement.getAudioStreams() != null) {
+                count += mediaElement.getAudioStreams().size();
+            }
+        }
+        
+        return count;
+    }
 }

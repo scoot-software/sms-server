@@ -86,7 +86,8 @@ public class ParserUtils {
         ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
         Process process = processBuilder.start();
         
-        List<String> result;
+        List<String> result = null;
+        
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             result = new ArrayList<>();
             String line;
@@ -97,11 +98,17 @@ public class ParserUtils {
                     result.add(line);
                 }
             }
+        } catch(Exception ex) {
+            return null;
         } finally {
             // Close streams
             process.getInputStream().close();
+            
+            if(result != null && !result.isEmpty()) {
+                return result.toArray(new String[result.size()]);
+            }
         }
 
-        return result.toArray(new String[result.size()]);        
+        return null;     
     }
 }

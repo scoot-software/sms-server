@@ -432,7 +432,7 @@ public class ScannerService implements DisposableBean {
             settingsDao.updateMediaFolder(folder);
 
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning media folder " + folder.getPath() + " (Items Scanned: " + fileParser.getTotal() + ", Folders: " + fileParser.getFolders() + ", Files: " + fileParser.getFiles() + ", Playlists: " + fileParser.getPlaylists() + ")", null);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error scanning media folder " + folder.getPath(), ex);
         }       
     }
@@ -535,14 +535,24 @@ public class ScannerService implements DisposableBean {
                     
                     // Add parent directory to update list
                     directoriesToUpdate.add(file.getParent());
-                    
+                                        
                     // Parse file name for media element attributes
                     mediaElement = parseFileName(file.getFileName(), mediaElement);
                     mediaElement.setSize(attr.size());
-
+                    
                     // Remove existing media streams and parse Metadata
-                    mediaDao.removeStreamsByMediaElementId(mediaElement.getID());
-                    metadataParser.parse(mediaElement);
+                    if(!mediaDao.removeStreamsByMediaElementId(mediaElement.getID())) {
+                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to remove streams from database for media element with ID " + mediaElement.getID(), null);
+                    }
+                    
+                    metadataParser.parse(mediaElement, log);
+                    
+                    // If we didn't find any media streams then move on...
+                    if(MediaUtils.getStreamCount(mediaElement) == 0) {
+                        LogUtils.writeToLog(log, "No media streams found for file " + file.toString(), Level.DEBUG);
+                        mediaDao.removeMediaElement(mediaElement.getID());
+                        return CONTINUE;
+                    }
                 }
                 
                 // Add media element to list

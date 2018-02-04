@@ -32,9 +32,9 @@ import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.utilities.LogUtils;
 import com.scooter1556.sms.server.utilities.ParserUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +46,7 @@ public class MetadataParser {
     
     private static final String CLASS_NAME = "MetadataParser";
         
-    public MediaElement parse(MediaElement mediaElement) {
+    public MediaElement parse(MediaElement mediaElement, String log) {
         // Use parser to parse file metadata
         Path parser = ParserUtils.getParser();
 
@@ -55,23 +55,38 @@ public class MetadataParser {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Parser is not available but is required to parse metadata.", null);
             return mediaElement;
         }
-
+        
         try {
             String[] command = new String[]{parser.toString(), "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", mediaElement.getPath()};
             String[] metadata = ParserUtils.getProcessOutput(command);
-            
+                        
+            // Check we got output from parser
+            if(metadata == null || metadata.length == 0) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get output from parser for " + mediaElement.getPath(), null);
+                return mediaElement;
+            }
+                        
             // Parse JSON
             JsonValue json = Json.parse(StringUtils.arrayToDelimitedString(metadata, ""));
+            
+            // Check we got output from JSON parser
+            if(json == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to parse JSON for " + mediaElement.getPath(), null);
+                return mediaElement;
+            }
+            
+            LogUtils.writeToLog(log, json.toString(), LogService.Level.INSANE);
+                        
             JsonArray streams = json.asObject().get("streams").asArray();
             JsonValue format = json.asObject().get("format").asObject();
             
-            // Initialise stream lists
-            List<VideoStream> videoStreams = new ArrayList<>();
-            List<AudioStream> audioStreams = new ArrayList<>();
-            List<SubtitleStream> subtitleStreams = new ArrayList<>();
-            
             // Process Streams
             if(streams != null && mediaElement.getID() != null) {
+                // Initialise stream lists
+                List<VideoStream> videoStreams = new ArrayList<>();
+                List<AudioStream> audioStreams = new ArrayList<>();
+                List<SubtitleStream> subtitleStreams = new ArrayList<>();
+                
                 for(JsonValue stream : streams) {     
                     JsonValue disposition = stream.asObject().get("disposition");
                     JsonValue tags = stream.asObject().get("tags");
@@ -219,7 +234,7 @@ public class MetadataParser {
                                 int f = disposition.asObject().getInt("forced", 0);
                                 aStream.setForced(f > 0);
                             }
-                            
+                                                        
                             audioStreams.add(aStream);
                             break;
                             
@@ -263,18 +278,18 @@ public class MetadataParser {
                             break;
                     }
                 }
-            }
-            
-            // Set streams
-            mediaElement.setVideoStreams(videoStreams);
-            mediaElement.setAudioStreams(audioStreams);
-            mediaElement.setSubtitleStreams(subtitleStreams);
-            
-            // Determine media type
-            if(videoStreams.size() > 0) {
-                mediaElement.setType(MediaElementType.VIDEO);
-            } else if(audioStreams.size() > 0) {
-                mediaElement.setType(MediaElementType.AUDIO);
+                
+                // Set streams
+                mediaElement.setVideoStreams(videoStreams);
+                mediaElement.setAudioStreams(audioStreams);
+                mediaElement.setSubtitleStreams(subtitleStreams);
+
+                // Determine media type
+                if(videoStreams.size() > 0) {
+                    mediaElement.setType(MediaElementType.VIDEO);
+                } else if(audioStreams.size() > 0) {
+                    mediaElement.setType(MediaElementType.AUDIO);
+                }
             }
             
             // Process Format
@@ -434,7 +449,7 @@ public class MetadataParser {
                     }
                 }
             }
-        } catch (IOException | NumberFormatException x) {
+        } catch (Exception x) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to parse metadata for file " + mediaElement.getPath(), x);
         }
 
