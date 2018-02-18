@@ -44,10 +44,10 @@ public class TranscodeUtils {
     public static final String[] FORMATS = {"hls","dash","matroska","webm"};
     public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
     public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","hevc","mpeg2video","vc1","vp8"};
-    public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
+    public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","eac3","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
     public static final String[] SUPPORTED_SUBTITLE_CODECS = {"subrip","webvtt","dvb","dvd","pgs"};
     public static final String[] TRANSCODE_VIDEO_CODECS = {"h264","vp8"};
-    public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","ac3","flac","mp3","pcm","vorbis"};
+    public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","eac3","ac3","flac","mp3","pcm","vorbis"};
     
     public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
     
@@ -56,6 +56,7 @@ public class TranscodeUtils {
     public static final String[][] AUDIO_CODEC_FORMAT = {
         {"aac", "adts"},
         {"ac3", "ac3"},
+        {"eac3", "eac3"},
         {"flac", "flac"},
         {"mp3", "mp3"},
         {"vorbis", "oga"},
@@ -63,14 +64,16 @@ public class TranscodeUtils {
     };
     
     public static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,aac,ac3,webvtt"},
+        {"hls", "h264,aac,eac3,ac3,webvtt"},
         {"dash", "h264,aac"},
-        {"matroska", "h264,hevc,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
+        {"matroska", "h264,hevc,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,eac3,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
         {"webm", "vp8,vorbis,opus"},
     };
     
     public static final String[][] AUDIO_MIME_TYPES = {
         {"aac", "audio/aac"},
+        {"ac3", "audio/ac3"},
+        {"eac3", "audio/eac3"},
         {"adts", "audio/aac"},
         {"aiff", "audio/aiff"},
         {"dash", "application/dash+xml"},
