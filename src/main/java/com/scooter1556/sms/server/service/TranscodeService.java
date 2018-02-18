@@ -612,13 +612,11 @@ public class TranscodeService {
 
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
-            // Check bitrate for audio elements
-            if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
-                int bitrate = (stream.getChannels() * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
+            // Check bitrate
+            int bitrate = (stream.getChannels() * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
 
-                if(bitrate > 0 && profile.getMediaElement().getBitrate() > bitrate) {
-                    return true;
-                }
+            if(bitrate > 0 && stream.getBitrate() > 0 && stream.getBitrate() > bitrate) {
+                return true;
             }
         }
         
