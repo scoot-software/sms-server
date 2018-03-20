@@ -471,19 +471,15 @@ public class TranscodeService {
             commands.add(transcode.getCodec());
             
             // Quality
-            if(transcode.getQuality() != null) {
-                commands.add("-q:a");
-                commands.add(String.valueOf(transcode.getQuality()));
+            if(transcode.getBitrate() > 0) {
+                commands.add("-b:a");
+                commands.add(String.valueOf(transcode.getBitrate()) + "k");
             }
             
             // Downmix
-            if(transcode.isDownmixed()) {
+            if(transcode.getChannelCount() > 0) {
                 commands.add("-ac");
-                commands.add("2");
-                commands.add("-clev");
-                commands.add("3dB");
-                commands.add("-slev");
-                commands.add("-3dB");
+                commands.add(String.valueOf(transcode.getChannelCount()));
             }
             
             // Sample rate
@@ -613,7 +609,18 @@ public class TranscodeService {
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
             // Check bitrate
-            int bitrate = (stream.getChannels() * TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()]);
+            int bitrate = 0;
+            
+            if(profile.getMediaElement().getType() == MediaElementType.VIDEO) {
+                bitrate = TranscodeUtils.VIDEO_QUALITY_AUDIO_BITRATE[profile.getQuality()];
+            } else {
+                bitrate = TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()];
+            }
+            
+            //  Calculate overall bitrate to compare
+            if(bitrate > 0) {
+                bitrate = new Double(bitrate * (stream.getChannels() * 0.5)).intValue();
+            }
 
             if(bitrate > 0 && stream.getBitrate() > 0 && stream.getBitrate() > bitrate) {
                 return true;
@@ -826,9 +833,9 @@ public class TranscodeService {
 
         for(AudioStream stream : profile.getMediaElement().getAudioStreams()) {
             String codec = null;
-            Integer quality = null;
+            int bitrate = -1;
             Integer sampleRate = null;
-            boolean downmix = false;
+            int numChannels = stream.getChannels();
             
             // Check if transcoding is required
             boolean transcodeRequired = isTranscodeRequired(profile, stream);
@@ -881,7 +888,7 @@ public class TranscodeService {
                     
                     // If a codec couldn't be found we need to downmix to stereo
                     if(codec == null) {
-                        downmix = true;
+                        numChannels = 2;
                     }
                 }
                 
@@ -910,11 +917,15 @@ public class TranscodeService {
                         sampleRate = (profile.getMaxSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec)) ? TranscodeUtils.getMaxSampleRateForCodec(codec) : profile.getMaxSampleRate();
                     }
                     
-                    // Quality
-                    if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
-                        quality = TranscodeUtils.getAudioQualityForCodec(codec, profile.getQuality());
-                    } else if (profile.getMediaElement().getType() == MediaElementType.VIDEO) {
-                        quality = TranscodeUtils.getAudioQualityForCodec(codec, TranscodeUtils.VIDEO_QUALITY_AUDIO_QUALITY[profile.getQuality()]);
+                    // Bitrate
+                    if(!TranscodeUtils.isSupported(TranscodeUtils.LOSSLESS_CODECS, codec)) {
+                        if(profile.getMediaElement().getType() == MediaElementType.AUDIO) {
+                            bitrate = TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()];
+                        } else if (profile.getMediaElement().getType() == MediaElementType.VIDEO) {
+                            bitrate = TranscodeUtils.VIDEO_QUALITY_AUDIO_BITRATE[profile.getQuality()];
+                        }
+
+                        bitrate = new Double(bitrate  * (numChannels * 0.5)).intValue();
                     }
                     
                     // Get format if required
@@ -928,7 +939,7 @@ public class TranscodeService {
             }
             
             // Add transcode properties to array
-            transcodes.add(new AudioTranscode(stream.getStreamId(), codec, quality, sampleRate, downmix));
+            transcodes.add(new AudioTranscode(stream.getStreamId(), codec, bitrate, sampleRate, numChannels));
         }
         
         // Update profile with audio transcode properties

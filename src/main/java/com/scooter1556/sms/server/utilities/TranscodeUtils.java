@@ -51,7 +51,7 @@ public class TranscodeUtils {
     
     public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
     
-    public static final String[] LOSSLESS_CODECS= {"flac","pcm","alac","dsd"};
+    public static final String[] LOSSLESS_CODECS = {"flac","pcm","alac","dsd"};
         
     public static final String[][] AUDIO_CODEC_FORMAT = {
         {"aac", "adts"},
@@ -135,17 +135,17 @@ public class TranscodeUtils {
         {"aac", "1", "2", "3", "10"}
     };
     
-    public static final int[] AUDIO_QUALITY_MAX_BITRATE = {64,96,160,-1};
+    public static final int[] AUDIO_QUALITY_MAX_BITRATE = {96,196,320,320};
     
     public static final int[] VIDEO_QUALITY_BITRATE = {400,800,1200,1800,2500,5000};
     public static final int[] VIDEO_QUALITY_MAX_BITRATE = {1000,1500,2000,3000,4000,8000};
     
-    public static final int[] VIDEO_QUALITY_AUDIO_QUALITY = {AudioQuality.LOW,
-                                                             AudioQuality.LOW,
-                                                             AudioQuality.LOW,
-                                                             AudioQuality.MEDIUM,
-                                                             AudioQuality.MEDIUM,
-                                                             AudioQuality.HIGH
+    public static final int[] VIDEO_QUALITY_AUDIO_BITRATE = {64,
+                                                             64,
+                                                             64,
+                                                             128,
+                                                             128,
+                                                             192,
     };
     
     public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(426,240),

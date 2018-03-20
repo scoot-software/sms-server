@@ -6,25 +6,25 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public class AudioTranscode {
     private Integer id;
     private String codec;
-    private Integer quality, sampleRate;
-    private boolean downmix;
+    private Integer bitrate, sampleRate;
+    private Integer channels;
 
-    public AudioTranscode(Integer id, String codec, Integer quality, Integer sampleRate, boolean downmix) {
+    public AudioTranscode(Integer id, String codec, Integer bitrate, Integer sampleRate, Integer channels) {
         this.id = id;
         this.codec = codec;
-        this.quality = quality;
+        this.bitrate = bitrate;
         this.sampleRate = sampleRate;
-        this.downmix = downmix;
+        this.channels = channels;
     }
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Codec=%s, Quality=%s, Sample Rate=%s, Downmix=%s}",
+        return String.format("{ID=%s, Codec=%s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
                 id == null ? "null" : id.toString(),
                 codec == null ? "null" : codec,
-                quality == null ? "null" : quality.toString(),
+                bitrate == null ? "null" : bitrate.toString(),
                 sampleRate == null ? "null" : sampleRate.toString(),
-                String.valueOf(downmix));
+                channels == null ? "null" : channels.toString());
     }
     
     public Integer getId() {
@@ -43,12 +43,12 @@ public class AudioTranscode {
         this.codec = codec;
     }
 
-    public Integer getQuality() {
-        return quality;
+    public Integer getBitrate() {
+        return bitrate;
     }
     
-    public void setQuality(Integer quality) {
-        this.quality = quality;
+    public void setBitrate(Integer bitrate) {
+        this.bitrate = bitrate;
     }
 
     public Integer getSampleRate() {
@@ -59,12 +59,12 @@ public class AudioTranscode {
         this.sampleRate = sampleRate;
     }
 
-    public boolean isDownmixed() {
-        return downmix;
+    public Integer getChannelCount() {
+        return channels;
     }
     
-    public void setDownmixed(boolean downmix) {
-        this.downmix = downmix;
+    public void setChannelCount(int channels) {
+        this.channels = channels;
     }
     
     public static class AudioQuality {
