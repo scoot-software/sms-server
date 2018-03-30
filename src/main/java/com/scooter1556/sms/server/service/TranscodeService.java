@@ -609,7 +609,7 @@ public class TranscodeService {
         // If direct play is not enabled check stream parameters
         if(!profile.isDirectPlayEnabled()) {
             // Check bitrate
-            int bitrate = 0;
+            int bitrate;
             
             if(profile.getMediaElement().getType() == MediaElementType.VIDEO) {
                 bitrate = TranscodeUtils.VIDEO_QUALITY_AUDIO_BITRATE[profile.getQuality()];
@@ -653,7 +653,7 @@ public class TranscodeService {
             String codec = null;
             boolean hardcode = false;
             
-            if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec()) && TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec())) {
+            if(TranscodeUtils.isSupported(profile.getCodecs(), stream.getCodec()) && TranscodeUtils.isSupported(TranscodeUtils.getSubtitleCodecsForFormat(profile.getFormat()), stream.getCodec())) {
                 codec = "copy";
             } else if(TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, stream.getCodec())) {
                 switch(stream.getCodec()) {
@@ -731,7 +731,7 @@ public class TranscodeService {
             boolean transcodeRequired = isTranscodeRequired(profile, stream);
 
             if(!transcodeRequired) {
-                transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
+                transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getVideoCodecsForFormat(profile.getFormat()), stream.getCodec());
             }
 
             // Check for hardcoded subtitles
@@ -757,7 +757,7 @@ public class TranscodeService {
 
                     // Get suitable codec
                     for(String test : profile.getCodecs()) {
-                        if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test) && TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_VIDEO_CODECS, test)) {
+                        if(TranscodeUtils.isSupported(TranscodeUtils.getVideoCodecsForFormat(profile.getFormat()), test) && TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_VIDEO_CODECS, test)) {
                             codec = test;
                             break;
                         }
@@ -843,7 +843,7 @@ public class TranscodeService {
             // Check the format supports this codec for video or that we can stream this codec for audio
             if(!transcodeRequired) {
                 if(profile.getFormat() != null) {
-                    transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), stream.getCodec());
+                    transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.getAudioCodecsForFormat(profile.getFormat()), stream.getCodec());
                 } else {
                     transcodeRequired = !TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, stream.getCodec());
                 }
@@ -874,7 +874,7 @@ public class TranscodeService {
                         for(String test : profile.getMchCodecs()) {
                             if(TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, test)) {
                                 if(profile.getFormat() != null) {
-                                    if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test)) {
+                                    if(TranscodeUtils.isSupported(TranscodeUtils.getAudioCodecsForFormat(profile.getFormat()), test)) {
                                         codec = test;
                                         break;
                                     }
@@ -897,7 +897,7 @@ public class TranscodeService {
                     for(String test : profile.getCodecs()) {
                         if(TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_AUDIO_CODECS, test)) {
                             if(profile.getFormat() != null) {
-                                if(TranscodeUtils.isSupported(TranscodeUtils.getCodecsForFormat(profile.getFormat()), test)) {
+                                if(TranscodeUtils.isSupported(TranscodeUtils.getAudioCodecsForFormat(profile.getFormat()), test)) {
                                     codec = test;
                                     break;
                                 }

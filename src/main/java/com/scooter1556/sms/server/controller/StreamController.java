@@ -160,7 +160,7 @@ public class StreamController {
         
         // Validate format
         if(format != null) {
-            if(!TranscodeUtils.isSupported(TranscodeUtils.FORMATS, format)) {
+            if(!TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_FORMATS, format)) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format '" + format + "' is not recognised.", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }

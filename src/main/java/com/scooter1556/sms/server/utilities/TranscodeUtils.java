@@ -41,7 +41,7 @@ public class TranscodeUtils {
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
     };
     
-    public static final String[] FORMATS = {"hls","dash","matroska","webm"};
+    public static final String[] TRANSCODE_FORMATS = {"hls"};
     public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
     public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","hevc","mpeg2video","vc1","vp8"};
     public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","eac3","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
@@ -63,11 +63,22 @@ public class TranscodeUtils {
         {"pcm", "wav"}
     };
     
-    public static final String[][] FORMAT_CODECS = {
-        {"hls", "h264,aac,eac3,ac3,webvtt"},
-        {"dash", "h264,aac"},
-        {"matroska", "h264,hevc,vc1,mpeg2video,mp3,vorbis,aac,flac,pcm,eac3,ac3,dts,truehd,srt,subrip,webvtt,dvb,dvd,pgs"},
+    public static final String[][] FORMAT_VIDEO_CODECS = {
+        {"hls", "h264"},
+        {"matroska", "h264,hevc,vc1,mpeg2video"},
+        {"webm", "vp8"},
+    };
+        
+    public static final String[][] FORMAT_AUDIO_CODECS = {
+        {"hls", "aac,eac3,ac3"},
+        {"matroska", "mp3,vorbis,aac,flac,pcm,eac3,ac3,dts,truehd"},
         {"webm", "vp8,vorbis,opus"},
+    };
+    
+    public static final String[][] FORMAT_SUBTITLE_CODECS = {
+        {"hls", "webvtt"},
+        {"matroska", "subrip,webvtt,dvb,dvd,pgs"},
+        {"webm", "webvtt"},
     };
     
     public static final String[][] AUDIO_MIME_TYPES = {
@@ -431,14 +442,48 @@ public class TranscodeUtils {
     }
     
     //
-    // Return the codecs supported by a given format
+    // Return the video codecs supported by a given format
     //
-    public static String[] getCodecsForFormat(String test) {
+    public static String[] getVideoCodecsForFormat(String test) {
         if(test == null) {
             return null;
         }
         
-        for(String[] format : FORMAT_CODECS) {
+        for(String[] format : FORMAT_VIDEO_CODECS) {
+            if(format[0].contains(test)) {
+                return format[1].split(",");
+            }
+        }
+        
+        return null;
+    }
+    
+    //
+    // Return the audio codecs supported by a given format
+    //
+    public static String[] getAudioCodecsForFormat(String test) {
+        if(test == null) {
+            return null;
+        }
+        
+        for(String[] format : FORMAT_AUDIO_CODECS) {
+            if(format[0].contains(test)) {
+                return format[1].split(",");
+            }
+        }
+        
+        return null;
+    }
+    
+    //
+    // Return the subtitle codecs supported by a given format
+    //
+    public static String[] getSubtitleCodecsForFormat(String test) {
+        if(test == null) {
+            return null;
+        }
+        
+        for(String[] format : FORMAT_SUBTITLE_CODECS) {
             if(format[0].contains(test)) {
                 return format[1].split(",");
             }
