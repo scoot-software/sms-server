@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.scooter1556.sms.server.SMS;
 import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
@@ -33,17 +34,16 @@ import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class MediaElement implements Serializable {
-    
     private UUID id;
     private Byte type;
-    private Byte directoryType = -1;
+    private Byte directoryType = DirectoryMediaType.NONE;
     private String path;
     private String parentPath;
     private Timestamp created;
     private Timestamp lastPlayed;
     private Timestamp lastScanned;
     private Boolean excluded = false;
-    private String format;
+    private Integer format = SMS.Format.NONE;
     private Long size = 0L;
     private Double duration = 0d;
     private Integer bitrate = 0;
@@ -77,7 +77,7 @@ public class MediaElement implements Serializable {
                         Timestamp lastPlayed,
                         Timestamp lastScanned,
                         Boolean excluded,
-                        String format,
+                        Integer format,
                         Long size,
                         Double duration,
                         Integer bitrate,
@@ -265,11 +265,11 @@ public class MediaElement implements Serializable {
     }
     
     @JsonIgnore
-    public String getFormat() {
+    public Integer getFormat() {
         return format;
     }
     
-    public void setFormat(String format) {
+    public void setFormat(Integer format) {
         this.format = format;
     }
     
@@ -440,8 +440,8 @@ public class MediaElement implements Serializable {
     
     public static class Stream {
         UUID mediaElementId;
-        Integer streamId;
-        String title, codec, language;
+        Integer streamId, codec;
+        String title, language;
         Boolean isDefault, isForced;
         
         public Stream() {};
@@ -470,11 +470,11 @@ public class MediaElement implements Serializable {
             this.title = title;
         }
         
-        public String getCodec() {
+        public Integer getCodec() {
             return codec;
         }
         
-        public void setCodec(String codec) {
+        public void setCodec(Integer codec) {
             this.codec = codec;
         }
         
@@ -504,7 +504,6 @@ public class MediaElement implements Serializable {
     }
     
     public static class VideoStream extends Stream {
-        private String profile, pixelFormat, colorSpace, colorTransfer, colorPrimaries;
         private Double fps;
         private Integer width, height, bitrate, maxBitrate, bps;
         private Boolean interlaced;
@@ -514,14 +513,9 @@ public class MediaElement implements Serializable {
         public VideoStream(UUID mediaElementId,
                            Integer streamId,
                            String title,
-                           String codec,
-                           String profile,
+                           Integer codec,
                            Integer width,
                            Integer height,
-                           String pixelFormat,
-                           String colorSpace,
-                           String colorTransfer,
-                           String colorPrimaries,
                            Boolean interlaced,
                            Double fps,
                            Integer bitrate,
@@ -534,13 +528,8 @@ public class MediaElement implements Serializable {
             this.streamId = streamId;
             this.title = title;
             this.codec = codec;
-            this.profile = profile;
             this.width = width;
             this.height = height;
-            this.pixelFormat = pixelFormat;
-            this.colorSpace = colorSpace;
-            this.colorTransfer = colorTransfer;
-            this.colorPrimaries = colorPrimaries;
             this.interlaced = interlaced;
             this.fps = fps;
             this.bitrate = bitrate;
@@ -554,18 +543,13 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Profile=%s, Width=%s, Height=%s, Pixel Format=%s, Color Space=%s, Color Transfer=%s, Color Primaries=%s, Interlaced=%s, FPS=%s, Bitrate=%s kb/s, Max Bitrate=%s kb/s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Width=%s, Height=%s, Interlaced=%s, FPS=%s, Bitrate=%s kb/s, Max Bitrate=%s kb/s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
                         codec == null ? "N/A" : codec,
-                        profile == null ? "N/A" : profile,
                         width == null ? "N/A" : width.toString(),
                         height == null ? "N/A" : height.toString(),
-                        pixelFormat == null ? "N/A" : pixelFormat,
-                        colorSpace == null ? "N/A" : colorSpace,
-                        colorTransfer == null ? "N/A" : colorTransfer,
-                        colorPrimaries == null ? "N/A" : colorPrimaries,
                         interlaced == null ? "N/A" : interlaced.toString(),
                         fps == null ? "N/A" : fps.toString(),
                         bitrate == null ? "N/A" : bitrate.toString(),
@@ -574,14 +558,6 @@ public class MediaElement implements Serializable {
                         language == null ? "N/A" : language,
                         isDefault == null ? "False" : isDefault.toString(),
                         isForced == null ? "False" : isForced.toString());
-        }
-        
-        public String getProfile() {
-            return profile;
-        }
-        
-        public void setProfile(String profile) {
-            this.profile = profile;
         }
         
         public Integer getWidth() {
@@ -602,38 +578,6 @@ public class MediaElement implements Serializable {
         
         public Dimension getResolution() {
             return new Dimension(width, height);
-        }
-        
-        public String getPixelFormat() {
-            return pixelFormat;
-        }
-        
-        public void setPixelFormat(String pixelFormat) {
-            this.pixelFormat = pixelFormat;
-        }
-        
-        public String getColorSpace() {
-            return colorSpace;
-        }
-        
-        public void setColorSpace(String colorSpace) {
-            this.colorSpace = colorSpace;
-        }
-        
-        public String getColorTransfer() {
-            return colorTransfer;
-        }
-        
-        public void setColorTransfer(String colorTransfer) {
-            this.colorTransfer = colorTransfer;
-        }
-        
-        public String getColorPrimaries() {
-            return colorPrimaries;
-        }
-        
-        public void setColorPrimaries(String colorPrimaries) {
-            this.colorPrimaries = colorPrimaries;
         }
         
         public Boolean isInterlaced() {
@@ -685,7 +629,7 @@ public class MediaElement implements Serializable {
         public AudioStream(UUID mediaElementId,
                            Integer streamId,
                            String title,
-                           String codec,
+                           Integer codec,
                            Integer sampleRate,
                            Integer channels,
                            Integer bitrate,
@@ -764,7 +708,7 @@ public class MediaElement implements Serializable {
         public SubtitleStream(UUID mediaElementId,
                               Integer streamId,
                               String title,
-                              String codec,
+                              Integer codec,
                               String language,
                               Boolean isDefault,
                               Boolean isForced) {
@@ -792,15 +736,17 @@ public class MediaElement implements Serializable {
     }
 
     public static class MediaElementType {
-        public static final byte AUDIO = 0;
-        public static final byte VIDEO = 1;
-        public static final byte DIRECTORY = 2;
+        public static final byte NONE = 0;
+        public static final byte AUDIO = 1;
+        public static final byte VIDEO = 2;
+        public static final byte SUBTITLE = 3;
+        public static final byte DIRECTORY = 4;
     }
     
     public static class DirectoryMediaType {
-        public static final byte AUDIO = 0;
-        public static final byte VIDEO = 1;
-        public static final byte MIXED = 2;
-        public static final byte NONE = 3;
+        public static final byte NONE = 0;
+        public static final byte AUDIO = 1;
+        public static final byte VIDEO = 2;
+        public static final byte MIXED = 3;
     }
 }

@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.service;
 
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
@@ -101,7 +102,7 @@ public class ScannerService implements DisposableBean {
     private PlaylistService playlistService;
 
     private static final String[] INFO_FILE_TYPES = {"nfo"};
-    private static final String EXCLUDED_FILE_NAMES = "Extras,extras";
+    private static final String[] EXCLUDED_FILE_NAMES = {"Extras","extras"};
 
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
@@ -526,7 +527,7 @@ public class ScannerService implements DisposableBean {
 
                 if (mediaElement == null) {
                     mediaElement = getMediaElementFromPath(file, attr);
-                    mediaElement.setFormat(MediaUtils.getFileExtension(file.getFileName()));
+                    mediaElement.setFormat(MediaUtils.getSMSContainer(FilenameUtils.getExtension(file.toString())));
                 }
                 
                 // Determine if we need to process the file
@@ -547,8 +548,8 @@ public class ScannerService implements DisposableBean {
                     
                     metadataParser.parse(mediaElement, log);
                     
-                    // If we didn't find any media streams then move on...
-                    if(MediaUtils.getStreamCount(mediaElement) == 0) {
+                    // If we don't support this media file move on...
+                    if(mediaElement.getType() == MediaElementType.NONE) {
                         LogUtils.writeToLog(log, "No media streams found for file " + file.toString(), Level.DEBUG);
                         mediaDao.removeMediaElement(mediaElement.getID());
                         return CONTINUE;
@@ -747,17 +748,11 @@ public class ScannerService implements DisposableBean {
         //
 
         private boolean isInfoFile(Path path) {
-            for (String type : INFO_FILE_TYPES) {
-                if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
-                    return true;
-                }
-            }
-
-            return false;
+            return FilenameUtils.isExtension(path.getFileName().toString().toLowerCase(), INFO_FILE_TYPES);
         }
 
         private boolean isExcluded(Path path) {
-            for (String name : EXCLUDED_FILE_NAMES.split(",")) {
+            for (String name : EXCLUDED_FILE_NAMES) {
                 if (path.getFileName().toString().equals(name)) {
                     return true;
                 }

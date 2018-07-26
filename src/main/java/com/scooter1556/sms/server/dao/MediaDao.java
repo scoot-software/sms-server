@@ -72,7 +72,7 @@ public class MediaDao {
                     ps.setString(5, mediaElement.getParentPath());
                     ps.setTimestamp(6, mediaElement.getLastScanned());
                     ps.setBoolean(7, mediaElement.getExcluded());
-                    ps.setString(8, mediaElement.getFormat());
+                    ps.setInt(8, mediaElement.getFormat());
                     ps.setLong(9, mediaElement.getSize());
                     ps.setDouble(10, mediaElement.getDuration());
                     ps.setInt(11, mediaElement.getBitrate());
@@ -535,7 +535,7 @@ public class MediaDao {
             mediaElement.setLastPlayed(rs.getTimestamp("LastPlayed"));
             mediaElement.setLastScanned(rs.getTimestamp("LastScanned"));
             mediaElement.setExcluded(rs.getBoolean("Excluded"));
-            mediaElement.setFormat(rs.getString("Format"));
+            mediaElement.setFormat(rs.getInt("Format"));
             mediaElement.setSize(rs.getLong("Size"));
             mediaElement.setDuration(rs.getDouble("Duration"));
             mediaElement.setBitrate(rs.getInt("Bitrate"));
@@ -563,8 +563,8 @@ public class MediaDao {
     //
     
     public boolean createVideoStreams(final List<VideoStream> videoStreams) {
-        String sql = "INSERT INTO VideoStream (MEID,SID,Title,Codec,Profile,Width,Height,PixelFormat,ColorSpace,ColorTransfer,ColorPrimaries,Interlaced,FPS,Bitrate,MaxBitrate,BPS,Language,Default,Forced) " +
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO VideoStream (MEID,SID,Title,Codec,Width,Height,Interlaced,FPS,Bitrate,MaxBitrate,BPS,Language,Default,Forced) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -574,22 +574,17 @@ public class MediaDao {
                     ps.setString(1, videoStream.getMediaElementId().toString());
                     ps.setInt(2, videoStream.getStreamId());
                     ps.setString(3, videoStream.getTitle());
-                    ps.setString(4, videoStream.getCodec());
-                    ps.setString(5, videoStream.getProfile());
-                    ps.setInt(6, videoStream.getWidth());
-                    ps.setInt(7, videoStream.getHeight());
-                    ps.setString(8, videoStream.getPixelFormat());
-                    ps.setString(9, videoStream.getColorSpace());
-                    ps.setString(10, videoStream.getColorTransfer());
-                    ps.setString(11, videoStream.getColorPrimaries());
-                    ps.setBoolean(12, videoStream.isInterlaced());
-                    ps.setDouble(13, videoStream.getFPS());
-                    ps.setInt(14, videoStream.getBitrate());
-                    ps.setInt(15, videoStream.getMaxBitrate());
-                    ps.setInt(16, videoStream.getBPS());
-                    ps.setString(17, videoStream.getLanguage());
-                    ps.setBoolean(18, videoStream.isDefault());
-                    ps.setBoolean(19, videoStream.isForced());
+                    ps.setInt(4, videoStream.getCodec());
+                    ps.setInt(5, videoStream.getWidth());
+                    ps.setInt(6, videoStream.getHeight());
+                    ps.setBoolean(7, videoStream.isInterlaced());
+                    ps.setDouble(8, videoStream.getFPS());
+                    ps.setInt(9, videoStream.getBitrate());
+                    ps.setInt(10, videoStream.getMaxBitrate());
+                    ps.setInt(11, videoStream.getBPS());
+                    ps.setString(12, videoStream.getLanguage());
+                    ps.setBoolean(13, videoStream.isDefault());
+                    ps.setBoolean(14, videoStream.isForced());
                 }
 
                 @Override
@@ -607,16 +602,11 @@ public class MediaDao {
     
     public boolean updateVideoStream(VideoStream stream) {
         try {
-            mediaDatabase.getJdbcTemplate().update("UPDATE VideoStream SET Title=?, Codec=?, Profile=?, Width=?, Height=?, PixelFormat=?, ColorSpace=?, ColorTransfer=?, ColorPrimaries=?, Interlaced=?, FPS=?, Bitrate=?, MaxBitrate=?, BPS=?, Language=?, Default=?, Forced=? WHERE MEID=? AND SID=?",
+            mediaDatabase.getJdbcTemplate().update("UPDATE VideoStream SET Title=?, Codec=?, Width=?, Height=?, Interlaced=?, FPS=?, Bitrate=?, MaxBitrate=?, BPS=?, Language=?, Default=?, Forced=? WHERE MEID=? AND SID=?",
                     new Object[]{stream.getTitle(),
                                  stream.getCodec(),
-                                 stream.getProfile(),
                                  stream.getWidth(),
                                  stream.getHeight(),
-                                 stream.getPixelFormat(),
-                                 stream.getColorSpace(),
-                                 stream.getColorTransfer(),
-                                 stream.getColorPrimaries(),
                                  stream.isInterlaced(),
                                  stream.getFPS(),
                                  stream.getBitrate(),
@@ -690,14 +680,9 @@ public class MediaDao {
             videoStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
             videoStream.setStreamId(rs.getInt("SID"));
             videoStream.setTitle(rs.getString("Title"));
-            videoStream.setCodec(rs.getString("Codec"));
-            videoStream.setProfile(rs.getString("Profile"));
+            videoStream.setCodec(rs.getInt("Codec"));
             videoStream.setWidth(rs.getInt("Width"));
             videoStream.setHeight(rs.getInt("Height"));
-            videoStream.setPixelFormat(rs.getString("PixelFormat"));
-            videoStream.setColorSpace(rs.getString("ColorSpace"));
-            videoStream.setColorTransfer(rs.getString("ColorTransfer"));
-            videoStream.setColorPrimaries(rs.getString("ColorPrimaries"));
             videoStream.setInterlaced(rs.getBoolean("Interlaced"));
             videoStream.setFPS(rs.getDouble("FPS"));
             videoStream.setBitrate(rs.getInt("Bitrate"));
@@ -727,7 +712,7 @@ public class MediaDao {
                     ps.setString(1, audioStream.getMediaElementId().toString());
                     ps.setInt(2, audioStream.getStreamId());
                     ps.setString(3, audioStream.getTitle());
-                    ps.setString(4, audioStream.getCodec());
+                    ps.setInt(4, audioStream.getCodec());
                     ps.setInt(5, audioStream.getSampleRate());
                     ps.setInt(6, audioStream.getChannels());
                     ps.setInt(7, audioStream.getBitrate());
@@ -792,7 +777,7 @@ public class MediaDao {
             audioStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
             audioStream.setStreamId(rs.getInt("SID"));
             audioStream.setTitle(rs.getString("Title"));
-            audioStream.setCodec(rs.getString("Codec"));
+            audioStream.setCodec(rs.getInt("Codec"));
             audioStream.setSampleRate(rs.getInt("SampleRate"));
             audioStream.setChannels(rs.getInt("Channels"));
             audioStream.setBitrate(rs.getInt("Bitrate"));
@@ -821,7 +806,7 @@ public class MediaDao {
                     ps.setString(1, subtitleStream.getMediaElementId().toString());
                     ps.setInt(2, subtitleStream.getStreamId());
                     ps.setString(3, subtitleStream.getTitle());
-                    ps.setString(4, subtitleStream.getCodec());
+                    ps.setInt(4, subtitleStream.getCodec());
                     ps.setString(5, subtitleStream.getLanguage());
                     ps.setBoolean(6, subtitleStream.isDefault());
                     ps.setBoolean(7, subtitleStream.isForced());
@@ -882,7 +867,7 @@ public class MediaDao {
             subtitleStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
             subtitleStream.setStreamId(rs.getInt("SID"));
             subtitleStream.setTitle(rs.getString("Title"));
-            subtitleStream.setCodec(rs.getString("Codec"));
+            subtitleStream.setCodec(rs.getInt("Codec"));
             subtitleStream.setLanguage(rs.getString("Language"));
             subtitleStream.setDefault(rs.getBoolean("Default"));
             subtitleStream.setForced(rs.getBoolean("Forced"));

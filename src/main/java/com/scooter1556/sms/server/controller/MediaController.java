@@ -95,7 +95,7 @@ public class MediaController {
     
     @RequestMapping(value="/random/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRandomElements(@PathVariable("limit") Integer limit,
-                                                          @RequestParam(value = "type", required = false) Byte type) {
+                                                                @RequestParam(value = "type", required = false) Byte type) {
         List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(limit, type);
         
         if (mediaElements == null) {

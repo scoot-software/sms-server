@@ -7,10 +7,10 @@ import java.awt.Dimension;
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class VideoTranscode {
     private Integer id, quality, maxBitrate;
-    private String codec;
+    private Integer codec;
     private Dimension resolution;
 
-    public VideoTranscode(Integer id, String codec, Dimension resolution, Integer quality, Integer maxBitrate) {
+    public VideoTranscode(Integer id, Integer codec, Dimension resolution, Integer quality, Integer maxBitrate) {
         this.id = id;
         this.codec = codec;
         this.resolution = resolution;
@@ -36,11 +36,11 @@ public class VideoTranscode {
         this.id = id;
     }
 
-    public String getCodec() {
+    public Integer getCodec() {
         return codec;
     }
 
-    public void setCodec(String codec) {
+    public void setCodec(Integer codec) {
         this.codec = codec;
     }
 

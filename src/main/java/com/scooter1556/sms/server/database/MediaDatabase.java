@@ -33,7 +33,7 @@ public class MediaDatabase extends Database {
     private static final String CLASS_NAME = "MediaDatabase";
     
     public static final String DB_NAME = "Media";
-    public static final int DB_VERSION = 4;
+    public static final int DB_VERSION = 5;
     
     public MediaDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -63,7 +63,7 @@ public class MediaDatabase extends Database {
                     + "LastPlayed TIMESTAMP,"
                     + "LastScanned TIMESTAMP NOT NULL,"
                     + "Excluded BOOLEAN DEFAULT 0 NOT NULL,"
-                    + "Format VARCHAR(20),"
+                    + "Format INT,"
                     + "Size BIGINT,"
                     + "Duration DOUBLE,"
                     + "Bitrate INT,"
@@ -88,14 +88,9 @@ public class MediaDatabase extends Database {
                     + "MEID UUID NOT NULL,"
                     + "SID INT NOT NULL,"
                     + "Title VARCHAR,"
-                    + "Codec VARCHAR,"
-                    + "Profile VARCHAR,"
+                    + "Codec INT,"
                     + "Width INT,"
                     + "Height INT,"
-                    + "PixelFormat VARCHAR,"
-                    + "ColorSpace VARCHAR,"
-                    + "ColorTransfer VARCHAR,"
-                    + "ColorPrimaries VARCHAR,"
                     + "Interlaced BOOLEAN DEFAULT 0,"
                     + "FPS DOUBLE,"
                     + "Bitrate INT,"
@@ -112,7 +107,7 @@ public class MediaDatabase extends Database {
                     + "MEID UUID NOT NULL,"
                     + "SID INT NOT NULL,"
                     + "Title VARCHAR,"
-                    + "Codec VARCHAR,"
+                    + "Codec INT,"
                     + "SampleRate INT,"
                     + "Channels INT,"
                     + "Bitrate INT,"
@@ -128,7 +123,7 @@ public class MediaDatabase extends Database {
                     + "MEID UUID NOT NULL,"
                     + "SID INT NOT NULL,"
                     + "Title VARCHAR,"
-                    + "Codec VARCHAR,"
+                    + "Codec INT,"
                     + "Language VARCHAR,"
                     + "Default BOOLEAN DEFAULT 0 NOT NULL,"
                     + "Forced BOOLEAN DEFAULT 0 NOT NULL,"
@@ -171,12 +166,18 @@ public class MediaDatabase extends Database {
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
     
-        if(newVersion == 2 || newVersion == 4) {
+        if(newVersion == 2 || newVersion == 4 || newVersion == 5) {
             getJdbcTemplate().execute("DROP TABLE IF EXISTS MediaElement");
         }
         
-        if(newVersion == 4) {
+        if(newVersion == 4 || newVersion == 5) {
             getJdbcTemplate().execute("DROP TABLE IF EXISTS PlaylistContent");
+        }
+        
+        if(newVersion == 5) {
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS VideoStream");
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS AudioStream");
+            getJdbcTemplate().execute("DROP TABLE IF EXISTS SubtitleStream");
         }
         
         create();

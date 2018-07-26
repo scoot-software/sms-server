@@ -11,6 +11,7 @@ public class Transcoder implements Serializable {
     private final Path path;
     private Version version;
     private HardwareAccelerator[] hwaccels;
+    private Integer[] codecs;
     
     public Transcoder(Path path) {
         this.path = path;
@@ -19,10 +20,11 @@ public class Transcoder implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "{Path=%s, Version=%s, Hardware Accelerators=%s}",
+                "{Path=%s, Version=%s, Hardware Accelerators=%s, Codecs=%s}",
                 path,
                 version == null ? "N/A" : version.toString(),
-                hwaccels == null ? "N/A" : Arrays.toString(hwaccels));
+                hwaccels == null ? "N/A" : Arrays.toString(hwaccels),
+                codecs == null ? "N/A" : Arrays.toString(codecs));
     }
     
     public Path getPath() {
@@ -70,5 +72,27 @@ public class Transcoder implements Serializable {
         }
         
         return result;
+    }
+    
+    public Integer[] getCodecs() {
+        return codecs;
+    }
+    
+    public void setCodecs(Integer[] codecs) {
+        this.codecs = codecs;
+    }
+    
+    public boolean isCodecSupported(int codec) {
+        if(codecs == null || codecs.length == 0) {
+            return false;
+        }
+        
+        for(int test : codecs) {
+            if(codec == test) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

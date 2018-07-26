@@ -2,6 +2,7 @@ package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.scooter1556.sms.server.encoder.Encoder;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -10,9 +11,10 @@ public class TranscodeProfile {
     private UUID id;
     private byte type;
     private MediaElement element;
-    private String[] files, codecs, mchCodecs;
-    private Integer quality, maxBitRate, maxSampleRate = 48000;
-    private String url, format, mimeType, client;
+    private Integer[] formats, codecs, mchCodecs;
+    private Integer format, quality, maxBitRate, maxSampleRate = 48000;
+    private String url, mimeType, client;
+    private Encoder encoder;
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
@@ -29,17 +31,18 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[ID=%s, Type=%s, %s, Client=%s, Supported Files=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Direct Play=%s",
+        return String.format("TranscodeProfile[ID=%s, Type=%s, %s, Client=%s, Supported Formats=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Quality=%s, Max Sample Rate=%s, Max Bit Rate=%s, Encoder=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Direct Play=%s",
                 id == null ? "null" : id.toString(),
                 String.valueOf(type),
                 element == null ? "null" : element.toString(),
                 client == null ? "null" : client,
-                files == null ? "null" : Arrays.toString(files),
+                formats == null ? "null" : Arrays.toString(formats),
                 codecs == null ? "null" : Arrays.toString(codecs),
                 mchCodecs == null ? "null" : Arrays.toString(mchCodecs),
                 quality == null ? "null" : quality.toString(),
                 maxSampleRate == null ? "null" : maxSampleRate.toString(),
                 maxBitRate == null ? "null" : maxBitRate.toString(),
+                encoder == null ? "null" : encoder.toString(),
                 format == null ? "null" : format,
                 mimeType == null ? "null" : mimeType,
                 videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
@@ -68,7 +71,6 @@ public class TranscodeProfile {
         this.type = type;
     }
 
-    @JsonIgnore
     public MediaElement getMediaElement() {
         return element;
     }
@@ -77,7 +79,6 @@ public class TranscodeProfile {
         this.element = element;
     }
 
-    @JsonIgnore
     public boolean isDirectPlayEnabled() {
         return directPlay;
     }
@@ -86,30 +87,27 @@ public class TranscodeProfile {
         this.directPlay = directPlay;
     }
 
-    @JsonIgnore
-    public String[] getFiles() {
-        return files;
+    public Integer[] getFormats() {
+        return formats;
     }
 
-    public void setFiles(String[] files) {
-        this.files = files;
+    public void setFormats(Integer[] formats) {
+        this.formats = formats;
     }
 
-    @JsonIgnore
-    public String[] getCodecs() {
+    public Integer[] getCodecs() {
         return codecs;
     }
 
-    public void setCodecs(String[] codecs) {
+    public void setCodecs(Integer[] codecs) {
         this.codecs = codecs;
     }
 
-    @JsonIgnore
-    public String[] getMchCodecs() {
+    public Integer[] getMchCodecs() {
         return mchCodecs;
     }
 
-    public void setMchCodecs(String[] mchCodecs) {
+    public void setMchCodecs(Integer[] mchCodecs) {
         this.mchCodecs = mchCodecs;
     }
 
@@ -122,12 +120,11 @@ public class TranscodeProfile {
         this.url = url;
     }
 
-    @JsonIgnore
-    public String getFormat() {
+    public Integer getFormat() {
         return format;
     }
 
-    public void setFormat(String format) {
+    public void setFormat(Integer format) {
         this.format = format;
     }
 
@@ -139,7 +136,6 @@ public class TranscodeProfile {
         this.mimeType = mimeType;
     }
 
-    @JsonIgnore
     public String getClient() {
         return client;
     }
@@ -147,8 +143,16 @@ public class TranscodeProfile {
     public void setClient(String client) {
         this.client = client;
     }
-
+    
     @JsonIgnore
+    public Encoder getEncoder() {
+        return encoder;
+    }
+    
+    public void setEncoder(Encoder encoder) {
+        this.encoder = encoder;
+    }
+
     public VideoTranscode[] getVideoTranscodes() {
         return videoTranscodes;
     }
@@ -157,7 +161,6 @@ public class TranscodeProfile {
         this.videoTranscodes = videoTranscodes;
     }
 
-    @JsonIgnore
     public AudioTranscode[] getAudioTranscodes() {
         return audioTranscodes;
     }
@@ -166,7 +169,6 @@ public class TranscodeProfile {
         this.audioTranscodes = audioTranscodes;
     }
 
-    @JsonIgnore
     public SubtitleTranscode[] getSubtitleTranscodes() {
         return subtitleTranscodes;
     }
@@ -175,7 +177,6 @@ public class TranscodeProfile {
         this.subtitleTranscodes = subtitleTranscodes;
     }
 
-    @JsonIgnore
     public Integer getQuality() {
         return quality;
     }
@@ -184,7 +185,6 @@ public class TranscodeProfile {
         this.quality = quality;
     }
     
-    @JsonIgnore
     public Integer getVideoStream() {
         return videoStream;
     }
@@ -193,7 +193,6 @@ public class TranscodeProfile {
         this.videoStream = videoStream;
     }
 
-    @JsonIgnore
     public Integer getAudioStream() {
         return audioStream;
     }
@@ -202,7 +201,6 @@ public class TranscodeProfile {
         this.audioStream = audioStream;
     }
 
-    @JsonIgnore
     public Integer getSubtitleStream() {
         return subtitleStream;
     }
@@ -211,7 +209,6 @@ public class TranscodeProfile {
         this.subtitleStream = subtitleStream;
     }
 
-    @JsonIgnore
     public Integer getMaxSampleRate() {
         return maxSampleRate;
     }
@@ -220,7 +217,6 @@ public class TranscodeProfile {
         this.maxSampleRate = maxSampleRate;
     }
 
-    @JsonIgnore
     public Integer getMaxBitRate() {
         return maxBitRate;
     }
@@ -229,7 +225,6 @@ public class TranscodeProfile {
         this.maxBitRate = maxBitRate;
     }
 
-    @JsonIgnore
     public Integer getOffset() {
         return offset;
     }

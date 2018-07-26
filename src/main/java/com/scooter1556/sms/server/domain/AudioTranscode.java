@@ -5,13 +5,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class AudioTranscode {
     private Integer id;
-    private String codec;
+    private Integer oCodec, tCodec;
     private Integer bitrate, sampleRate;
     private Integer channels;
 
-    public AudioTranscode(Integer id, String codec, Integer bitrate, Integer sampleRate, Integer channels) {
+    public AudioTranscode(Integer id, Integer oCodec, Integer tCodec, Integer bitrate, Integer sampleRate, Integer channels) {
         this.id = id;
-        this.codec = codec;
+        this.oCodec = oCodec;
+        this.tCodec = tCodec;
         this.bitrate = bitrate;
         this.sampleRate = sampleRate;
         this.channels = channels;
@@ -19,9 +20,10 @@ public class AudioTranscode {
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Codec=%s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
+        return String.format("{ID=%s, Original Codec=%s, Transcode Codec = %s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
                 id == null ? "null" : id.toString(),
-                codec == null ? "null" : codec,
+                oCodec == null ? "null" : oCodec.toString(),
+                tCodec == null ? "null" : tCodec.toString(),
                 bitrate == null ? "null" : bitrate.toString(),
                 sampleRate == null ? "null" : sampleRate.toString(),
                 channels == null ? "null" : channels.toString());
@@ -35,12 +37,20 @@ public class AudioTranscode {
         this.id = id;
     }
 
-    public String getCodec() {
-        return codec;
+    public Integer getOriginalCodec() {
+        return oCodec;
     }
     
-    public void setCodec(String codec) {
-        this.codec = codec;
+    public void setOriginalCodec(Integer oCodec) {
+        this.oCodec = oCodec;
+    }
+    
+    public Integer getCodec() {
+        return tCodec;
+    }
+    
+    public void setCodec(Integer tcodec) {
+        this.tCodec = tCodec;
     }
 
     public Integer getBitrate() {

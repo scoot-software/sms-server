@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class SubtitleTranscode {
     private Integer id;
-    private String codec;
+    private Integer codec;
     private boolean hardcode = false;
 
-    public SubtitleTranscode(Integer id, String codec, boolean hardcode) {
+    public SubtitleTranscode(Integer id, Integer codec, boolean hardcode) {
         this.id = id;
         this.codec = codec;
         this.hardcode = hardcode;
@@ -30,11 +30,11 @@ public class SubtitleTranscode {
         this.id = id;
     }
 
-    public String getCodec() {
+    public Integer getCodec() {
         return codec;
     }
     
-    public void setCodec(String codec) {
+    public void setCodec(Integer codec) {
         this.codec = codec;
     }
 

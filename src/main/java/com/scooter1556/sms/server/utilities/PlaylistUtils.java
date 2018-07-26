@@ -3,19 +3,14 @@ package com.scooter1556.sms.server.utilities;
 import static com.scooter1556.sms.server.utilities.MediaUtils.isMediaFile;
 import java.io.File;
 import java.nio.file.Path;
+import org.apache.commons.io.FilenameUtils;
 
 public class PlaylistUtils {
     
     public static final String[] SUPPORTED_PLAYLISTS = {"m3u","m3u8"};
     
     public static boolean isPlaylist(Path path) {
-        for (String type : SUPPORTED_PLAYLISTS) {
-            if (path.getFileName().toString().toLowerCase().endsWith("." + type)) {
-                return true;
-            }
-        }
-
-        return false;
+        return FilenameUtils.isExtension(path.getFileName().toString().toLowerCase(), SUPPORTED_PLAYLISTS);
     }
     
     // Determines if a directory contains playlists

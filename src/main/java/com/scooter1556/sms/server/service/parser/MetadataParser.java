@@ -26,6 +26,7 @@ package com.scooter1556.sms.server.service.parser;
 import com.eclipsesource.json.Json;
 import com.eclipsesource.json.JsonArray;
 import com.eclipsesource.json.JsonValue;
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
@@ -33,8 +34,8 @@ import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.LogUtils;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.ParserUtils;
-import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +83,9 @@ public class MetadataParser {
             
             // Process Streams
             if(streams != null && mediaElement.getID() != null) {
+                // Intialise media element type
+                mediaElement.setType(MediaElementType.NONE);
+                
                 // Initialise stream lists
                 List<VideoStream> videoStreams = new ArrayList<>();
                 List<AudioStream> audioStreams = new ArrayList<>();
@@ -91,21 +95,32 @@ public class MetadataParser {
                     JsonValue disposition = stream.asObject().get("disposition");
                     JsonValue tags = stream.asObject().get("tags");
                     String type = stream.asObject().getString("codec_type", "Unknown");
-                    String codec;
+                    String codec, profile, pixelFormat, colorSpace, colorTransfer, colorPrimaries;
                     String bitrate;
                     String bps;
+                    Integer smsCodec;
                     
                     switch(type) {
                         case "video":
                             VideoStream vStream = new VideoStream();
                             
-                            // Check codec
-                            codec = stream.asObject().getString("codec_name", "Unknown");
+                            // Set media element type to video
+                            mediaElement.setType(MediaElementType.VIDEO);
                             
-                            if(!TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_VIDEO_CODECS, codec)) {
+                            // Check codec
+                            codec = stream.asObject().getString("codec_name", "");
+                            profile = stream.asObject().getString("profile", "");
+                            pixelFormat = stream.asObject().getString("pix_fmt", "");
+                            colorSpace = stream.asObject().getString("color_space", "");
+                            colorTransfer = stream.asObject().getString("color_transfer", "");
+                            colorPrimaries = stream.asObject().getString("color_primaries", "");
+                            
+                            smsCodec = MediaUtils.getSMSCodec(codec, profile, pixelFormat, colorTransfer, colorPrimaries);
+                            
+                            if(smsCodec == SMS.Codec.UNSUPPORTED) {
                                 continue;
                             } else {
-                                vStream.setCodec(codec);
+                                vStream.setCodec(smsCodec);
                             }
                             
                             // Media Element ID
@@ -114,18 +129,9 @@ public class MetadataParser {
                             // Stream ID
                             vStream.setStreamId(stream.asObject().getInt("index", 0));
                             
-                            // Profile
-                            vStream.setProfile(stream.asObject().getString("profile", ""));
-                            
                             // Resolution
                             vStream.setWidth(stream.asObject().getInt("width", 0));
                             vStream.setHeight(stream.asObject().getInt("height", 0));
-                            
-                            // Format
-                            vStream.setPixelFormat(stream.asObject().getString("pix_fmt", ""));
-                            vStream.setColorSpace(stream.asObject().getString("color_space", ""));
-                            vStream.setColorTransfer(stream.asObject().getString("color_transfer", ""));
-                            vStream.setColorPrimaries(stream.asObject().getString("color_primaries", ""));
                             
                             // Interlaced
                             String fieldOrder = stream.asObject().getString("field_order", "");
@@ -187,12 +193,15 @@ public class MetadataParser {
                             AudioStream aStream = new AudioStream();
                             
                             // Check codec
-                            codec = stream.asObject().getString("codec_name", "Unknown");
+                            codec = stream.asObject().getString("codec_name", "");
+                            profile = stream.asObject().getString("profile", "");
                             
-                            if(!TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_AUDIO_CODECS, codec)) {
+                            smsCodec = MediaUtils.getSMSCodec(codec, profile, null, null, null);
+                            
+                            if(smsCodec == SMS.Codec.UNSUPPORTED) {
                                 continue;
                             } else {
-                                aStream.setCodec(codec);
+                                aStream.setCodec(smsCodec);
                             }
                             
                             // Media Element ID
@@ -242,12 +251,15 @@ public class MetadataParser {
                             SubtitleStream sStream = new SubtitleStream();
                             
                             // Check codec
-                            codec = stream.asObject().getString("codec_name", "Unknown");
+                            codec = stream.asObject().getString("codec_name", "");
+                            profile = stream.asObject().getString("profile", "");
                             
-                            if(!TranscodeUtils.isSupported(TranscodeUtils.SUPPORTED_SUBTITLE_CODECS, codec)) {
+                            smsCodec = MediaUtils.getSMSCodec(codec, profile, null, null, null);
+                            
+                            if(smsCodec == SMS.Codec.UNSUPPORTED) {
                                 continue;
                             } else {
-                                sStream.setCodec(codec);
+                                sStream.setCodec(smsCodec);
                             }
                             
                             // Media Element ID
@@ -279,6 +291,12 @@ public class MetadataParser {
                     }
                 }
                 
+                // Check video file includes at least one supported video stream and fail if not
+                if(mediaElement.getType() == MediaElementType.VIDEO && videoStreams.isEmpty()) {
+                    mediaElement.setType(MediaElementType.NONE);
+                    return mediaElement;
+                }
+                
                 // Set streams
                 mediaElement.setVideoStreams(videoStreams);
                 mediaElement.setAudioStreams(audioStreams);
@@ -289,6 +307,11 @@ public class MetadataParser {
                     mediaElement.setType(MediaElementType.VIDEO);
                 } else if(audioStreams.size() > 0) {
                     mediaElement.setType(MediaElementType.AUDIO);
+                } else if(subtitleStreams.size() > 0) {
+                    mediaElement.setType(MediaElementType.SUBTITLE);
+                } else {
+                    mediaElement.setType(MediaElementType.NONE);
+                    return mediaElement;
                 }
             }
             

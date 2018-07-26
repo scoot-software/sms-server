@@ -1,5 +1,6 @@
 package com.scooter1556.sms.server.utilities;
 
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.MediaElement;
@@ -10,6 +11,8 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
+import com.scooter1556.sms.server.encoder.Encoder;
+import com.scooter1556.sms.server.encoder.HLSEncoder;
 import com.scooter1556.sms.server.io.NullStream;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SettingsService;
@@ -41,18 +44,17 @@ public class TranscodeUtils {
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
     };
     
-    public static final String[] TRANSCODE_FORMATS = {"hls"};
-    public static final String[] SUPPORTED_FILE_EXTENSIONS = {"3gp","aac","avi","dsf","flac","m4a","m4v","mka","mkv","mp3","mp4","mpeg","mpg","oga","ogg","opus","wav","webm"};
-    public static final String[] SUPPORTED_VIDEO_CODECS = {"h264","hevc","mpeg2video","vc1","vp8"};
-    public static final String[] SUPPORTED_AUDIO_CODECS = {"aac","eac3","ac3","alac","dsd","dts","flac","mp3","opus","pcm","truehd","vorbis"};
-    public static final String[] SUPPORTED_SUBTITLE_CODECS = {"subrip","webvtt","dvb","dvd","pgs"};
-    public static final String[] TRANSCODE_VIDEO_CODECS = {"h264","vp8"};
-    public static final String[] TRANSCODE_AUDIO_CODECS = {"aac","eac3","ac3","flac","mp3","pcm","vorbis"};
-    
-    public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
-    
-    public static final String[] LOSSLESS_CODECS = {"flac","pcm","alac","dsd"};
+    public static final String ISO_AVC_BASELINE = "avc1.42E01E";
+    public static final String ISO_AVC_MAIN = "avc1.4D401F";
+    public static final String ISO_AVC_HIGH = "avc1.640029";
+    public static final String ISO_MP3 = "mp4a.69";
+    public static final String ISO_AAC = "mp4a.40.2";
+    public static final String ISO_AC3 = "ac-3";
+    public static final String ISO_EAC3 = "ec-3";
+    public static final String ISO_VORBIS = "vorbis";
         
+    public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
+            
     public static final String[][] AUDIO_CODEC_FORMAT = {
         {"aac", "adts"},
         {"ac3", "ac3"},
@@ -63,81 +65,8 @@ public class TranscodeUtils {
         {"pcm", "wav"}
     };
     
-    public static final String[][] FORMAT_VIDEO_CODECS = {
-        {"hls", "h264"},
-        {"matroska", "h264,hevc,vc1,mpeg2video"},
-        {"webm", "vp8"},
-    };
-        
-    public static final String[][] FORMAT_AUDIO_CODECS = {
-        {"hls", "aac,eac3,ac3"},
-        {"matroska", "mp3,vorbis,aac,flac,pcm,eac3,ac3,dts,truehd"},
-        {"webm", "vp8,vorbis,opus"},
-    };
-    
-    public static final String[][] FORMAT_SUBTITLE_CODECS = {
-        {"hls", "webvtt"},
-        {"matroska", "subrip,webvtt,dvb,dvd,pgs"},
-        {"webm", "webvtt"},
-    };
-    
-    public static final String[][] AUDIO_MIME_TYPES = {
-        {"aac", "audio/aac"},
-        {"ac3", "audio/ac3"},
-        {"eac3", "audio/eac3"},
-        {"adts", "audio/aac"},
-        {"aiff", "audio/aiff"},
-        {"dash", "application/dash+xml"},
-        {"dsf", "audio/dsf"},
-        {"flac", "audio/flac"},
-        {"hls", "application/x-mpegurl"},
-        {"m4a", "audio/mp4"},
-        {"mka", "audio/x-matroska"},
-        {"matroska", "audio/x-matroska"},
-        {"mp3", "audio/mpeg"},
-        {"mp4", "audio/mp4"},
-        {"oga", "audio/ogg"},
-        {"ogg", "audio/ogg"},
-        {"opus", "audio/opus"},        
-        {"wav", "audio/wav"},
-        {"webm", "audio/webm"}
-    };
-    
-    public static final String[][] VIDEO_MIME_TYPES = {
-        {"3gp", "video/3gpp"},
-        {"avi", "video/avi"},
-        {"dash", "application/dash+xml"},
-        {"hls", "application/x-mpegurl"},
-        {"m4v", "video/mp4"},
-        {"matroska", "video/x-matroska"},
-        {"mkv", "video/x-matroska"},
-        {"mp4", "video/mp4"},
-        {"mpeg", "video/mpeg"},
-        {"mpg", "video/mpeg"},
-        {"ogg", "video/ogg"},
-        {"ogv", "video/ogg"},
-        {"ts", "video/MP2T"},
-        {"webm", "video/webm"}
-    };
-    
     public static final String[][] SUBTITLE_MIME_TYPES = {
         {"webvtt", "text/vtt"}
-    };
-    
-    public static final String[][] AUDIO_CODEC_ENCODER = {
-        {"mp3", "libmp3lame"},
-        {"vorbis", "libvorbis"},
-        {"aac", "aac"},
-        {"flac", "flac"},
-        {"pcm", "pcm_s16le"},
-        {"ac3", "ac3"}
-    };
-    
-    public static final String[][] AUDIO_CODEC_ISO_SPEC = {
-        {"mp3", "mp4a.40.34"},
-        {"aac", "mp4a.40.2"},
-        {"ac3", "ac-3"},
-        {"eac3", "ec-3"},
     };
     
     public static final String[][] AUDIO_CODEC_QUALITY = {
@@ -165,15 +94,6 @@ public class TranscodeUtils {
                                                                 new Dimension(1024,576),
                                                                 new Dimension(1280,720),
                                                                 new Dimension(1920,1080)
-    };
-    
-    public static final String[][] AUDIO_CODEC_MAX_SAMPLE_RATE = {
-        {"mp3", "48000"},
-        {"vorbis", "48000"},
-        {"aac", "96000"},
-        {"flac", "192000"},
-        {"pcm", "192000"},
-        {"ac3", "48000"}
     };
     
     public static final String[][] CHANNEL_CONFIGURATION = {
@@ -419,74 +339,9 @@ public class TranscodeUtils {
         return -1;
     }
     
-    public static String getMimeType(String format, byte type) {
-        if(type == MediaElement.MediaElementType.AUDIO) {
-            for (String[] map : AUDIO_MIME_TYPES) {
-                if (map[0].equalsIgnoreCase(format)) { return map[1]; }
-            }
-        } else if(type == MediaElement.MediaElementType.VIDEO) {
-            for (String[] map : VIDEO_MIME_TYPES) {
-                if (map[0].equalsIgnoreCase(format)) { return map[1]; }
-            }
-        }
-        
-        return null;
-    }
-    
     public static String getFormatForAudioCodec(String codec) {
         for (String[] map : AUDIO_CODEC_FORMAT) {
             if (map[0].contains(codec)) { return map[1]; }
-        }
-        
-        return null;
-    }
-    
-    //
-    // Return the video codecs supported by a given format
-    //
-    public static String[] getVideoCodecsForFormat(String test) {
-        if(test == null) {
-            return null;
-        }
-        
-        for(String[] format : FORMAT_VIDEO_CODECS) {
-            if(format[0].contains(test)) {
-                return format[1].split(",");
-            }
-        }
-        
-        return null;
-    }
-    
-    //
-    // Return the audio codecs supported by a given format
-    //
-    public static String[] getAudioCodecsForFormat(String test) {
-        if(test == null) {
-            return null;
-        }
-        
-        for(String[] format : FORMAT_AUDIO_CODECS) {
-            if(format[0].contains(test)) {
-                return format[1].split(",");
-            }
-        }
-        
-        return null;
-    }
-    
-    //
-    // Return the subtitle codecs supported by a given format
-    //
-    public static String[] getSubtitleCodecsForFormat(String test) {
-        if(test == null) {
-            return null;
-        }
-        
-        for(String[] format : FORMAT_SUBTITLE_CODECS) {
-            if(format[0].contains(test)) {
-                return format[1].split(",");
-            }
         }
         
         return null;
@@ -523,34 +378,91 @@ public class TranscodeUtils {
         return null;
     }
     
-    public static String getEncoderForAudioCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_ENCODER) {
-            if (map[0].contains(codec)) {
-                return map[1];
-            }
+    public static String getEncoderForCodec(int codec) {
+        switch(codec) {
+            case SMS.Codec.AAC:
+                return "aac";
+                
+            case SMS.Codec.AC3:
+                return "ac3";
+                
+            case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH: case SMS.Codec.AVC_HIGH10:
+                return "libx264";
+                
+            case SMS.Codec.COPY:
+                return "copy";
+                
+            case SMS.Codec.EAC3:
+                return "eac3";
+                
+            case SMS.Codec.FLAC:
+                return "flac";
+                
+            case SMS.Codec.MP3:
+                return "libmp3lame";
+                
+            case SMS.Codec.PCM:
+                return "pcm_s16le";
+                
+            case SMS.Codec.SUBRIP:
+                return "subrip";
+                
+            case SMS.Codec.WEBVTT:
+                return "webvtt";
+                
+            case SMS.Codec.VORBIS:
+                return "libvorbis";
+                
+            default:
+                return null;
         }
-        
-        return null;
     }
     
-    public static String getIsoSpecForAudioCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_ISO_SPEC) {
-            if (codec.contains(map[0])) {
-                return map[1];
-            }
-        }
-        
-        return null;
+    public static String getIsoSpecForCodec(int codec) {
+        switch(codec) {
+            case SMS.Codec.AVC_BASELINE:
+                return ISO_AVC_BASELINE;
+                
+            case SMS.Codec.AVC_MAIN:
+                return ISO_AVC_MAIN;
+                
+            case SMS.Codec.AVC_HIGH:
+                return ISO_AVC_HIGH;
+                
+            case SMS.Codec.AAC:
+                return ISO_AAC;
+                
+            case SMS.Codec.MP3:
+                return ISO_MP3;
+                
+            case SMS.Codec.VORBIS:
+                return ISO_VORBIS;
+                
+            case SMS.Codec.AC3:
+                return ISO_AC3;
+                
+            case SMS.Codec.EAC3:
+                return ISO_EAC3;
+                
+            default:
+                return "";
+        }        
     }
     
-    public static Integer getMaxSampleRateForCodec(String codec) {
-        for (String[] map : AUDIO_CODEC_MAX_SAMPLE_RATE) {
-            if (codec.contains(map[0])) {
-                return Integer.valueOf(map[1]);
-            }
-        }
-        
-        return null;
+    public static int getMaxSampleRateForCodec(int codec) {
+        switch(codec) {
+            case SMS.Codec.AC3: case SMS.Codec.EAC3: case SMS.Codec.DTS: case SMS.Codec.MP3: case SMS.Codec.VORBIS:
+                return 48000;
+                
+            case SMS.Codec.AAC:
+                return 96000;
+                
+            case SMS.Codec.ALAC: case SMS.Codec.FLAC: case SMS.Codec.PCM: case SMS.Codec.DTSHD: case SMS.Codec.TRUEHD:
+                return 192000;
+                
+            default:
+                return -1;
+        }        
     }
     
     public static boolean isValidVideoStream(List<VideoStream> videoStreams, int streamId) {
@@ -665,6 +577,16 @@ public class TranscodeUtils {
         }
         
         return null;
+    }
+    
+    public static Encoder getEncoderForFormat(int format) {
+        switch(format) {
+            case  SMS.Format.HLS:
+                return new HLSEncoder();
+                
+            default:
+                return null;
+        }
     }
     
     public static Path[] getRenderDevices() {

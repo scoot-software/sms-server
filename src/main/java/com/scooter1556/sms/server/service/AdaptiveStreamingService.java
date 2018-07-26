@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.service;
 
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.AudioTranscode;
@@ -120,6 +121,7 @@ public class AdaptiveStreamingService {
         process.setAudioTranscodes(profile.getAudioTranscodes());
         process.setTranscoder(transcodeService.getTranscoder());
         
+        /*
         // Check if post-processing of segments is required for client
         if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
             switch(profile.getClient()) {
@@ -131,6 +133,7 @@ public class AdaptiveStreamingService {
                     break; 
             }
         }
+        */
             
         process.initialise();
         
@@ -281,7 +284,7 @@ public class AdaptiveStreamingService {
                     bandwidth = 384000;
                 }
                 
-                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec()) + "\"");
+                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()) + "\"");
                 playlist.add(baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8");
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
@@ -299,10 +302,10 @@ public class AdaptiveStreamingService {
                         isDefault = "YES";
                     }
 
-                    if(transcode.getCodec().equals("copy")) {
-                        audio = TranscodeUtils.getIsoSpecForAudioCodec(stream.getCodec());
+                    if(transcode.getCodec() == SMS.Codec.COPY) {
+                        audio = TranscodeUtils.getIsoSpecForCodec(stream.getCodec());
                     } else {
-                        audio = TranscodeUtils.getIsoSpecForAudioCodec(transcode.getCodec());
+                        audio = TranscodeUtils.getIsoSpecForCodec(transcode.getCodec());
                     }
                     
                     playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
@@ -363,12 +366,11 @@ public class AdaptiveStreamingService {
                 builder.append(",CLOSED-CAPTIONS=NONE");
                 builder.append(",CODECS=\"");
                 
-                if(profile.getQuality() > VideoQuality.HIGH) {
-                    builder.append("avc1.640028");
+                if(transcode.getCodec() == SMS.Codec.COPY) {
+                    builder.append(TranscodeUtils.getIsoSpecForCodec(videoStream.getCodec()));
                 } else {
-                    builder.append("avc1.42e01e");
+                    builder.append(TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()));
                 }
-                
                 
                 if(!audio.isEmpty()) {
                     builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
@@ -430,7 +432,7 @@ public class AdaptiveStreamingService {
             long i = Double.valueOf(Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION)).longValue();
             
             playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
-            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
+            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i + ".ts");
         }
 
         playlist.add("#EXT-X-ENDLIST");

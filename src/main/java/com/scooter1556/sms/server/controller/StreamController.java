@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.controller;
 
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.AudioTranscode;
@@ -61,12 +62,14 @@ import java.util.Enumeration;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -107,27 +110,15 @@ public class StreamController {
     @ResponseBody
     public ResponseEntity<TranscodeProfile> initialiseStream(@PathVariable("session") UUID sessionId,
                                                              @PathVariable("id") UUID id,
-                                                             @RequestParam(value = "client", required = false) String client,
-                                                             @RequestParam(value = "files", required = false) String files,
-                                                             @RequestParam(value = "codecs", required = true) String codecs,
-                                                             @RequestParam(value = "mchcodecs", required = false) String mchCodecs,
-                                                             @RequestParam(value = "format", required = false) String format,
-                                                             @RequestParam(value = "quality", required = true) Integer quality,
-                                                             @RequestParam(value = "samplerate", required = false) Integer maxSampleRate,
-                                                             @RequestParam(value = "bitrate", required = false) Integer maxBitRate,
-                                                             @RequestParam(value = "vstream", required = false) Integer videoStream,
-                                                             @RequestParam(value = "astream", required = false) Integer audioStream,
-                                                             @RequestParam(value = "sstream", required = false) Integer subtitleStream,
-                                                             @RequestParam(value = "direct", required = false) Boolean directPlay,
-                                                             @RequestParam(value = "update", required = false) Boolean update,
+                                                             @RequestBody TranscodeProfile profile,
                                                              HttpServletRequest request) {
         MediaElement mediaElement;
         Session session;
         Job job;
         Byte jobType;
-        TranscodeProfile profile;
         Boolean transcodeRequired = true;
-
+        
+        
         // Check session is valid
         session = sessionService.getSessionById(sessionId);
         
@@ -136,13 +127,26 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
         }
         
+        if(profile == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Requested media element not found.", null);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        
+        if(profile.getCodecs() == null || profile.getQuality() == null || profile.getFormat() == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode profile.", null);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        
         // Check media element
         mediaElement = mediaDao.getMediaElementByID(id);
         
-        if(mediaElement == null || codecs == null || quality == null) {
-            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode request.", null);
+        if(mediaElement == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Requested media element not found.", null);
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
+        
+        // Set media element in transcode profile
+        profile.setMediaElement(mediaElement);
         
         // Check physical file is available
         if(!new File(mediaElement.getPath()).exists()) {
@@ -150,27 +154,19 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
-        // Validate codecs
-        for(String codec : codecs.split(",")) {
-            if(!TranscodeUtils.isSupported(TranscodeService.getSupportedCodecs(), codec)) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Codec '" + codec + "' not recognised.", null);
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
-        }
+        // Get encoder for required format
+        profile.setEncoder(TranscodeUtils.getEncoderForFormat(profile.getFormat()));
         
-        // Validate format
-        if(format != null) {
-            if(!TranscodeUtils.isSupported(TranscodeUtils.TRANSCODE_FORMATS, format)) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format '" + format + "' is not recognised.", null);
-                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-            }
+        if(profile.getEncoder() == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Unsupported format specified.", null);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
         // Determine job type, validate quality and fetch available streams
-        if(mediaElement.getType() == MediaElementType.AUDIO && AudioQuality.isValid(quality)) {
+        if(mediaElement.getType() == MediaElementType.AUDIO && AudioQuality.isValid(profile.getQuality())) {
             jobType = JobType.AUDIO_STREAM;
             mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(id));
-        } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(quality)) {
+        } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(profile.getQuality())) {
             jobType = JobType.VIDEO_STREAM;
             mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(id));
             mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(id));
@@ -180,18 +176,16 @@ public class StreamController {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
         
-        // Ensure our metadata update flag is set
-        if(update == null) {
-            update = true;
-        }
-        
         // Create a new job
-        job = jobService.createJob(jobType, session.getUsername(), mediaElement, update);
+        job = jobService.createJob(jobType, session.getUsername(), mediaElement, true);
         
         if(job == null) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to create job for trancode request.", null);
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+        
+        // Set job ID in transcode profile
+        profile.setID(job.getID());
         
         // Determine if the device is on the local network
         boolean isLocal = false;
@@ -224,38 +218,10 @@ public class StreamController {
         }
         
         // Direct Play        
-        if(directPlay == null) {
-            directPlay = false;
-        } else if(directPlay) {
-            directPlay = isLocal;
+        if(profile.isDirectPlayEnabled()) {
+            profile.setDirectPlayEnabled(isLocal);
         }
-        
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG,
-                                             CLASS_NAME, 
-                                             "Initialise Stream: [" 
-                                                     +"Session=" + session 
-                                                     + ", Job ID=" + id 
-                                                     + ", Client=" + client 
-                                                     + ", Files=" + files 
-                                                     + ", Codecs=" + codecs 
-                                                     +  ", Mch Codecs=" + mchCodecs 
-                                                     + ", Format=" + format 
-                                                     + ", Quality=" + quality 
-                                                     + ", Max Sample Rate=" + maxSampleRate 
-                                                     + ", Max Bit Rate=" + maxBitRate
-                                                     + ", Video Stream=" + videoStream
-                                                     + ", Audio Stream=" + audioStream
-                                                     + ", Subtitle Stream=" + subtitleStream
-                                                     + ", Direct Play=" + directPlay
-                                                     + ", Update Stats=" + update,
-                                             null);
-        
-        //
-        // Create transcode profile for job
-        //
-        
-        profile = new TranscodeProfile(job.getID());
-        
+                
         // Set stream type
         if(isLocal) {
             profile.setType(TranscodeProfile.StreamType.LOCAL);
@@ -263,82 +229,50 @@ public class StreamController {
             profile.setType(TranscodeProfile.StreamType.REMOTE);
         }
         
-        profile.setMediaElement(mediaElement);
-        
         profile.setUrl(request.getRequestURL().toString().replaceFirst("/stream(.*)", ""));
         
-        if(files != null) {
-            profile.setFiles(files.split(","));
-        }
+        //
+        //  Validate streams
+        //
         
-        profile.setCodecs(codecs.split(","));
-        
-        if(client != null) {
-            profile.setClient(client);
-        }
-        
-        if(format != null) {
-            profile.setFormat(format);
-        }
-        
-        profile.setQuality(quality);
-        
-        if(maxSampleRate != null) {
-            profile.setMaxSampleRate(maxSampleRate);
-        }
-        
-        if(mchCodecs != null) {
-            profile.setMchCodecs(mchCodecs.split(","));
-        }
-        
-        if(videoStream != null) {
-            if(TranscodeUtils.isValidVideoStream(profile.getMediaElement().getVideoStreams(), videoStream)) {
-                profile.setVideoStream(videoStream);
-            } else {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Video stream " + videoStream + " is not available for media element " + mediaElement.getID() + ".", null);
+        if(profile.getVideoStream() != null) {
+            if(!TranscodeUtils.isValidVideoStream(profile.getMediaElement().getVideoStreams(), profile.getVideoStream())) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Video stream " + profile.getVideoStream() + " is not available for media element " + mediaElement.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }
         
-        if(audioStream != null) {
-            if(TranscodeUtils.isValidAudioStream(profile.getMediaElement().getAudioStreams(), audioStream)) {
-                profile.setAudioStream(audioStream);
-            } else {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + audioStream + " is not available for media element " + mediaElement.getID() + ".", null);
+        if(profile.getAudioStream() != null) {
+            if(!TranscodeUtils.isValidAudioStream(profile.getMediaElement().getAudioStreams(), profile.getAudioStream())) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Audio stream " + profile.getAudioStream() + " is not available for media element " + mediaElement.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }
             
-        if(subtitleStream != null) {
-            if(TranscodeUtils.isValidSubtitleStream(profile.getMediaElement().getSubtitleStreams(), subtitleStream)) {
-                profile.setSubtitleStream(subtitleStream);
-            } else {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + subtitleStream + " is not available for media element " + mediaElement.getID() + ".", null);
+        if(profile.getSubtitleStream() != null) {
+            if(!TranscodeUtils.isValidSubtitleStream(profile.getMediaElement().getSubtitleStreams(), profile.getSubtitleStream())) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Subtitle stream " + profile.getSubtitleStream() + " is not available for media element " + mediaElement.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
         }
-        
-        profile.setDirectPlayEnabled(directPlay);
-        
+                
         // Populate max bitrate
-        if(maxBitRate != null) {
-            profile.setMaxBitRate(maxBitRate);
-        } else if(!isLocal) {
-            profile.setMaxBitRate(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[quality]);
+        if(profile.getMaxBitRate() == null && !isLocal) {
+            profile.setMaxBitRate(TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[profile.getQuality()]);
         }
                 
         // Test if we can stream the file directly without transcoding
-        if(profile.getFiles() != null) {
+        if(profile.getFormats() != null) {
             // If the file type is supported and all codecs are supported without transcoding stream the file directly
-            if(TranscodeUtils.isSupported(profile.getFiles(), mediaElement.getFormat())) {
-                transcodeRequired = TranscodeService.isTranscodeRequired(profile);
+            if(ArrayUtils.contains(profile.getFormats(), mediaElement.getFormat())) {
+                transcodeRequired = transcodeService.isTranscodeRequired(profile);
                 
                 if(transcodeRequired == null) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to determine trancode parameters for job " + job.getID() + ".", null);
                     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
                 } else if(!transcodeRequired) {
                     profile.setType(StreamType.DIRECT);
-                    profile.setMimeType(TranscodeUtils.getMimeType(mediaElement.getFormat(), mediaElement.getType()));
+                    profile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), mediaElement.getFormat()));
                 }
             }
         }
@@ -353,27 +287,27 @@ public class StreamController {
                 }
                 
                 // Process subtitles
-                if(!TranscodeService.processSubtitles(profile)) {
+                if(!transcodeService.processSubtitles(profile)) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process subtitle streams for job " + job.getID() + ".", null);
                     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
                 
                 // Process video
-                if(!TranscodeService.processVideo(profile)) {
+                if(!transcodeService.processVideo(profile)) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process video stream for job " + job.getID() + ".", null);
                     return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
                 }
             }
             
             // Process Audio
-            if(!TranscodeService.processAudio(profile)) {
+            if(!transcodeService.processAudio(profile)) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process audio streams for job " + job.getID() + ".", null);
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
             
             // Set MIME Type
             if(profile.getFormat() != null) {
-                profile.setMimeType(TranscodeUtils.getMimeType(profile.getFormat(), mediaElement.getType()));
+                profile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), profile.getFormat()));
             }
         }
         
@@ -463,7 +397,7 @@ public class StreamController {
             
             // Return playlist
             switch (profile.getFormat()) {
-                case "hls":
+                case SMS.Format.HLS:
                     adaptiveStreamingService.sendHLSPlaylist(id, type, extra, request, response);
                     break;
                     
@@ -521,12 +455,8 @@ public class StreamController {
             String mimeType;
             
             switch (profile.getFormat()) {
-                case "hls":
+                case SMS.Format.HLS:
                     mimeType = "video/MP2T";
-                    break;
-                    
-                case "dash":
-                    mimeType = "video/mp4";
                     break;
                     
                 default:
@@ -535,6 +465,7 @@ public class StreamController {
                     return;
             }
             
+            /*
             // Check for special cases such as Chromecast
             if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
                 // Determine proper mimetype for audio
@@ -542,9 +473,9 @@ public class StreamController {
                     switch(profile.getClient()) {
                         case "chromecast":
                             AudioTranscode transcode = profile.getAudioTranscodes()[extra];
-                            String codec = transcode.getCodec();
+                            Integer codec = transcode.getCodec();
                             
-                            if(codec.equals("copy")) {
+                            if(codec == SMS.Codec.COPY) {
                                 codec = MediaUtils.getAudioStreamById(profile.getMediaElement().getAudioStreams(), transcode.getId()).getCodec();
                             }
                             
@@ -558,15 +489,16 @@ public class StreamController {
                     }
                 }
             }
+            */
             
             // Set default segment if not already set
             if(segment == null) {
-                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra);
+                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra + ".ts");
             }
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + id + " Segment=" + file + " Type=" + type + " Extra=" + extra, null);
             
-            if(profile.getFormat().equals("hls")) {
+            if(profile.getFormat() == SMS.Format.HLS) {
                 // Update segment tracking
                 int num = Integer.parseInt(file);
                 int oldNum = transcodeProcess.getSegmentNum();
@@ -662,10 +594,8 @@ public class StreamController {
             
             switch(profile.getType()) {
                 case StreamType.LOCAL: case StreamType.REMOTE:
-                    if(profile.getFormat().equals("hls")) {
+                    if(profile.getFormat() == SMS.Format.HLS) {
                         adaptiveStreamingService.sendHLSPlaylist(id, null, null, request, response);
-                    } else if(profile.getFormat().equals("dash")) {
-                        adaptiveStreamingService.sendDashPlaylist(id, request, response);
                     }
                 
                     break;

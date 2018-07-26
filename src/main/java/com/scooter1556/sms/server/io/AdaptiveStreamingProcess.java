@@ -23,6 +23,7 @@
  */
 package com.scooter1556.sms.server.io;
 
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.Transcoder;
@@ -132,13 +133,13 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                                     
                                     // Determine codec
                                     AudioTranscode aTranscode = audioTranscodes[transcode];
-                                    String codec = aTranscode.getCodec();
+                                    Integer codec = aTranscode.getCodec();
 
-                                    if(codec.equals("copy")) {
+                                    if(codec == SMS.Codec.COPY) {
                                         codec = MediaUtils.getAudioStreamById(mediaElement.getAudioStreams(), aTranscode.getId()).getCodec();
                                     }
                                     
-                                    final String format = TranscodeUtils.getFormatForAudioCodec(codec);
+                                    final int format = MediaUtils.getFormatForCodec(codec);
                                     
                                     // Transcode
                                     postProcessExecutor.submit(new Runnable() {
@@ -223,7 +224,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         ended = true;
     }
     
-    private void postProcess(String path, String format) {
+    private void postProcess(String path, Integer format) {
         // Process for transcoding
         Process postProcess = null;
         
@@ -237,9 +238,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             command.add(path);
             command.add("-c:a");
             command.add("copy");
-            command.add("-f");
-            command.add(format);
-            command.add(path + ".tmp");
+            command.add(path + "." + format + ".tmp");
             
             LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
             
@@ -251,7 +250,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             postProcess.waitFor();
             
             // Rename file once complete
-            File temp = new File(path + ".tmp");
+            File temp = new File(path + "." + format + ".tmp");
             File segment = new File(path + "." + format);
             
             if(temp.exists()) {
