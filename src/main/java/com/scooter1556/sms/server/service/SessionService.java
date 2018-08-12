@@ -23,49 +23,122 @@
  */
 package com.scooter1556.sms.server.service;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.scooter1556.sms.server.SMS;
+import com.scooter1556.sms.server.dao.UserDao;
+import com.scooter1556.sms.server.domain.ClientProfile;
+import com.scooter1556.sms.server.domain.Job;
+import com.scooter1556.sms.server.domain.Session;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
+import com.scooter1556.sms.server.domain.UserStats;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentSkipListSet;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class SessionService {
+public class SessionService implements DisposableBean {
     private static final String CLASS_NAME = "SessionService";
     
-    private final List<Session> sessions = new ArrayList<>();
+    @Autowired
+    private AdaptiveStreamingService adaptiveStreamingService;
     
-    public UUID createSession(String username) {
-        // Checks
-        if(username == null) {
+    @Autowired
+    private UserDao userDao;
+    
+    private final ConcurrentSkipListSet<Session> sessions = new ConcurrentSkipListSet<>();
+    
+    public Session[] getSessions() {
+        return sessions.toArray(new Session[sessions.size()]);
+    }
+    
+    public int getNumSessions() {
+        return sessions.size();
+    }
+    
+    public UUID addSession(UUID id, String username, ClientProfile profile) {
+        // Check required parameters
+        if(username == null || profile == null) {
             return null;
         }
         
-        // Generate new ID and add to session list
-        UUID id = UUID.randomUUID();
-        addSession(id, username);
-                
-        return id;
-    }
-    
-    public int addSession(UUID id, String username) {
-        // Checks
-        if(id == null || username == null) {
-            return -1;
-        }
-        
-        // Check session doesn't already exist
-        if(getSessionById(id) != null) {
-            return 0;
+        // Generate ID if required
+        if(id == null) {
+            id = UUID.randomUUID();
+        } else {
+            // Check session doesn't already exist
+            if(isSessionValid(id)) {
+                return null;
+            }
         }
         
         // Create a new session and add it to the list
-        Session session = new Session(id, username);
+        Session session = new Session(id, username, profile);
         sessions.add(session);
         
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "New session created: " + session.toString(), null);
         
-        return 1;
+        return id;
+    }
+    
+    public void removeSessions(UUID id) {        
+        Iterator<Session> sIter = sessions.iterator();
+
+        while (sIter.hasNext()) {
+            Session session = sIter.next();
+
+            // Check if we are looking for a specific session 
+            if(id != null) {
+                if(session.getId().compareTo(id) != 0) {
+                    continue;
+                }
+            }
+            
+            // Remove session
+            endJobs(session, null);
+            sIter.remove();            
+        }
+    }
+    
+    public void endJobs(Session session, UUID mediaElement) {
+        // End jobs associated with sessions
+        for(Job job : session.getJobs()) {
+            // Check we are handling the correct job
+            if(mediaElement != null) {
+                if(job.getMediaElement().getID().compareTo(mediaElement) != 0) {
+                    continue;
+                }
+            }
+            
+            // Stop transcode process
+            if(job.getTranscodeProfile().getType() > TranscodeProfile.StreamType.DIRECT) {
+                adaptiveStreamingService.endProcess(job.getId());
+            }
+            
+            // Update User Stats
+            UserStats userStats = userDao.getUserStatsByUsername(session.getUsername());
+        
+            if(userStats != null) {
+                switch(job.getType()) {
+                    case Job.JobType.VIDEO_STREAM: case Job.JobType.AUDIO_STREAM:
+                        userStats.setStreamed(userStats.getStreamed() + job.getBytesTransferred());
+                        break;
+
+                    case Job.JobType.DOWNLOAD:
+                        userStats.setDownloaded(userStats.getDownloaded() + job.getBytesTransferred());
+                        break;
+                }
+
+                // Update database
+                userDao.updateUserStats(userStats);            
+            }
+
+            // Remove job from session
+            session.removeJobById(job.getId());
+        }
     }
     
     public Session getSessionById(UUID id) {
@@ -81,47 +154,16 @@ public class SessionService {
     public boolean isSessionValid(UUID id) {
         return getSessionById(id) != null;
     }
-     
-    public void removeSessionById(UUID id) {
-        int index = 0;
-        
-        for (Session session : sessions) {
-            if(session.getId().compareTo(id) == 0) {
-                sessions.remove(index);
-                break;
-            }
-            
-            index ++;
-        }
-    }
     
-    public List<Session> getActiveSessions() {
-        return sessions;
-    }
-        
-    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public static class Session {
-        private final UUID id;
-        private final String username;
-        
-        public Session(UUID id, String username) {
-            this.id = id;
-            this.username = username;
+    // End all active sessions before the application exits
+    @Override
+    public void destroy() {
+        // Check number of sessions
+        if(sessions.isEmpty()) {
+            return;
         }
-        
-        @Override
-        public String toString() {
-            return String.format("{ID=%s, Username=%s}",
-                    id == null ? "null" : id,
-                    username == null ? "null" : username);
-        }
-        
-        public UUID getId() {
-            return id;
-        }
-        
-        public String getUsername() {
-            return username;
-        }
+            
+        // End all sessions
+        removeSessions(null);
     }
 }

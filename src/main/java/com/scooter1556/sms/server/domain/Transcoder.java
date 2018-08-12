@@ -1,3 +1,4 @@
+
 package com.scooter1556.sms.server.domain;
 
 import java.io.Serializable;
@@ -48,8 +49,12 @@ public class Transcoder implements Serializable {
     }
     
     public List<HardwareAccelerator> getHardwareAcceleratorOptions(boolean streaming) {
-        List<HardwareAccelerator> result = new ArrayList<>();
+        if(hwaccels == null) {
+            return null;
+        }
         
+        List<HardwareAccelerator> result = new ArrayList<>();
+                
         for(HardwareAccelerator accelerator : hwaccels) {
             // Check the accelerator supports bitrate limiting
             if(streaming) {

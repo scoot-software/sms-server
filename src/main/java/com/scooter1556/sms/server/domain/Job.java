@@ -29,44 +29,50 @@ import java.util.UUID;
 
 public class Job implements Serializable {
     
-    private UUID id;
+    private UUID id, sid;
     private Byte type;
-    private String username;
-    private UUID mediaElement;
+    private MediaElement mediaElement;
     private Timestamp startTime;
     private Timestamp endTime;
     private Timestamp lastActivity;
-    private Long bytesTransferred;
-    
+    private long bytesTransferred = 0;
+    private TranscodeProfile profile;
 
 
-    public Job() {};
-    
-    public Job(UUID id, Byte type, String username, UUID mediaElement, Timestamp startTime, Timestamp endTime, Timestamp lastActivity, Long bytesTransferred)
-    {
-        this.id = id;
-        this.type = type;
-        this.username = username;
-        this.mediaElement = mediaElement;
-        this.startTime = startTime;
-        this.endTime = endTime;
-        this.lastActivity = lastActivity;
-        this.bytesTransferred = bytesTransferred;
-    }
+    public Job(UUID sid) {
+        // Set IDs
+        id = UUID.randomUUID();
+        this.sid = sid;
+    };
     
     @Override
     public String toString() {
         return String.format(
-                "Job[ID=%s, Type=%s, User=%s, Media Element=%s, Start Time=%s, End Time=%s, Last Activity=%s, Bytes Transferred=%s]",
-                id == null ? "N/A" : id.toString(), type == null ? "N/A" : type.toString(), username == null ? "N/A" : username, mediaElement == null ? "N/A" : mediaElement, startTime == null ? "N/A" : startTime.toString(), endTime == null ? "N/A" : endTime.toString(), lastActivity == null ? "N/A" : lastActivity.toString(), bytesTransferred == null ? "N/A" : bytesTransferred.toString());
+                "Job[ID=%s, Session ID=%s, Type=%s, Media Element=%s, Start Time=%s, End Time=%s, Last Activity=%s, Bytes Transferred=%s]",
+                id == null ? "N/A" : id.toString(),
+                sid == null ? "N/A" : sid.toString(),
+                type == null ? "N/A" : type.toString(),
+                mediaElement == null ? "N/A" : mediaElement,
+                startTime == null ? "N/A" : startTime.toString(),
+                endTime == null ? "N/A" : endTime.toString(),
+                lastActivity == null ? "N/A" : lastActivity.toString(),
+                String.valueOf(bytesTransferred));
     }
 
-    public UUID getID()  {
+    public UUID getId()  {
         return id;
     }
     
-    public void setID(UUID id) {
+    public void setId(UUID id) {
         this.id = id;
+    }
+    
+    public UUID getSessionId()  {
+        return sid;
+    }
+    
+    public void setSessionId(UUID sid) {
+        this.sid = sid;
     }
     
     public Byte getType() {
@@ -77,19 +83,11 @@ public class Job implements Serializable {
         this.type = type;
     }
     
-    public String getUsername() {
-        return username;
-    }
-    
-    public void setUsername(String username) {
-        this.username = username;
-    }
-    
-    public UUID getMediaElement()  {
+    public MediaElement getMediaElement()  {
         return mediaElement;
     }
     
-    public void setMediaElement(UUID mediaElement) {
+    public void setMediaElement(MediaElement mediaElement) {
         this.mediaElement = mediaElement;
     }
     
@@ -117,12 +115,20 @@ public class Job implements Serializable {
         this.lastActivity = lastActivity;
     }
     
-    public Long getBytesTransferred() {
+    public long getBytesTransferred() {
         return bytesTransferred;
     }
     
-    public void setBytesTransferred(Long bytesTransferred) {
+    public void setBytesTransferred(long bytesTransferred) {
         this.bytesTransferred = bytesTransferred;
+    }
+    
+    public TranscodeProfile getTranscodeProfile() {
+        return profile;
+    }
+    
+    public void setTranscodeProfile(TranscodeProfile profile) {
+        this.profile = profile;
     }
 
     public static class JobType {

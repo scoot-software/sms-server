@@ -1,6 +1,7 @@
 package com.scooter1556.sms.server.utilities;
 
 import com.scooter1556.sms.server.service.SettingsService;
+import static com.scooter1556.sms.server.service.parser.MetadataParser.getParserPaths;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -9,27 +10,32 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.SystemUtils;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class ParserUtils {
     
-    private static final String PARSER = "ffprobe";
+    public static final String METADATA_PARSER = "ffprobe";
     
-    public static final String[] PARSER_PATH_LINUX = {
+    public static final String LINUX_HARDWARE_PARSER = "lshw";
+    
+    public static final String[] METADATA_PARSER_PATH_LINUX = {
         "/usr/bin/ffprobe"
     };
     
-    public static final String[] PARSER_PATH_WINDOWS = {
+    public static final String[] METADATA_PARSER_PATH_WINDOWS = {
         System.getenv("SystemDrive") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffprobe.exe",
         System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "ffprobe.exe",
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffprobe.exe",
     };
     
-    public static Path getParser() {
+    public static Path getMetadataParser() {
         // Check user config transcode path
         if(SettingsService.getInstance().getParserPath() != null){
             File pFile = new File(SettingsService.getInstance().getParserPath());
             
-            if(isValidParser(pFile)) {
+            if(isValid(METADATA_PARSER, pFile)) {
                 return pFile.toPath();
             }
         }
@@ -38,7 +44,7 @@ public class ParserUtils {
         for(String path : getParserPaths()) {
             File test = new File(path);
             
-            if(isValidParser(test)) {
+            if(isValid(METADATA_PARSER, test)) {
                 SettingsService.getInstance().setParserPath(path);
                 return test.toPath();
             }
@@ -48,30 +54,28 @@ public class ParserUtils {
         return null;
     }
     
-    public static String[] getParserPaths() {
-        if(SystemUtils.IS_OS_WINDOWS) {
-            return PARSER_PATH_WINDOWS;
-        } else if(SystemUtils.IS_OS_LINUX) {
-            return PARSER_PATH_LINUX;
+    public static String getHardwareParser() {
+        if(SystemUtils.IS_OS_LINUX) {
+            return LINUX_HARDWARE_PARSER;
+        } else {
+            return null;
         }
-        
-        return null;
     }
     
-    public static boolean isValidParser(File parser) {
+    public static boolean isValid(String parser, File path) {
         // Check file exists and is executable
-        if(parser == null || !parser.canExecute()) {
+        if(path == null || !path.canExecute()) {
             return false;
         }
         
-        // Check this is a supported transcoder
-        String[] command = new String[]{parser.getAbsolutePath()};
+        // Check parser is valid
+        String[] command = new String[]{path.getAbsolutePath()};
         
         try {
-            String[] result = ParserUtils.getProcessOutput(command);
+            String[] result = ParserUtils.getProcessOutput(command, true);
             
             for (String line : result) {
-                if(line.contains(PARSER)) {
+                if(line.contains(parser)) {
                     return true;
                 }
             }
@@ -82,8 +86,8 @@ public class ParserUtils {
         return false;
     }
     
-    public static String[] getProcessOutput(String[] command) throws IOException {
-        ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
+    public static String[] getProcessOutput(String[] command, boolean redirectErrorStream) throws IOException {
+        ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(redirectErrorStream);
         Process process = processBuilder.start();
         
         List<String> result = null;
@@ -110,5 +114,58 @@ public class ParserUtils {
         }
 
         return null;     
+    }
+    
+    //
+    // XML Helpers
+    //
+    public static Node getNode(String tagName, NodeList nodes) {
+        for(int x = 0; x < nodes.getLength(); x++) {
+            Node node = nodes.item(x);
+            
+            if (node.getNodeName().equalsIgnoreCase(tagName)) {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    public static String getNodeValue(String tagName, NodeList nodes, String defaultValue) {
+        for (int x = 0; x < nodes.getLength(); x++) {
+            Node node = nodes.item(x);
+            
+            if (node.getNodeName().equalsIgnoreCase(tagName)) {
+                NodeList childNodes = node.getChildNodes();
+                
+                for (int y = 0; y < childNodes.getLength(); y++ ) {
+                    Node data = childNodes.item(y);
+                    
+                    if ( data.getNodeType() == Node.TEXT_NODE ) {
+                        return data.getNodeValue();
+                    }
+                }
+            }
+        }
+        
+        return defaultValue;
+    }
+    
+    public static String getNodeAttr(String attrName, Node node, String defaultValue) {
+        NamedNodeMap attrs = node.getAttributes();
+        
+        if(attrs == null) {
+            return defaultValue;
+        }
+
+        for (int y = 0; y < attrs.getLength(); y++ ) {
+            Node attr = attrs.item(y);
+            
+            if (attr.getNodeName().equalsIgnoreCase(attrName)) {
+                return attr.getNodeValue();
+            }
+        }
+
+        return defaultValue;
     }
 }

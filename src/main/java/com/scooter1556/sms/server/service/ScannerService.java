@@ -24,7 +24,6 @@
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.SMS;
-import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.domain.Job;
@@ -85,9 +84,6 @@ public class ScannerService implements DisposableBean {
 
     @Autowired
     private MediaDao mediaDao;
-
-    @Autowired
-    private JobDao jobDao;
     
     @Autowired
     private MetadataParser metadataParser;
@@ -100,6 +96,9 @@ public class ScannerService implements DisposableBean {
     
     @Autowired
     private PlaylistService playlistService;
+    
+    @Autowired
+    private SessionService sessionService;
 
     private static final String[] INFO_FILE_TYPES = {"nfo"};
     private static final String[] EXCLUDED_FILE_NAMES = {"Extras","extras"};
@@ -129,33 +128,31 @@ public class ScannerService implements DisposableBean {
     
     // Check for inactive jobs at midnight
     @Scheduled(cron="#{config.deepScanSchedule}")
-    private void deepScan() {
+    public int startDeepScan() {
         // Check a scanning process is not already active
         if (isScanning() || isDeepScanning()) {
-            return;
+            return SMS.Status.NOT_ALLOWED;
         }
         
-        // Check there are not currently jobs active
-        List<Job> jobs = jobDao.getActiveJobs();
-        
-        if (jobs != null) {
-            for(Job job : jobs) {
-                if(job.getType() == Job.JobType.VIDEO_STREAM) {
-                    return;
-                }
-            }
+        // Check there are no active sessions which may be affected
+        if(sessionService.getNumSessions() > 0) {
+            return SMS.Status.NOT_ALLOWED;
         }
         
         // List of streams to scan
         List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
         
         // Start scanning
-        if(!streams.isEmpty()) {
-            // Start scanning playlists
-            startDeepScan(streams);
+        if(streams.isEmpty()) {
+            return SMS.Status.NOT_REQUIRED;
         }
         
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started scheduled deep scan of media.", null);
+        // Start scanning
+        deepScan(streams);
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started deep scan of media.", null);
+        
+        return SMS.Status.OK;
     }
 
     //
@@ -260,12 +257,7 @@ public class ScannerService implements DisposableBean {
     //
     // Performs a deep scan of media streams
     //
-    public synchronized void startDeepScan(final List<VideoStream> streams) {
-        // Check if media is already being scanned
-        if (isScanning() || isDeepScanning()) {
-            return;
-        }
-        
+    private synchronized void deepScan(final List<VideoStream> streams) {        
         // Create log file
         Timestamp scanTime = new Timestamp(new Date().getTime());
         deepScanLog = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";

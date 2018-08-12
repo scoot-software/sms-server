@@ -23,7 +23,7 @@
  */
 package com.scooter1556.sms.server.controller;
 
-import com.scooter1556.sms.server.dao.JobDao;
+import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
@@ -67,9 +67,6 @@ public class AdminController {
     
     @Autowired
     private MediaDao mediaDao;
-    
-    @Autowired
-    private JobDao jobDao;
     
     @Autowired
     private ScannerService scannerService;
@@ -419,41 +416,26 @@ public class AdminController {
     }
     
     @RequestMapping(value="/deep/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> deepScan() {        
-        // Check a scanning process is not already active
-        if (scannerService.isScanning() || scannerService.isDeepScanning()) {
-            return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
-        }
-        
-        // Check there are not currently jobs active
-        List<Job> jobs = jobDao.getActiveJobs();
-        
-        if (jobs != null) {
-            for(Job job : jobs) {
-                if(job.getType() == Job.JobType.VIDEO_STREAM) {
-                    return new ResponseEntity<>("Deep scan cannot run whilst there are active streaming jobs.", HttpStatus.NOT_ACCEPTABLE);
-                }
-            }
-        }
-        
-        // List of streams to scan
-        List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
-        
-        // Check we have video streams to scan
-        if(streams.isEmpty()) {
-            return new ResponseEntity<>("No streams to scan for this request.", HttpStatus.NOT_FOUND);
-        }
-        
+    public ResponseEntity<String> deepScan() {
         // Start scanning playlists
-        scannerService.startDeepScan(streams);
+        int status = scannerService.startDeepScan();
         
-        return new ResponseEntity<>("Deep scanning started.", HttpStatus.OK);
+        // Check status
+        switch(status) {
+            case SMS.Status.NOT_ALLOWED:
+                return new ResponseEntity<>("Deep scan cannot be run at this time.", HttpStatus.NOT_ACCEPTABLE);
+                
+            case SMS.Status.NOT_REQUIRED:
+                return new ResponseEntity<>("No media requires scanning.", HttpStatus.NOT_FOUND);
+                
+            default:
+                return new ResponseEntity<>("Deep scanning started.", HttpStatus.OK);
+        }
     }
     
     @RequestMapping(value="/deep/scan/stop", method=RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
-    public void deepScanStop()
-    {   
+    public void deepScanStop() {   
         scannerService.stopDeepScan();
     }
     
@@ -462,23 +444,7 @@ public class AdminController {
     {   
         return new ResponseEntity<>(scannerService.getDeepScanCount(), HttpStatus.OK);
     }
-    
-    //
-    // Job
-    //
-    
-    @RequestMapping(value="/job/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<Job>> getJobs(@PathVariable("limit") Integer limit)
-    {
-        List<Job> jobs = jobDao.getJobs(limit);
-        
-        if (jobs == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        
-        return new ResponseEntity<>(jobs, HttpStatus.OK);
-    }
-    
+
     //
     // Log
     //

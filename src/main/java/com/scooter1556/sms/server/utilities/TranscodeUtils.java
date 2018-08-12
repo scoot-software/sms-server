@@ -157,7 +157,7 @@ public class TranscodeUtils {
         String[] command = new String[]{transcoder.getAbsolutePath()};
         
         try {
-            String[] result = ParserUtils.getProcessOutput(command);
+            String[] result = ParserUtils.getProcessOutput(command, true);
             
             for (String line : result) {
                 if(line.contains(TRANSCODER)) {
@@ -181,7 +181,7 @@ public class TranscodeUtils {
         String[] command = new String[]{transcoder.getPath().toString()};
         
         try {
-            String[] result = ParserUtils.getProcessOutput(command);
+            String[] result = ParserUtils.getProcessOutput(command, true);
             short check =  0;
             
             for (String line : result) {

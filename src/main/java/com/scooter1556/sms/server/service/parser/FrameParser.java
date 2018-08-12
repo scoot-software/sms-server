@@ -50,7 +50,7 @@ public class FrameParser {
         
     public VideoStream parse(VideoStream stream) {
         // Use parser to parse frames of a video stream
-        Path parser = ParserUtils.getParser();
+        Path parser = ParserUtils.getMetadataParser();
 
         // Check transcoder exists
         if(parser == null) {

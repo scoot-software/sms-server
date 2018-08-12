@@ -39,6 +39,7 @@ import com.scooter1556.sms.server.utilities.ParserUtils;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.SystemUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -49,7 +50,7 @@ public class MetadataParser {
         
     public MediaElement parse(MediaElement mediaElement, String log) {
         // Use parser to parse file metadata
-        Path parser = ParserUtils.getParser();
+        Path parser = ParserUtils.getMetadataParser();
 
         // Check transcoder exists
         if(parser == null) {
@@ -59,7 +60,7 @@ public class MetadataParser {
         
         try {
             String[] command = new String[]{parser.toString(), "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", mediaElement.getPath()};
-            String[] metadata = ParserUtils.getProcessOutput(command);
+            String[] metadata = ParserUtils.getProcessOutput(command, false);
                         
             // Check we got output from parser
             if(metadata == null || metadata.length == 0) {
@@ -477,5 +478,15 @@ public class MetadataParser {
         }
 
         return mediaElement;
+    }
+    
+    public static String[] getParserPaths() {
+        if(SystemUtils.IS_OS_WINDOWS) {
+            return ParserUtils.METADATA_PARSER_PATH_WINDOWS;
+        } else if(SystemUtils.IS_OS_LINUX) {
+            return ParserUtils.METADATA_PARSER_PATH_LINUX;
+        }
+        
+        return null;
     }
 }

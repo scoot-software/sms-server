@@ -32,7 +32,6 @@ import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.utilities.MediaUtils;
-import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -95,6 +94,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Reset flags
             ended = false;
             
+            /*
             // Setup post-processing of audio segments if required
             if(postProcessEnabled && audioTranscodes != null && mediaElement != null && transcoder != null) {                
                 //  Setup thread pool for post-processing segments
@@ -161,7 +161,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 
                 // Start directory watcher
                 watcher.start();
-            }
+            }*/
         
             // Start transcoding
             start();

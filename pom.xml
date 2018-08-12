@@ -17,7 +17,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>1.5.10.RELEASE</version>
+        <version>1.5.15.RELEASE</version>
     </parent>
 
     <dependencies>
@@ -61,6 +61,7 @@
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
+            <version>1.9.3</version>
         </dependency>
         <dependency>
             <groupId>com.corundumstudio.socketio</groupId>
@@ -71,17 +72,6 @@
             <groupId>net.harawata</groupId>
             <artifactId>appdirs</artifactId>
             <version>1.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jhardware</groupId>
-            <artifactId>jHardware</artifactId>
-            <version>0.8.5</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-simple</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.eclipsesource.minimal-json</groupId>

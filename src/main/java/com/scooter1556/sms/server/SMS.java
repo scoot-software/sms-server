@@ -1,6 +1,14 @@
 package com.scooter1556.sms.server;
 
 public class SMS {
+    public static class Status {
+        public static final int ERROR = -1;
+        public static final int OK = 0;
+        public static final int NOT_ALLOWED = 1;
+        public static final int NOT_REQUIRED = 2;
+        public static final int REQUIRED_DATA_MISSING = 3;
+    }
+    
     public static class Codec {
         public static final int UNSUPPORTED = -1;
         
@@ -68,4 +76,11 @@ public class SMS {
         public static final int SUBTITLE = 2;
     }
     
+    public static class Client {
+        public static final int UNSUPPORTED = 0;
+        public static final int ANDROID = 1;
+        public static final int ANDROID_TV = 2;
+        public static final int CHROMECAST = 3;
+        public static final int KODI = 4;
+    }
 }

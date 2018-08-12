@@ -24,9 +24,9 @@
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.SMS;
-import com.scooter1556.sms.server.dao.JobDao;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.AudioTranscode;
+import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
@@ -35,7 +35,6 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode;
-import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
@@ -47,23 +46,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.apache.commons.math3.util.Precision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 @Service
 public class AdaptiveStreamingService {
@@ -75,9 +61,6 @@ public class AdaptiveStreamingService {
     
     // The number of stream alternatives to transcode by default
     public static final Integer DEFAULT_STREAM_COUNT = 2;
-        
-    @Autowired
-    private JobDao jobDao;
     
     @Autowired
     private MediaDao mediaDao;
@@ -87,38 +70,34 @@ public class AdaptiveStreamingService {
     
     private final ArrayList<AdaptiveStreamingProcess> processes = new ArrayList<>();
 
-    public AdaptiveStreamingProcess initialise(TranscodeProfile profile, int num) {
-        // Check that this is an adaptive streaming job
-        if(profile.getType() == StreamType.DIRECT) {
-            return null;
-        }
-        
+    public AdaptiveStreamingProcess initialise(Job job, int num) {        
         // Get offset
         if(num > 0) {
             // Start transcoding from the previous segment
             num -= 1;
-            profile.setOffset(num * HLS_SEGMENT_DURATION);
+            job.getTranscodeProfile().setOffset(num * HLS_SEGMENT_DURATION);
         }
         
         // Get transcode command
-        String[][] commands = transcodeService.getTranscodeCommand(profile);
+        String[][] commands = transcodeService.getTranscodeCommand(job);
         
         if(commands == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get transcode command for profile: " + job.getTranscodeProfile(), null);
             return null;
         }
         
         // Start transcoding
-        AdaptiveStreamingProcess process = getProcessById(profile.getID());
+        AdaptiveStreamingProcess process = getProcessById(job.getId());
         
         if(process == null) {
-            process = new AdaptiveStreamingProcess(profile.getID());
+            process = new AdaptiveStreamingProcess(job.getId());
             processes.add(process);
         }
         
         // Update process with required information
         process.setCommands(commands);
-        process.setMediaElement(profile.getMediaElement());
-        process.setAudioTranscodes(profile.getAudioTranscodes());
+        process.setMediaElement(job.getMediaElement());
+        process.setAudioTranscodes(job.getTranscodeProfile().getAudioTranscodes());
         process.setTranscoder(transcodeService.getTranscoder());
         
         /*
@@ -140,126 +119,18 @@ public class AdaptiveStreamingService {
         return process;
     }
     
-    public DOMSource generateDashPlaylist(UUID id, String baseUrl) {
-        Job job = jobDao.getJobByID(id);
-        
+    public List<String> generateHLSVariantPlaylist(Job job, ClientProfile clientProfile) {
         if(job == null) {
             return null;
         }
         
-        MediaElement mediaElement = mediaDao.getMediaElementByID(job.getMediaElement());
+        MediaElement mediaElement = job.getMediaElement();
         
         if(mediaElement == null) {
             return null;
         }
         
-        baseUrl = baseUrl + "/stream/segment/" + id + "/";
-        
-        try {
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder;
-            docBuilder = docFactory.newDocumentBuilder();
-
-            // Root elements
-            Document playlist = docBuilder.newDocument();
-            Element mpd = playlist.createElement("MPD");
-            playlist.appendChild(mpd);
-
-            mpd.setAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
-            mpd.setAttribute("xmlns", "urn:mpeg:dash:schema:mpd:2011");
-            mpd.setAttribute("xsi:schemaLocation", "urn:mpeg:DASH:schema:MPD:2011 DASH-MPD.xsd");
-            //mpd.setAttribute("profiles", "urn:mpeg:dash:profile:full:2011");
-            mpd.setAttribute("profiles", "urn:mpeg:dash:profile:isoff-live:2011");
-            mpd.setAttribute("minBufferTime", "PT"+ DASH_SEGMENT_DURATION + "S");
-            mpd.setAttribute("type", "static");
-            mpd.setAttribute("mediaPresentationDuration", "PT" + mediaElement.getDuration() + "S");
-
-            Element period = playlist.createElement("Period");
-            mpd.appendChild(period);
-
-            period.setAttribute("duration", "PT" + mediaElement.getDuration() + "S");
-
-            Element adaptationSet = playlist.createElement("AdaptationSet");
-            period.appendChild(adaptationSet);
-
-            adaptationSet.setAttribute("segmentAlignment", "true");
-            adaptationSet.setAttribute("contentType", "audio");
-
-            Element representation = playlist.createElement("Representation");
-            adaptationSet.appendChild(representation);
-
-            representation.setAttribute("id", "audio");
-            representation.setAttribute("mimeType", "audio/mp4");
-            representation.setAttribute("codecs", "mp4a.40.2");
-            representation.setAttribute("audioSamplingRate", "44100");
-            representation.setAttribute("bandwidth", "128000");
-            
-            Element audioChannelConfig = playlist.createElement("AudioChannelConfiguration");
-            representation.appendChild(audioChannelConfig);
-            
-            audioChannelConfig.setAttribute("schemeIdUri", "urn:mpeg:dash:23003:3:audio_channel_configuration:2011");
-            audioChannelConfig.setAttribute("value", "2");
-            
-            Element segmentTemplate = playlist.createElement("SegmentTemplate");
-            representation.appendChild(segmentTemplate);
-
-            segmentTemplate.setAttribute("duration", "5000");
-            segmentTemplate.setAttribute("initialization", baseUrl + "init-stream0.m4s");
-            segmentTemplate.setAttribute("media", baseUrl + "chunk-stream0-$Number%05d$.m4s");
-            segmentTemplate.setAttribute("startNumber", "1");
-            
-            DOMSource result = new DOMSource(playlist);
-            return result;
-        } catch (ParserConfigurationException ex) {
-            return null;
-        }
-    }
-    
-    public void sendDashPlaylist(UUID id, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        try {
-            // Get the request base URL so we can use it in our playlist
-            String baseUrl = request.getRequestURL().toString().replaceFirst("/stream(.*)", "");
-            
-            // Get playlist
-            DOMSource playlist = generateDashPlaylist(id, baseUrl);
-            
-            if(playlist == null) {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Unable to generate Dash playlist.");
-                return;
-            }
-            
-            // Write playlist to buffer
-            StringWriter playlistWriter = new StringWriter();
-            StreamResult result = new StreamResult(playlistWriter);
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.transform(playlist, result);
-            
-            // Set Header Parameters
-            response.setContentType("application/dash+xml");
-            response.setContentLength(playlistWriter.toString().length());
-
-            // Write playlist out to the client
-            response.getWriter().write(playlistWriter.toString());
-        } catch (TransformerException ex) {
-            Logger.getLogger(AdaptiveStreamingService.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-    
-    public List<String> generateHLSVariantPlaylist(UUID id, String baseUrl) {
-        Job job = jobDao.getJobByID(id);
-        
-        if(job == null) {
-            return null;
-        }
-        
-        MediaElement mediaElement = mediaDao.getMediaElementByID(job.getMediaElement());
-        
-        if(mediaElement == null) {
-            return null;
-        }
-        
-        TranscodeProfile profile = transcodeService.getTranscodeProfile(id);
+        TranscodeProfile profile = job.getTranscodeProfile();
         
         if(profile == null) {
             return null;
@@ -276,8 +147,8 @@ public class AdaptiveStreamingService {
                 // Get audio bandwidth
                 int bandwidth = -1;
                 
-                if(profile.getQuality() != null) {
-                    bandwidth = (TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getQuality()] * 1000);
+                if(clientProfile.getAudioQuality() != null) {
+                    bandwidth = (TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[clientProfile.getAudioQuality()] * 1000);
                 }
                 
                 if(bandwidth < 0) {
@@ -285,7 +156,7 @@ public class AdaptiveStreamingService {
                 }
                 
                 playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()) + "\"");
-                playlist.add(baseUrl + "/stream/playlist/" + id + "/audio/" + i + ".m3u8");
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i + ".m3u8");
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
             String audio = "";
@@ -295,7 +166,7 @@ public class AdaptiveStreamingService {
             if(profile.getAudioTranscodes() != null) {
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
-                    AudioStream stream = TranscodeUtils.getAudioStreamById(profile.getMediaElement().getAudioStreams(), transcode.getId());
+                    AudioStream stream = TranscodeUtils.getAudioStreamById(mediaElement.getAudioStreams(), transcode.getId());
                     String isDefault = "NO";
                     
                     if(transcode.getId().equals(profile.getAudioStream())) {
@@ -308,7 +179,7 @@ public class AdaptiveStreamingService {
                         audio = TranscodeUtils.getIsoSpecForCodec(transcode.getCodec());
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/audio/" + a + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + ".m3u8\"");
                 }                
             }
             
@@ -337,7 +208,7 @@ public class AdaptiveStreamingService {
                 VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(i);
                 
                 // Get video stream
-                VideoStream videoStream = MediaUtils.getVideoStreamById(profile.getMediaElement().getVideoStreams(), transcode.getId());
+                VideoStream videoStream = MediaUtils.getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId());
                 
                 // Determine bitrate
                 int bitrate = -1;
@@ -385,7 +256,7 @@ public class AdaptiveStreamingService {
                 playlist.add(builder.toString());
                 
                 // Url
-                playlist.add(baseUrl + "/stream/playlist/" + id + "/video/" + i + ".m3u8");
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/video/" + i + ".m3u8");
             }
         } else {
             return null;
@@ -394,19 +265,17 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public List<String> generateHLSPlaylist(UUID id, String baseUrl, String type, Integer extra) {
+    public List<String> generateHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra) {
         // Check variables
         if(type == null || extra == null) {
             return null;
         }
-        
-        Job job = jobDao.getJobByID(id);
-        
+                
         if(job == null) {
             return null;
         }
         
-        MediaElement mediaElement = mediaDao.getMediaElementByID(job.getMediaElement());
+        MediaElement mediaElement = job.getMediaElement();
         
         if(mediaElement == null) {
             return null;
@@ -423,7 +292,7 @@ public class AdaptiveStreamingService {
         // Get Video Segments
         for (int i = 0; i < Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION); i++) {
             playlist.add("#EXTINF:" + HLS_SEGMENT_DURATION.floatValue() + ",");
-            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i);
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);
         }   
 
         // Determine the duration of the final segment.
@@ -432,7 +301,7 @@ public class AdaptiveStreamingService {
             long i = Double.valueOf(Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION)).longValue();
             
             playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
-            playlist.add(baseUrl + "/stream/segment/" + id + "/" + type + "/" + extra + "/" + i + ".ts");
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);
         }
 
         playlist.add("#EXT-X-ENDLIST");
@@ -440,17 +309,14 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public void sendHLSPlaylist(UUID id, String type, Integer extra, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // Get the request base URL so we can use it in our playlist
-        String baseUrl = request.getRequestURL().toString().replaceFirst("/stream(.*)", "");
-
+    public void sendHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, HttpServletResponse response) throws IOException {
         List<String> playlist;
         
         // Get playlist as a string array
         if(type == null) {
-            playlist = generateHLSVariantPlaylist(id, baseUrl);
+            playlist = generateHLSVariantPlaylist(job, clientProfile);
         } else {
-            playlist = generateHLSPlaylist(id, baseUrl, type, extra);
+            playlist = generateHLSPlaylist(job, clientProfile, type, extra);
         }
 
         if(playlist == null) {

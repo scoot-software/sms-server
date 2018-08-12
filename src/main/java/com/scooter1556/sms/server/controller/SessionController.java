@@ -22,10 +22,19 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 package com.scooter1556.sms.server.controller;
+import com.scooter1556.sms.server.domain.ClientProfile;
+import com.scooter1556.sms.server.domain.Job;
+import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.NetworkService;
 import com.scooter1556.sms.server.service.SessionService;
-import com.scooter1556.sms.server.service.SessionService.Session;
-import java.util.List;
+import com.scooter1556.sms.server.utilities.NetworkUtils;
+import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,8 +42,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -45,57 +57,140 @@ public class SessionController {
     @Autowired
     private SessionService sessionService;
     
-    @RequestMapping(value="/active", method=RequestMethod.GET)
-    public ResponseEntity<List<Session>> getActiveSessions() {
-        List<Session> sessions = sessionService.getActiveSessions();
-        
-        if (sessions == null) {
+    @Autowired
+    private NetworkService networkService;
+    
+    @RequestMapping(method=RequestMethod.GET)
+    public ResponseEntity<Session[]> getSessions() {
+        if (sessionService.getNumSessions() == 0) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        return new ResponseEntity<>(sessions, HttpStatus.OK);
-    }
-    
-    @RequestMapping(value="/create", method=RequestMethod.GET)
-    public ResponseEntity<String> createSession(HttpServletRequest request) {
-        UUID id = sessionService.createSession(request.getUserPrincipal().getName());
-        
-        if (id == null) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-        
-        return new ResponseEntity<>(id.toString(), HttpStatus.OK);
+        return new ResponseEntity<>(sessionService.getSessions(), HttpStatus.OK);
     }
     
     @CrossOrigin
-    @RequestMapping(value="/add/{id}", method=RequestMethod.GET)
-    public ResponseEntity<String> addSession(@PathVariable("id") UUID id, 
+    @RequestMapping(value="/add", method=RequestMethod.GET)
+    public ResponseEntity<String> addSession(@RequestParam(value = "id", required = false) UUID id,
+                                             @RequestBody ClientProfile profile,
                                              HttpServletRequest request) {
-        int result = sessionService.addSession(id, request.getUserPrincipal().getName());
-        
-        if (result < 0) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        } else if(result == 0) {
-            return new ResponseEntity<>("Session already exists with ID: " + id, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("Session added with ID: " + id, HttpStatus.OK);
+        // Check the client profile
+        if(profile == null || profile.getClient() == null || profile.getCodecs() == null || profile.getFormats() == null || profile.getFormat() == null) {
+            return new ResponseEntity<>("Client profile invalid.", HttpStatus.EXPECTATION_FAILED);
         }
+
+        // Determine if the device is on the local network
+        boolean isLocal = false;
+        
+        try {
+            InetAddress local = InetAddress.getByName(request.getLocalAddr());
+            InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
+
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
+
+            // Check if the remote device is on the same subnet as the server
+            for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+                if(address.getAddress().equals(local)) {
+                    int mask = address.getNetworkPrefixLength();
+                    isLocal = NetworkUtils.isLocalIP(local, remote, mask);
+                }
+            }
+
+            // Check if request came from public IP if subnet check was false
+            if(!isLocal) {
+                String ip = networkService.getPublicIP();
+
+                if(ip != null) {
+                    isLocal = remote.toString().contains(ip);
+                }
+            }
+        } catch (SocketException | UnknownHostException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
+        }
+        
+        // Set client status in profile
+        profile.setLocal(isLocal);
+        
+        // Set client URL
+        profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
+        
+        // Add session
+        UUID sid  = sessionService.addSession(id, request.getUserPrincipal().getName(), profile);
+        
+        if(sid == null) {
+            return new ResponseEntity<>("Failed to add session, maybe it already exists?", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        
+        return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
     }
     
-    @CrossOrigin
-    @RequestMapping(value="/end/{id}", method=RequestMethod.GET)
-    public ResponseEntity<String> endSession(@PathVariable("id") UUID id) {
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ending session with ID: " + id, null);
+    @RequestMapping(value="/{sid}/profile", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
+    @ResponseBody
+    public ResponseEntity<String> updateClientProfile(@PathVariable("sid") UUID sid,
+                                                      @RequestBody ClientProfile profile) {
+        // Check the client profile
+        if(profile == null || profile.getClient() == null || profile.getCodecs() == null || profile.getFormats() == null || profile.getFormat() == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to update client profile for session " + sid + ", profile is invalid.", null);
+            return new ResponseEntity<>("Client profile invalid.", HttpStatus.EXPECTATION_FAILED);
+        }
+
+        // Retrieve session
+        Session session = sessionService.getSessionById(sid);
         
         // Check session is valid
-        if (!sessionService.isSessionValid(id)) {
-            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + id, null);
-            return new ResponseEntity<>("Session does not exist with ID: " + id, HttpStatus.NOT_FOUND);
+        if (session == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
+        }
+        
+        // Update client profile
+        session.setClientProfile(profile);
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client profile for session " + sid + " update successfully.", null);
+        return new ResponseEntity<>("Client profile updated successfully.", HttpStatus.OK);
+    }
+    
+    @CrossOrigin
+    @RequestMapping(value="/end/{sid}", method=RequestMethod.GET)
+    public ResponseEntity<String> endSession(@PathVariable("sid") UUID sid) {        
+        // Check session is valid
+        if (!sessionService.isSessionValid(sid)) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
         }
         
         // Remove session
-        sessionService.removeSessionById(id);
+        sessionService.removeSessions(sid);
         
-        return new ResponseEntity<>("Ended session with ID: " + id, HttpStatus.OK);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Ended session with ID: " + sid, null);
+        return new ResponseEntity<>("Ended session with ID: " + sid, HttpStatus.OK);
+    }
+    
+    @CrossOrigin
+    @RequestMapping(value="/end/{sid}/{meid}", method=RequestMethod.GET)
+    public ResponseEntity<String> endJob(@PathVariable("sid") UUID sid,
+                                         @PathVariable("meid") UUID meid) {        
+        Session session = sessionService.getSessionById(sid);
+        
+        // Check session is valid
+        if (session == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
+        }
+        
+        Job job = session.getJobByMediaElementId(meid);
+        
+        // Check job exists
+        if (job == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Job does not exist for media element with ID: " + meid, null);
+            return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NOT_FOUND);
+        }
+        
+        // Remove job
+        session.removeJobById(job.getId());
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
+        return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);
     }
 }
