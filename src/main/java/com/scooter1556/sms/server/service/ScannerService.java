@@ -26,7 +26,6 @@ package com.scooter1556.sms.server.service;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
-import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.DirectoryMediaType;
@@ -101,7 +100,7 @@ public class ScannerService implements DisposableBean {
     private SessionService sessionService;
 
     private static final String[] INFO_FILE_TYPES = {"nfo"};
-    private static final String[] EXCLUDED_FILE_NAMES = {"Extras","extras"};
+    private static final String[] EXCLUDED_FILE_NAMES = {"extras", "trailers"};
 
     private static final Pattern FILE_NAME = Pattern.compile("(.+)(\\s+[(\\[](\\d{4})[)\\]])$?");
 
@@ -745,7 +744,7 @@ public class ScannerService implements DisposableBean {
 
         private boolean isExcluded(Path path) {
             for (String name : EXCLUDED_FILE_NAMES) {
-                if (path.getFileName().toString().equals(name)) {
+                if (path.getFileName().toString().equalsIgnoreCase(name)) {
                     return true;
                 }
             }
