@@ -272,6 +272,43 @@ public class MediaUtils {
         }
     }
     
+    public static String getFormat(int format) {
+        switch(format) {
+            case SMS.Format.AVI:
+                return "avi";
+                
+            case SMS.Format.FLAC:
+                return "flac";
+                
+            case SMS.Format.MATROSKA:
+                return "matroska";
+                
+            case SMS.Format.MP3:
+                return "mp3";
+                
+            case SMS.Format.MP4:
+                return "mp4";
+                
+            case SMS.Format.MPEGTS:
+                return "mpegts";
+                
+            case SMS.Format.OGG:
+                return "ogg";
+                
+            case SMS.Format.WAV:
+                return "wav";
+                
+            case SMS.Format.AAC:
+                return "adts";
+                
+            case SMS.Format.AC3:
+                return "ac3";
+                
+            default:
+                return null;
+        }
+    }
+    
     public static String getMimeType(int type, int format) {        
         StringBuilder mimeType = new StringBuilder();
         
@@ -336,6 +373,12 @@ public class MediaUtils {
                 mimeType.append("wav");
                 break;
                 
+            case SMS.Format.AAC:
+                mimeType.append("aac");
+                
+            case SMS.Format.AC3:
+                mimeType.append("ac3");
+                                
             default:
                 return null;
         }

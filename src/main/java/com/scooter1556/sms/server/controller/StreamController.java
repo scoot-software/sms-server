@@ -49,6 +49,7 @@ import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.UUID;
@@ -227,51 +228,8 @@ public class StreamController {
                 return;
             }
             
-            String mimeType;
-            
-            switch (session.getClientProfile().getFormat()) {
-                case SMS.Format.HLS:
-                    mimeType = "video/MP2T";
-                    break;
-                    
-                default:
-                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Format for job " + job.getId() + " is not compatible with adaptive streaming.", null);
-                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Format is not supported for adaptive streaming.");
-                    return;
-            }
-            
-            /*
-            // Check for special cases such as Chromecast
-            if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
-                // Determine proper mimetype for audio
-                if(type.equals("audio")) {
-                    switch(profile.getClient()) {
-                        case "chromecast":
-                            AudioTranscode transcode = profile.getAudioTranscodes()[extra];
-                            Integer codec = transcode.getCodec();
-                            
-                            if(codec == SMS.Codec.COPY) {
-                                codec = MediaUtils.getAudioStreamById(profile.getMediaElement().getAudioStreams(), transcode.getId()).getCodec();
-                            }
-                            
-                            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + file + "-" + type + "-" + extra + "." + TranscodeUtils.getFormatForAudioCodec(codec));
-                            
-                            mimeType = TranscodeUtils.getMimeType(codec, MediaElementType.AUDIO);
-                            break;
-
-                        default:
-                            break; 
-                    }
-                }
-            }
-            */
-            
-            // Set default segment if not already set
-            if(segment == null) {
-                segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + job.getId() + "/" + file + "-" + type + "-" + extra + ".ts");
-            }
-            
-            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra, null);
+            // Get segment
+            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + job.getId() + "/" + file + "-" + type + "-" + extra);
             
             if(session.getClientProfile().getFormat() == SMS.Format.HLS) {
                 // Update segment tracking
@@ -307,6 +265,12 @@ public class StreamController {
                 return;
             }
             
+            // Get file type
+            String mimeType;
+            mimeType = Files.probeContentType(segment.toPath());
+            
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra + " MimeType=" + mimeType, null);
+            
             process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
             process.start();
                 
@@ -327,7 +291,7 @@ public class StreamController {
                           HttpServletRequest request,
                           HttpServletResponse response) {
         // Variables
-        Job job = null;
+        Job job;
         SMSProcess process = null;
         MediaElement mediaElement;
         Session session;
@@ -492,6 +456,11 @@ public class StreamController {
                     // Set MIME Type
                     if(clientProfile.getFormat() != null) {
                         transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), clientProfile.getFormat()));
+                    }
+                    
+                    // Packed Audio
+                    if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
+                        transcodeProfile.setPackedAudio(true);
                     }
                 }
 

@@ -15,13 +15,13 @@ public class TranscodeProfile {
     private SubtitleTranscode[] subtitleTranscodes;
     private Integer videoStream, audioStream, subtitleStream;
     private Integer offset = 0;
-    private boolean active = true;
+    private boolean active = true, packedAudio = false;
 
     public TranscodeProfile() {}
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[Type=%s, Encoder=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s",
+        return String.format("TranscodeProfile[Type=%s, Encoder=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Packed Audio=%s",
                 String.valueOf(type),
                 encoder == null ? "null" : encoder.toString(),
                 mimeType == null ? "null" : mimeType,
@@ -31,7 +31,8 @@ public class TranscodeProfile {
                 videoStream == null ? "null" : videoStream.toString(),
                 audioStream == null ? "null" : audioStream.toString(),
                 subtitleStream == null ? "null" : subtitleStream.toString(),
-                offset == null ? "null" : offset.toString()
+                offset == null ? "null" : offset.toString(),
+                Boolean.toString(packedAudio)
                 );
     }
 
@@ -122,6 +123,14 @@ public class TranscodeProfile {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+    
+    public boolean getPackedAudio() {
+        return packedAudio;
+    }
+
+    public void setPackedAudio(boolean packedAudio) {
+        this.packedAudio = packedAudio;
     }
     
     public static class StreamType {

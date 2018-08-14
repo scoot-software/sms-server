@@ -26,6 +26,7 @@ package com.scooter1556.sms.server.io;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.utilities.DirectoryWatcher;
 import com.scooter1556.sms.server.service.LogService;
@@ -94,9 +95,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Reset flags
             ended = false;
             
-            /*
             // Setup post-processing of audio segments if required
-            if(postProcessEnabled && audioTranscodes != null && mediaElement != null && transcoder != null) {                
+            if(audioTranscodes != null && transcoder != null && mediaElement != null) {                
                 //  Setup thread pool for post-processing segments
                 postProcessExecutor = Executors.newCachedThreadPool();
                 
@@ -106,13 +106,12 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     .setPreExistingAsCreated(true)
                     .build(new DirectoryWatcher.Listener() {
                         
-                        
                         @Override
                         public void onEvent(DirectoryWatcher.Event event, final Path path) {
                             switch (event) {
                                 case ENTRY_CREATE:
                                     // Check if we are interested in this file
-                                    if(!FilenameUtils.getExtension(path.toString()).isEmpty() || !path.getFileName().toString().contains("audio")) {
+                                    if(!FilenameUtils.getExtension(path.toString()).equals("pp")) {
                                         break;
                                     }
                                                                         
@@ -126,7 +125,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                                     // Variables
                                     final int transcode = Integer.parseInt(segmentData[2]);
                                     
-                                    // Retrive transcode format
+                                    // Retrieve transcode format
                                     if(audioTranscodes.length < transcode || mediaElement == null) {
                                         break;
                                     }
@@ -139,7 +138,11 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                                         codec = MediaUtils.getAudioStreamById(mediaElement.getAudioStreams(), aTranscode.getId()).getCodec();
                                     }
                                     
-                                    final int format = MediaUtils.getFormatForCodec(codec);
+                                    final String format = MediaUtils.getFormat(MediaUtils.getFormatForCodec(codec));
+                                    
+                                    if(format == null) {
+                                        break;
+                                    }
                                     
                                     // Transcode
                                     postProcessExecutor.submit(new Runnable() {
@@ -161,7 +164,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 
                 // Start directory watcher
                 watcher.start();
-            }*/
+            }
         
             // Start transcoding
             start();
@@ -224,13 +227,16 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         ended = true;
     }
     
-    private void postProcess(String path, Integer format) {
+    private void postProcess(String path, String format) {
         // Process for transcoding
         Process postProcess = null;
         
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Post processing segment " + path + " with format '" + format + "'", null);
         
         try {
+            // Get segment path
+            String segmentPath = FilenameUtils.getFullPath(path) + FilenameUtils.getBaseName(path);
+            
             // Generate post-process command
             List<String> command = new  ArrayList<>();
             command.add(transcoder.getPath().toString());
@@ -238,7 +244,9 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             command.add(path);
             command.add("-c:a");
             command.add("copy");
-            command.add(path + "." + format + ".tmp");
+            command.add("-f");
+            command.add(format);
+            command.add(segmentPath + ".tmp");
             
             LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
             
@@ -250,11 +258,17 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             postProcess.waitFor();
             
             // Rename file once complete
-            File temp = new File(path + "." + format + ".tmp");
-            File segment = new File(path + "." + format);
+            File source = new File(path);
+            File temp = new File(segmentPath + ".tmp");
+            File segment = new File(segmentPath);
             
             if(temp.exists()) {
                 temp.renameTo(segment);
+            }
+            
+            // Remove original segment
+            if(source.exists()) {
+                source.delete();
             }
         } catch(IOException ex) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to post-process file " + path, ex);

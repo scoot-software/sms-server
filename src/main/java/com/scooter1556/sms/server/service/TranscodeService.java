@@ -48,6 +48,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -237,7 +238,13 @@ public class TranscodeService {
                     commands.get(i).getCommands().addAll(getAudioCommands(transcode));
                     
                     // Segment commands
-                    commands.get(i).getCommands().addAll(getHlsCommands(job.getId(), "audio-" + a, profile.getOffset()));
+                    String fileName = "audio-" + a;
+                    
+                    if(job.getMediaElement().getType() == MediaElementType.VIDEO && profile.getPackedAudio()) {
+                        fileName += ".pp";
+                    }
+                    
+                    commands.get(i).getCommands().addAll(getHlsCommands(job.getId(), fileName, profile.getOffset()));
                 }
             }
         }
@@ -280,9 +287,9 @@ public class TranscodeService {
         commands.add("temp_file");
 
         commands.add("-hls_segment_filename");
-        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d-" + name + ".ts");
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d-" + name);
 
-        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + name + ".m3u8");
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + FilenameUtils.getBaseName(name) + ".m3u8");
         
         return commands;
     }
