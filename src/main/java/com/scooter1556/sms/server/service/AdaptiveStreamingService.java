@@ -220,9 +220,7 @@ public class AdaptiveStreamingService {
                 if(bitrate < 0) {
                     bitrate = MediaUtils.getAverageBitrate(videoStream, mediaElement.getBitrate());
                 }
-                
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Bitrate: " + bitrate, null);
-                
+                                
                 // Determine resolution
                 Dimension resolution = transcode.getResolution();
                 

@@ -6,10 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-/**
- *
- * @author scott2ware
- */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class Session implements Comparable {
     private final UUID id;

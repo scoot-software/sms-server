@@ -23,16 +23,13 @@
  */
 package com.scooter1556.sms.server.service;
 
-import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.UserStats;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.springframework.beans.factory.DisposableBean;
@@ -61,7 +58,7 @@ public class SessionService implements DisposableBean {
     
     public UUID addSession(UUID id, String username, ClientProfile profile) {
         // Check required parameters
-        if(username == null || profile == null) {
+        if(username == null) {
             return null;
         }
         

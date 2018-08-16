@@ -75,45 +75,15 @@ public class SessionController {
                                              @RequestBody ClientProfile profile,
                                              HttpServletRequest request) {
         // Check the client profile
-        if(profile == null || profile.getClient() == null || profile.getCodecs() == null || profile.getFormats() == null || profile.getFormat() == null) {
-            return new ResponseEntity<>("Client profile invalid.", HttpStatus.EXPECTATION_FAILED);
-        }
-
-        // Determine if the device is on the local network
-        boolean isLocal = false;
-        
-        try {
-            InetAddress local = InetAddress.getByName(request.getLocalAddr());
-            InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
-            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
-
-            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
-
-            // Check if the remote device is on the same subnet as the server
-            for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
-                if(address.getAddress().equals(local)) {
-                    int mask = address.getNetworkPrefixLength();
-                    isLocal = NetworkUtils.isLocalIP(local, remote, mask);
-                }
+        if(profile != null) {
+            if(profile.getClient() == null || profile.getFormat() == null || profile.getCodecs() == null || profile.getFormats() == null) {
+                return new ResponseEntity<>("Client profile invalid.", HttpStatus.EXPECTATION_FAILED);
             }
 
-            // Check if request came from public IP if subnet check was false
-            if(!isLocal) {
-                String ip = networkService.getPublicIP();
-
-                if(ip != null) {
-                    isLocal = remote.toString().contains(ip);
-                }
-            }
-        } catch (SocketException | UnknownHostException ex) {
-            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
+            // Set client status in profile
+            profile.setLocal(isLocal(request));
+            profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
         }
-        
-        // Set client status in profile
-        profile.setLocal(isLocal);
-        
-        // Set client URL
-        profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
         
         // Add session
         UUID sid  = sessionService.addSession(id, request.getUserPrincipal().getName(), profile);
@@ -125,10 +95,11 @@ public class SessionController {
         return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
     }
     
-    @RequestMapping(value="/{sid}/profile", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
+    @RequestMapping(value="/update/{sid}", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
     public ResponseEntity<String> updateClientProfile(@PathVariable("sid") UUID sid,
-                                                      @RequestBody ClientProfile profile) {
+                                                      @RequestBody ClientProfile profile,
+                                                      HttpServletRequest request) {
         // Check the client profile
         if(profile == null || profile.getClient() == null || profile.getCodecs() == null || profile.getFormats() == null || profile.getFormat() == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to update client profile for session " + sid + ", profile is invalid.", null);
@@ -144,10 +115,14 @@ public class SessionController {
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
         }
         
+        // Set client status in profile
+        profile.setLocal(isLocal(request));
+        profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
+        
         // Update client profile
         session.setClientProfile(profile);
         
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client profile for session " + sid + " update successfully.", null);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client profile for session " + sid + " updated successfully.", null);
         return new ResponseEntity<>("Client profile updated successfully.", HttpStatus.OK);
     }
     
@@ -187,10 +162,50 @@ public class SessionController {
             return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NOT_FOUND);
         }
         
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, session.getUsername() + " finished streaming '" + job.getMediaElement().getTitle() + "'.", null);
+        
         // Remove job
         session.removeJobById(job.getId());
         
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
         return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);
+    }
+    
+    //
+    // Helper Functions
+    //
+    private boolean isLocal(HttpServletRequest request) {
+        // Determine if the device is on the local network
+        boolean isLocal = false;
+
+        try {
+            InetAddress local = InetAddress.getByName(request.getLocalAddr());
+            InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
+            NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
+
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
+
+            // Check if the remote device is on the same subnet as the server
+            for (InterfaceAddress address : networkInterface.getInterfaceAddresses()) {
+                if(address.getAddress().equals(local)) {
+                    int mask = address.getNetworkPrefixLength();
+                    isLocal = NetworkUtils.isLocalIP(local, remote, mask);
+                }
+            }
+
+            // Check if request came from public IP if subnet check was false
+            if(!isLocal) {
+                String ip = networkService.getPublicIP();
+
+                if(ip != null) {
+                    isLocal = remote.toString().contains(ip);
+                }
+            }
+        } catch (SocketException | UnknownHostException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
+            return false;
+        }
+        
+        return isLocal;
     }
 }

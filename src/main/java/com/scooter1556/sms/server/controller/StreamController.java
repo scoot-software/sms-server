@@ -107,6 +107,12 @@ public class StreamController {
                 return;
             }
             
+            if(session.getClientProfile() == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
+                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Client profile is not available for session with ID: " + sid + ".");
+                return;
+            }
+            
             // Retrieve Job
             job = session.getJobByMediaElementId(meid);
             
@@ -201,6 +207,12 @@ public class StreamController {
                 return;
             }
             
+            if(session.getClientProfile() == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
+                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Client profile is not available for session with ID: " + sid + ".");
+                return;
+            }
+            
             // Retrieve Job
             job = session.getJobByMediaElementId(meid);
             
@@ -284,7 +296,7 @@ public class StreamController {
         }
     }
     
-    @RequestMapping(value="/{sid}/{meid}", method=RequestMethod.GET)
+    @RequestMapping(value="/{sid}/{meid}", method={RequestMethod.GET, RequestMethod.HEAD})
     @ResponseBody
     public void getStream(@PathVariable("sid") UUID sid,
                           @PathVariable("meid") UUID meid,
@@ -322,6 +334,12 @@ public class StreamController {
             if(session == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session invalid with ID: " + sid, null);
                 response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Session invalid with ID: " + sid + ".");
+                return;
+            }
+            
+            if(session.getClientProfile() == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
+                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Client profile is not available for session with ID: " + sid + ".");
                 return;
             }
 
@@ -466,22 +484,25 @@ public class StreamController {
 
                 // Set transcode profile for job
                 job.setTranscodeProfile(transcodeProfile);
-
-                // If transcode is required start the transcode process
-                if(transcodeProfile.getType() > StreamType.DIRECT) {
-                    if(adaptiveStreamingService.initialise(job, 0) == null) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to intialise adaptive streaming process for job " + job.getId() + ".", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to intialise adaptive streaming process for job " + job.getId() + ".");
-                        return;
-                    }
-                }
                 
-                //  Add job to session
-                session.addJob(job);
+                // Only do certain things if this isn't a HEAD request
+                if(!request.getMethod().equals("HEAD")) {
+                    // Add job to session
+                    session.addJob(job);
 
-                // Stop deep scan if necessary
-                if(job.getType() == Job.JobType.VIDEO_STREAM) {
-                    scannerService.stopDeepScan();
+                    // Stop deep scan if necessary
+                    if(job.getType() == Job.JobType.VIDEO_STREAM) {
+                        scannerService.stopDeepScan();
+                    }
+                
+                    // If transcode is required start the transcode process
+                    if(transcodeProfile.getType() > StreamType.DIRECT) {
+                        if(adaptiveStreamingService.initialise(job, 0) == null) {
+                            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to intialise adaptive streaming process for job " + job.getId() + ".", null);
+                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to intialise adaptive streaming process for job " + job.getId() + ".");
+                            return;
+                        }
+                    }
                 }
             } else {
                 // Populate variables
@@ -493,6 +514,10 @@ public class StreamController {
         } catch (IOException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Error encountered processing stream for session " + sid + ".", ex);
             return;
+        }
+        
+        if(!request.getMethod().equals("HEAD")) {
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, session.getUsername() + " started streaming '" + mediaElement.getTitle() + "'.", null);
         }
             
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "SID: " + sid + " MEID: " + meid + " Client Profile=" + clientProfile.toString() + " Transcode Profile=" + transcodeProfile.toString(), null);
@@ -526,8 +551,8 @@ public class StreamController {
             if(process != null) {
                 process.end();
             }
-        } finally {
-            if(process != null) {
+        } finally {            
+            if(process != null) {          
                 job.setBytesTransferred(job.getBytesTransferred() + process.getBytesTransferred());
             }
         }
