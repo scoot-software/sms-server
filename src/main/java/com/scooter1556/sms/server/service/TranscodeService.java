@@ -25,7 +25,6 @@ package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
-import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
 import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.HardwareAccelerator;
 import com.scooter1556.sms.server.domain.Job;
@@ -845,11 +844,10 @@ public class TranscodeService {
             }
             
             if(!transcodeRequired) {
-                // Work around transcoder bug where flac files have the wrong duration if the stream is copied
                 codec = SMS.Codec.COPY;
             } else {
                 // Check multichannel codecs
-                if(clientProfile.getMchCodecs() == null) {
+                if(clientProfile.getMchCodecs() == null || clientProfile.getMchCodecs().length == 0) {
                     numChannels = 2;
                 }
                 
@@ -857,7 +855,6 @@ public class TranscodeService {
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {
-                    
                     // Sample rate
                     if((stream.getSampleRate() > clientProfile.getMaxSampleRate()) || (stream.getSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec))) {
                         sampleRate = (clientProfile.getMaxSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec)) ? TranscodeUtils.getMaxSampleRateForCodec(codec) : clientProfile.getMaxSampleRate();
