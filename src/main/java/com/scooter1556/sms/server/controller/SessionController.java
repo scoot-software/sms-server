@@ -72,7 +72,7 @@ public class SessionController {
     @CrossOrigin
     @RequestMapping(value="/add", method=RequestMethod.GET)
     public ResponseEntity<String> addSession(@RequestParam(value = "id", required = false) UUID id,
-                                             @RequestBody ClientProfile profile,
+                                             @RequestBody(required = false) ClientProfile profile,
                                              HttpServletRequest request) {
         // Check the client profile
         if(profile != null) {
@@ -95,8 +95,8 @@ public class SessionController {
         return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
     }
     
-    @RequestMapping(value="/update/{sid}", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
-    @ResponseBody
+    @CrossOrigin
+    @RequestMapping(value="/update/{sid}", method=RequestMethod.POST, headers = {"Content-type=application/json"})
     public ResponseEntity<String> updateClientProfile(@PathVariable("sid") UUID sid,
                                                       @RequestBody ClientProfile profile,
                                                       HttpServletRequest request) {
@@ -122,7 +122,7 @@ public class SessionController {
         // Update client profile
         session.setClientProfile(profile);
         
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client profile for session " + sid + " updated successfully.", null);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Session updated: " + session.toString(), null);
         return new ResponseEntity<>("Client profile updated successfully.", HttpStatus.OK);
     }
     
