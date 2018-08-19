@@ -103,19 +103,19 @@ public class NFOParser {
 
             if (document.getElementsByTagName("mpaa").getLength() > 0) {
                 if (!document.getElementsByTagName("mpaa").item(0).getTextContent().equals("")) {
-                    data.setCertificate(document.getElementsByTagName("mpaa").item(0).getTextContent());
+                    String[] mpaa = document.getElementsByTagName("mpaa").item(0).getTextContent().split(":");
+                    
+                    if(mpaa.length > 1) {
+                        data.setCertificate(mpaa[1]);
+                    } else {
+                        data.setCertificate(mpaa[0]);
+                    }
                 }
             }
 
             if (document.getElementsByTagName("set").getLength() > 0) {
                 if (!document.getElementsByTagName("set").item(0).getTextContent().equals("")) {
-                    String[] mpaa = document.getElementsByTagName("set").item(0).getTextContent().split(":");
-                    
-                    if(mpaa.length > 1) {
-                        data.setCollection(mpaa[1]);
-                    } else {
-                        data.setCollection(mpaa[0]);
-                    }
+                    data.setCollection(document.getElementsByTagName("set").item(0).getTextContent());
                 }
             }
             
