@@ -43,7 +43,7 @@ public class ImageService {
     
     private static final String SUPPORTED_IMAGE_FORMATS = "jpg,jpeg,png,bmp";
     
-    private static final String COVER_ART = "folder,cover";
+    private static final String COVER_ART = "folder,cover,poster";
     private static final String FAN_ART = "fanart";
     
     Transcoder transcoder = null;
