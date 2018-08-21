@@ -8,7 +8,9 @@ import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.Stream;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
+import com.scooter1556.sms.server.domain.StreamProfile;
 import com.scooter1556.sms.server.domain.SubtitleTranscode;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.encoder.Encoder;
@@ -23,7 +25,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 
@@ -49,8 +53,8 @@ public class TranscodeUtils {
     public static final String ISO_AVC_HIGH = "avc1.640029";
     public static final String ISO_MP3 = "mp4a.69";
     public static final String ISO_AAC = "mp4a.40.2";
-    public static final String ISO_AC3 = "ac-3";
-    public static final String ISO_EAC3 = "ec-3";
+    public static final String ISO_AC3 = "mp4a.a5";
+    public static final String ISO_EAC3 = "mp4a.a6";
     public static final String ISO_VORBIS = "vorbis";
         
     public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
@@ -565,6 +569,34 @@ public class TranscodeUtils {
         return null;
     }
     
+    public static VideoStream getVideoStreamById(List<VideoStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(VideoStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
+    }
+    
+    public static SubtitleStream getSubtitleStreamById(List<SubtitleStream> streams, int id) {
+        if(streams == null || streams.isEmpty()) {
+            return null;
+        }
+        
+        for(SubtitleStream stream : streams) {
+            if(stream.getStreamId() == id) {
+                return stream;
+            }
+        }
+        
+        return null;
+    }
+    
     public static AudioStream getAudioStreamById(List<AudioStream> streams, int id) {
         if(streams == null || streams.isEmpty()) {
             return null;
@@ -587,6 +619,84 @@ public class TranscodeUtils {
             default:
                 return null;
         }
+    }
+    
+    public static StreamProfile getStreamProfile(MediaElement mediaElement, TranscodeProfile transcodeProfile) {
+        // Checks
+        if(mediaElement == null || transcodeProfile == null) {
+            return null;
+        }
+        
+        // Create new stream profile
+        StreamProfile streamProfile = new StreamProfile();
+        
+        // Populate MIME type
+        streamProfile.setMimeType(transcodeProfile.getMimeType());
+        
+        // Determine codecs
+        List<Integer> codecs = new ArrayList<>();
+        
+        // If this is a direct stream populate codecs from media element
+        if(transcodeProfile.getType() == TranscodeProfile.StreamType.DIRECT) {
+            if(mediaElement.getVideoStreams() != null && !mediaElement.getVideoStreams().isEmpty()) {
+                for(VideoStream stream : mediaElement.getVideoStreams()) {
+                    codecs.add(stream.getCodec());
+                }
+            }
+            
+            if(mediaElement.getAudioStreams() != null && !mediaElement.getAudioStreams().isEmpty()) {
+                for(AudioStream stream : mediaElement.getAudioStreams()) {
+                    codecs.add(stream.getCodec());
+                }
+            }
+            
+            if(mediaElement.getSubtitleStreams() != null && !mediaElement.getSubtitleStreams().isEmpty()) {
+                for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
+                    codecs.add(stream.getCodec());
+                }
+            }
+        } else {
+            if(transcodeProfile.getVideoTranscodes() != null && transcodeProfile.getVideoTranscodes().length > 0) {
+                for(VideoTranscode transcode : transcodeProfile.getVideoTranscodes()) {
+                    if(transcode.getCodec() == SMS.Codec.COPY) {
+                        codecs.add(getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId()).getCodec());
+                    } else {
+                        codecs.add(transcode.getCodec());
+                    }
+                }
+            }
+            
+            if(transcodeProfile.getAudioTranscodes() != null && transcodeProfile.getAudioTranscodes().length > 0) {
+                for(AudioTranscode transcode : transcodeProfile.getAudioTranscodes()) {
+                    if(transcode.getCodec() == SMS.Codec.COPY) {
+                        codecs.add(getAudioStreamById(mediaElement.getAudioStreams(), transcode.getId()).getCodec());
+                    } else {
+                        codecs.add(transcode.getCodec());
+                    }
+                }
+            }
+            
+            if(transcodeProfile.getSubtitleTranscodes() != null && transcodeProfile.getSubtitleTranscodes().length > 0) {
+                for(SubtitleTranscode transcode : transcodeProfile.getSubtitleTranscodes()) {
+                    if(transcode.getCodec() == SMS.Codec.COPY) {
+                        codecs.add(getSubtitleStreamById(mediaElement.getSubtitleStreams(), transcode.getId()).getCodec());
+                    } else {
+                        codecs.add(transcode.getCodec());
+                    }
+                }
+            }
+        }
+        
+        // Remove duplicate codecs
+        Set<Integer> deDup = new HashSet<>();
+        deDup.addAll(codecs);
+        codecs.clear();
+        codecs.addAll(deDup);
+        
+        // Add codecs to stream profile
+        streamProfile.setCodecs(codecs.toArray(new Integer[codecs.size()]));
+        
+        return streamProfile;
     }
     
     public static Path[] getRenderDevices() {

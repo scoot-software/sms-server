@@ -48,6 +48,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -239,7 +240,7 @@ public class TranscodeService {
                     // Segment commands
                     String fileName = "audio-" + a;
                     
-                    if(job.getMediaElement().getType() == MediaElementType.VIDEO && profile.getPackedAudio()) {
+                    if(profile.getPackedAudio()) {
                         fileName += ".pp";
                     }
                     
@@ -851,7 +852,9 @@ public class TranscodeService {
                     numChannels = 2;
                 }
                 
-                codec = transcodeProfile.getEncoder().getAudioCodec(clientProfile.getCodecs(), numChannels);
+                // Combine supported codecs
+                Integer[] codecs = ArrayUtils.addAll(clientProfile.getCodecs(), clientProfile.getMchCodecs());
+                codec = transcodeProfile.getEncoder().getAudioCodec(codecs, numChannels);
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {

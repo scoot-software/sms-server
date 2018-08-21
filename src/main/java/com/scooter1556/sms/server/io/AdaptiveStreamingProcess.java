@@ -26,7 +26,6 @@ package com.scooter1556.sms.server.io;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.MediaElement;
-import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.utilities.DirectoryWatcher;
 import com.scooter1556.sms.server.service.LogService;

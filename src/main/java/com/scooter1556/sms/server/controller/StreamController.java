@@ -32,6 +32,7 @@ import com.scooter1556.sms.server.domain.Job.JobType;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.Session;
+import com.scooter1556.sms.server.domain.StreamProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
@@ -57,7 +58,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -309,7 +313,6 @@ public class StreamController {
         Session session;
         ClientProfile clientProfile;
         TranscodeProfile transcodeProfile;
-        Boolean transcodeRequired = true;
         
                 
         /*********************** DEBUG: Get Request Headers *********************************/        
@@ -342,9 +345,12 @@ public class StreamController {
                 response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Client profile is not available for session with ID: " + sid + ".");
                 return;
             }
+            
+            // Retrieve job
+            job = session.getJobByMediaElementId(meid);
 
             // Check if a job for this media element is already associated with the session
-            if(session.getJobByMediaElementId(meid) == null) {
+            if(job == null) {
                 // Get client profile
                 clientProfile = session.getClientProfile();
 
@@ -391,95 +397,12 @@ public class StreamController {
                 // Set media element in job
                 job.setMediaElement(mediaElement);
 
-                // Update media element and parent media element if necessary
-                mediaDao.updateLastPlayed(mediaElement.getID());
-
-                MediaElement parentElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
-
-                if(parentElement != null) {
-                    mediaDao.updateLastPlayed(parentElement.getID());
-                }
-
-                // Create and populate transcode profile
-                transcodeProfile = new TranscodeProfile();
-
-                // Set stream type
-                if(clientProfile.getLocal()) {
-                    transcodeProfile.setType(TranscodeProfile.StreamType.LOCAL);
-                } else {
-                    transcodeProfile.setType(TranscodeProfile.StreamType.REMOTE);
-                }
-
-                // Test if we can stream the file directly without transcoding
-                if(clientProfile.getFormats() != null) {
-                    // If the file type is supported and all codecs are supported without transcoding, stream the file directly
-                    if(ArrayUtils.contains(clientProfile.getFormats(), mediaElement.getFormat())) {
-                        transcodeRequired = transcodeService.isTranscodeRequired(mediaElement, clientProfile);
-
-                        if(transcodeRequired == null) {
-                            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to determine trancode parameters for job " + job.getId() + ".", null);
-                            response.sendError(HttpServletResponse.SC_NOT_ACCEPTABLE, "Failed to determine trancode parameters for job " + job.getId() + ".");
-                            return;
-                        } else if(!transcodeRequired) {
-                            transcodeProfile.setType(StreamType.DIRECT);
-                            transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), mediaElement.getFormat()));
-                        }
-                    }
-                }
-
-                // If necessary process all streams ready for streaming and/or transcoding
-                if(transcodeRequired) {
-                    // Get a suitable encoder
-                    Encoder encoder = TranscodeUtils.getEncoderForFormat(clientProfile.getFormat());
-                    
-                    if(encoder == null) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);
-                        response.sendError(HttpServletResponse.SC_NOT_ACCEPTABLE, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".");
-                    }
-                    
-                    // Set encoder in transcode profile
-                    transcodeProfile.setEncoder(encoder);
-                    
-                    if(mediaElement.getType() == MediaElementType.VIDEO) {
-                        // If a suitable format was not given we can't continue
-                        if(clientProfile.getFormat() == null) {
-                            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "No suitable format given for job " + job.getId() + ".", null);
-                            response.sendError(HttpServletResponse.SC_NOT_ACCEPTABLE, "No suitable format given for job " + job.getId() + ".");
-                            return;
-                        }
-
-                        // Process subtitles
-                        if(!transcodeService.processSubtitles(transcodeProfile, mediaElement)) {
-                            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process subtitle streams for job " + job.getId() + ".", null);
-                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process subtitle streams for job " + job.getId() + ".");
-                            return;
-                        }
-
-                        // Process video
-                        if(!transcodeService.processVideo(transcodeProfile, clientProfile, mediaElement)) {
-                            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process video streams for job " + job.getId() + ".", null);
-                            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process video streams for job " + job.getId() + ".");
-                            return;
-                        }
-                    }
-
-                    // Process Audio
-                    if(!transcodeService.processAudio(transcodeProfile, clientProfile, mediaElement)) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process audio streams for job " + job.getId() + ".", null);
-                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to process audio streams for job " + job.getId() + ".");
-                        return;
-                        
-                    }
-
-                    // Set MIME Type
-                    if(clientProfile.getFormat() != null) {
-                        transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), clientProfile.getFormat()));
-                    }
-                    
-                    // Packed Audio
-                    if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
-                        transcodeProfile.setPackedAudio(true);
-                    }
+                // Populate transcode profile
+                transcodeProfile = getTranscodeProfile(clientProfile, mediaElement);
+                
+                if(transcodeProfile == null) {
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to get transcode profile for media element " + mediaElement + " and client profile " + clientProfile + ".", null);
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get transcode profile.");
                 }
 
                 // Set transcode profile for job
@@ -487,6 +410,14 @@ public class StreamController {
                 
                 // Only do certain things if this isn't a HEAD request
                 if(!request.getMethod().equals("HEAD")) {
+                    // Update media element and parent media element if necessary
+                    mediaDao.updateLastPlayed(mediaElement.getID());
+
+                    MediaElement parentElement = mediaDao.getMediaElementByPath(mediaElement.getParentPath());
+                    
+                    if(parentElement != null) {
+                        mediaDao.updateLastPlayed(parentElement.getID());
+                    }
                     // Add job to session
                     session.addJob(job);
 
@@ -506,7 +437,6 @@ public class StreamController {
                 }
             } else {
                 // Populate variables
-                job = session.getJobByMediaElementId(meid);
                 clientProfile = session.getClientProfile();
                 transcodeProfile = job.getTranscodeProfile();
                 mediaElement = job.getMediaElement();
@@ -556,5 +486,187 @@ public class StreamController {
                 job.setBytesTransferred(job.getBytesTransferred() + process.getBytesTransferred());
             }
         }
+    }
+    
+    @CrossOrigin
+    @RequestMapping(value="/profile/{sid}/{meid}", method={RequestMethod.GET})
+    public ResponseEntity<StreamProfile> getStreamProfile(@PathVariable("sid") UUID sid,
+                                                          @PathVariable("meid") UUID meid,
+                                                          HttpServletRequest request) {
+        // Variables
+        Job job;
+        MediaElement mediaElement;
+        Session session;
+        ClientProfile clientProfile;
+        TranscodeProfile transcodeProfile;
+        StreamProfile streamProfile;
+        
+        // Check session is valid
+        session = sessionService.getSessionById(sid);
+
+        if(session == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session invalid with ID: " + sid, null);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+
+        if(session.getClientProfile() == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        
+        // Retrieve job
+        job = session.getJobByMediaElementId(meid);
+
+        // Check if a job for this media element is already associated with the session
+        if(job == null) {
+            // Get client profile
+            clientProfile = session.getClientProfile();
+
+            if(clientProfile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile not found for session.", null);
+                return new ResponseEntity<>(HttpStatus.EXPECTATION_FAILED);
+            }
+
+            // Check media element
+            mediaElement = mediaDao.getMediaElementByID(meid);
+
+            if(mediaElement == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Requested media element not found.", null);
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            // Check physical file is available
+            if(!new File(mediaElement.getPath()).exists()) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "File not found for media element with ID " + meid + ".", null);
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            }
+
+            // Create and populate a new job
+            job = new Job(session.getId());
+
+            // Determine job type, validate quality and fetch available streams
+            if(mediaElement.getType() == MediaElementType.AUDIO && AudioQuality.isValid(clientProfile.getAudioQuality())) {
+                job.setType(JobType.AUDIO_STREAM);
+                mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(meid));
+            } else if(mediaElement.getType() == MediaElementType.VIDEO && VideoQuality.isValid(clientProfile.getVideoQuality())) {
+                job.setType(JobType.VIDEO_STREAM);
+                mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(meid));
+                mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(meid));
+                mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(meid));
+            } else {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Invalid transcode request.", null);
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+
+            // Set media element in job
+            job.setMediaElement(mediaElement);
+
+            // Populate transcode profile
+            transcodeProfile = getTranscodeProfile(clientProfile, mediaElement);
+            
+            if(transcodeProfile == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to get transcode profile for media element " + mediaElement + " and client profile " + clientProfile + ".", null);
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            
+            //  Add transcode Profile to job
+            job.setTranscodeProfile(transcodeProfile);
+        }
+        
+        // Convert transcode profile to stream profile
+        streamProfile = TranscodeUtils.getStreamProfile(job.getMediaElement(), job.getTranscodeProfile());
+        
+        if(streamProfile == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to get stream profile for transcode profile: " + job.getTranscodeProfile(), null);
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+        }
+        
+        return new ResponseEntity<>(streamProfile, HttpStatus.OK);
+    }
+    
+    //
+    // Helper Functions
+    //
+    
+    private TranscodeProfile getTranscodeProfile(ClientProfile clientProfile, MediaElement mediaElement) {
+        // Create and populate transcode profile
+        TranscodeProfile transcodeProfile = new TranscodeProfile();
+        
+        Boolean transcodeRequired = true;
+
+        // Set stream type
+        if(clientProfile.getLocal()) {
+            transcodeProfile.setType(TranscodeProfile.StreamType.LOCAL);
+        } else {
+            transcodeProfile.setType(TranscodeProfile.StreamType.REMOTE);
+        }
+
+        // Test if we can stream the file directly without transcoding
+        if(clientProfile.getFormats() != null) {
+            // If the file type is supported and all codecs are supported without transcoding, stream the file directly
+            if(ArrayUtils.contains(clientProfile.getFormats(), mediaElement.getFormat())) {
+                transcodeRequired = transcodeService.isTranscodeRequired(mediaElement, clientProfile);
+
+                if(transcodeRequired == null) {
+                    return null;
+                } else if(!transcodeRequired) {
+                    transcodeProfile.setType(StreamType.DIRECT);
+                    transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), mediaElement.getFormat()));
+                }
+            }
+        }
+
+        // If necessary process all streams ready for streaming and/or transcoding
+        if(transcodeRequired) {
+            // Get a suitable encoder
+            Encoder encoder = TranscodeUtils.getEncoderForFormat(clientProfile.getFormat());
+
+            if(encoder == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);
+                return null;
+            }
+
+            // Set encoder in transcode profile
+            transcodeProfile.setEncoder(encoder);
+
+            if(mediaElement.getType() == MediaElementType.VIDEO) {
+                // If a suitable format was not given we can't continue
+                if(clientProfile.getFormat() == null) {
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "No suitable format found for client profile:" + clientProfile, null);
+                    return null;
+                }
+
+                // Process subtitles
+                if(!transcodeService.processSubtitles(transcodeProfile, mediaElement)) {
+                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process subtitle streams: " + ArrayUtils.toString(mediaElement.getSubtitleStreams()) + " " + clientProfile, null);
+                    return null;
+                }
+
+                // Process video
+                if(!transcodeService.processVideo(transcodeProfile, clientProfile, mediaElement)) {
+                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process video streams: " + ArrayUtils.toString(mediaElement.getVideoStreams()) + " " + clientProfile, null);
+                    return null;
+                }
+            }
+
+            // Process Audio
+            if(!transcodeService.processAudio(transcodeProfile, clientProfile, mediaElement)) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process audio streams: " + ArrayUtils.toString(mediaElement.getAudioStreams()) + " " + clientProfile, null);
+                return null;
+
+            }
+
+            // Set MIME Type
+            if(clientProfile.getFormat() != null) {
+                transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), clientProfile.getFormat()));
+            }
+
+            // Packed Audio
+            if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
+                transcodeProfile.setPackedAudio(true);
+            }
+        }
+        
+        return transcodeProfile;
     }
 }
