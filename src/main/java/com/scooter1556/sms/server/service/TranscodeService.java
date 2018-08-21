@@ -94,16 +94,31 @@ public class TranscodeService {
         // Get transcode profile
         TranscodeProfile profile = job.getTranscodeProfile();
         
-        // Get available hardware accelerators
-        List<HardwareAccelerator> accelerators = transcoder.getHardwareAcceleratorOptions(profile.getType() == TranscodeProfile.StreamType.REMOTE);
+        // Number of potential transcode commands
+        int transcodeCommands = 1;
         
-        // Determine number of potential transcode commands to generate
-        int transcodeCommands = 1; 
+        // Hardware accelerators
+        List<HardwareAccelerator> accelerators = null;
         
-        if(accelerators != null && profile.getVideoTranscodes() != null) {
-            transcodeCommands += accelerators.size();
+        if(profile.getVideoTranscodes() != null) {
+            // Some encoders don't support bitrate limiting so check if this is a requirement
+            boolean bitrateLimit = false;
+            
+            for(VideoTranscode transcode : profile.getVideoTranscodes()) {
+                if(transcode.getMaxBitrate() != null) {
+                    bitrateLimit = true;
+                }
+            }
+
+            // Get available hardware accelerators
+            accelerators = transcoder.getHardwareAcceleratorOptions(bitrateLimit);
+            
+            // Determine number of potential transcode commands to generate
+            if(accelerators != null) {
+                transcodeCommands += accelerators.size();
+            }
         }
-        
+
         for(int i = 0; i < transcodeCommands; i++) {
             commands.add(new TranscodeCommand());
             
@@ -554,7 +569,7 @@ public class TranscodeService {
         // Check subtitle streams
         if(mediaElement.getSubtitleStreams() != null) {
             for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
-                if(!getTranscoder().isCodecSupported(stream.getCodec())) {
+                if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
                     return true;
                 }
             }
@@ -564,7 +579,7 @@ public class TranscodeService {
     }
     
     public boolean isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, VideoStream stream) {
-        if(!getTranscoder().isCodecSupported(stream.getCodec())) {
+        if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
             return true;
         }
         
@@ -589,11 +604,11 @@ public class TranscodeService {
     public boolean isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, AudioStream stream) {
         // Check audio codec
         if(stream.getChannels() > 2) {
-            if(profile.getMchCodecs() == null || !getTranscoder().isCodecSupported(stream.getCodec())) {
+            if(profile.getMchCodecs() == null || !ArrayUtils.contains(profile.getMchCodecs(), stream.getCodec())) {
                 return true;
             }
         } else {
-            if(!getTranscoder().isCodecSupported(stream.getCodec())) {
+            if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
                 return true;
             }
         }
