@@ -878,6 +878,11 @@ public class TranscodeService {
                         sampleRate = (clientProfile.getMaxSampleRate() > TranscodeUtils.getMaxSampleRateForCodec(codec)) ? TranscodeUtils.getMaxSampleRateForCodec(codec) : clientProfile.getMaxSampleRate();
                     }
                     
+                    // Channels
+                    if(numChannels > TranscodeUtils.getMaxChannelsForCodec(codec)) {
+                        numChannels = TranscodeUtils.getMaxChannelsForCodec(codec);
+                    }
+                    
                     // Bitrate
                     if(!MediaUtils.isLossless(codec)) {
                         if(mediaElement.getType() == MediaElementType.AUDIO) {

@@ -453,6 +453,22 @@ public class TranscodeUtils {
         }        
     }
     
+    public static int getMaxChannelsForCodec(int codec) {
+        switch(codec) {
+            case SMS.Codec.AAC: case SMS.Codec.ALAC: case SMS.Codec.FLAC: case SMS.Codec.PCM: case SMS.Codec.DTSHD: case SMS.Codec.TRUEHD: case SMS.Codec.VORBIS:
+                return 8;
+                
+            case SMS.Codec.AC3: case SMS.Codec.EAC3: case SMS.Codec.DTS:
+                return 6;
+                
+            case SMS.Codec.MP3:
+                return 2;
+                
+            default:
+                return -1;
+        }        
+    }
+    
     public static int getMaxSampleRateForCodec(int codec) {
         switch(codec) {
             case SMS.Codec.AC3: case SMS.Codec.EAC3: case SMS.Codec.DTS: case SMS.Codec.MP3: case SMS.Codec.VORBIS:
