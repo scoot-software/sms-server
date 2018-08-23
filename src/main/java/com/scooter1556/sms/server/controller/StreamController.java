@@ -625,6 +625,9 @@ public class StreamController {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);
                 return null;
             }
+            
+            // Set client in encoder
+            encoder.setClient(clientProfile.getClient());
 
             // Set encoder in transcode profile
             transcodeProfile.setEncoder(encoder);

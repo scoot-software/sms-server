@@ -13,6 +13,11 @@ public class HLSEncoder implements Encoder {
         SMS.Codec.EAC3,
         SMS.Codec.WEBVTT
     };
+    
+    // Client ID
+    int client = SMS.Client.NONE;
+    
+    public HLSEncoder(){};
 
     @Override
     public boolean isSupported(int codec) {
@@ -38,21 +43,52 @@ public class HLSEncoder implements Encoder {
 
     @Override
     public int getAudioCodec(Integer[] codecs, int channels) {
-        if(channels > 2) {
-            if(ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
-                return SMS.Codec.EAC3;
-            }
-            
-            if(ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
-                return SMS.Codec.AC3;
-            }
-        }
         
-        if(ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
-            return SMS.Codec.AAC;
+        switch(client) {
+            // For Chromecast the codec needs to be the same for all streams...
+            case SMS.Client.CHROMECAST:
+                if(ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                    return SMS.Codec.EAC3;
+                }
+
+                if(ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                    return SMS.Codec.AC3;
+                }
+
+                if(ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                    return SMS.Codec.AAC;
+                }
+                
+                break;
+                
+            default:
+                if(channels > 2) {
+                    if(ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                        return SMS.Codec.EAC3;
+                    }
+
+                    if(ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                        return SMS.Codec.AC3;
+                    }
+                }
+
+                if(ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                    return SMS.Codec.AAC;
+                }
+                
+                break;
         }
         
         return SMS.Codec.UNSUPPORTED;
     }
     
+    @Override
+    public void setClient(int client) {
+        this.client = client;
+    }
+    
+    @Override
+    public int getClient() {
+        return client;
+    }
 }

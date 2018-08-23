@@ -77,7 +77,8 @@ public class SMS {
     }
     
     public static class Client {
-        public static final int UNSUPPORTED = 0;
+        public static final int UNSUPPORTED = -1;
+        public static final int NONE = 0;
         public static final int ANDROID = 1;
         public static final int ANDROID_TV = 2;
         public static final int CHROMECAST = 3;
