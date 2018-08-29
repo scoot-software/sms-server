@@ -164,8 +164,8 @@ public class SessionController {
         
         LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, session.getUsername() + " finished streaming '" + job.getMediaElement().getTitle() + "'.", null);
         
-        // Remove job
-        session.removeJobById(job.getId());
+        // End job
+        sessionService.endJobs(session, meid);
         
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
         return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);

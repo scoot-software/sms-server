@@ -403,6 +403,7 @@ public class StreamController {
                 if(transcodeProfile == null) {
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to get transcode profile for media element " + mediaElement + " and client profile " + clientProfile + ".", null);
                     response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to get transcode profile.");
+                    return;
                 }
 
                 // Set transcode profile for job
@@ -434,6 +435,8 @@ public class StreamController {
                             return;
                         }
                     }
+                    
+                    LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, session.getUsername() + " started streaming '" + mediaElement.getTitle() + "'.", null);
                 }
             } else {
                 // Populate variables
@@ -444,10 +447,6 @@ public class StreamController {
         } catch (IOException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Error encountered processing stream for session " + sid + ".", ex);
             return;
-        }
-        
-        if(!request.getMethod().equals("HEAD")) {
-            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, session.getUsername() + " started streaming '" + mediaElement.getTitle() + "'.", null);
         }
             
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "SID: " + sid + " MEID: " + meid + " Client Profile=" + clientProfile.toString() + " Transcode Profile=" + transcodeProfile.toString(), null);
