@@ -307,7 +307,7 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public void sendHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, HttpServletResponse response) throws IOException {
+    public void sendHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, boolean head, HttpServletResponse response) throws IOException {
         List<String> playlist;
         
         // Get playlist as a string array
@@ -338,9 +338,6 @@ public class AdaptiveStreamingService {
         response.setHeader(("Access-Control-Allow-Origin"), "*");
         response.setHeader("Access-Control-Allow-Methods", "GET");
         response.setIntHeader("Access-Control-Max-Age", 3600);
-
-        // Write playlist out to the client
-        response.getWriter().write(playlistWriter.toString());
         
         /*********************** DEBUG: Response Headers *********************************/        
         String requestHeader = "\n***************\nResponse Header:\n***************\n";
@@ -356,6 +353,14 @@ public class AdaptiveStreamingService {
         LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, requestHeader, null);
         
         /********************************************************************************/
+        
+        // If this is a HEAD request we are done
+        if(head) {
+            return;
+        }
+
+        // Write playlist out to the client
+        response.getWriter().write(playlistWriter.toString());
         
         // Log playlist
         LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, "\n************\nHLS Playlist\n************\n" + playlistWriter.toString(), null);

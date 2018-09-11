@@ -173,7 +173,7 @@ public class StreamController {
             // Return playlist
             switch (session.getClientProfile().getFormat()) {
                 case SMS.Format.HLS:
-                    adaptiveStreamingService.sendHLSPlaylist(job, session.getClientProfile(), type, extra, response);
+                    adaptiveStreamingService.sendHLSPlaylist(job, session.getClientProfile(), type, extra, false, response);
                     break;
                     
                 default:
@@ -199,7 +199,7 @@ public class StreamController {
         TranscodeProfile profile;
         AdaptiveStreamingProcess transcodeProcess;
         SMSProcess process = null;
-        File segment = null;
+        File segment;
                 
         try {
             // Retrieve session
@@ -287,7 +287,7 @@ public class StreamController {
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra + " MimeType=" + mimeType, null);
             
-            process = new FileDownloadProcess(segment.toPath(), mimeType, request, response);
+            process = new FileDownloadProcess(segment.toPath(), mimeType, false, request, response);
             process.start();
                 
         } catch (Exception ex) {
@@ -409,7 +409,7 @@ public class StreamController {
                 // Set transcode profile for job
                 job.setTranscodeProfile(transcodeProfile);
                 
-                // Only do certain things if this isn't a HEAD request
+                // Only do certain things if this IS NOT a HEAD request
                 if(!request.getMethod().equals("HEAD")) {
                     // Update media element and parent media element if necessary
                     mediaDao.updateLastPlayed(mediaElement.getID());
@@ -455,7 +455,7 @@ public class StreamController {
             switch(transcodeProfile.getType()) {
                 case StreamType.LOCAL: case StreamType.REMOTE:
                     if(clientProfile.getFormat() == SMS.Format.HLS) {
-                        adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, response);
+                        adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, request.getMethod().equals("HEAD"), response);
                     }
                 
                     break;
@@ -467,7 +467,7 @@ public class StreamController {
                         return;
                     }
                     
-                    process = new FileDownloadProcess(Paths.get(mediaElement.getPath()), transcodeProfile.getMimeType(), request, response);
+                    process = new FileDownloadProcess(Paths.get(mediaElement.getPath()), transcodeProfile.getMimeType(), request.getMethod().equals("HEAD"), request, response);
                     process.start();
                     break;
                     

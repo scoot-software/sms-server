@@ -44,6 +44,7 @@ import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
@@ -167,7 +168,7 @@ public class TranscodeService {
                     }
                     
                     // Add a filter list for video transcode
-                    commands.get(i).getFilters().add(new ArrayList<String>());
+                    commands.get(i).getFilters().add(new ArrayList<>());
                     
                     // Burn in subtitles if required
                     if(hardcodedSubtitles) {
@@ -419,14 +420,19 @@ public class TranscodeService {
                 commands.add("-profile:v");
                 
                 //  Profile
-                if(codec == SMS.Codec.AVC_BASELINE) {
-                    commands.add("baseline");
-                } else if(codec == SMS.Codec.AVC_MAIN) {
-                    commands.add("main");
-                } else if(codec == SMS.Codec.AVC_HIGH){
-                    commands.add("high");
-                } else {
-                    commands.add("high");
+                switch (codec) {
+                    case SMS.Codec.AVC_BASELINE:
+                        commands.add("baseline");
+                        break;
+                    case SMS.Codec.AVC_MAIN:
+                        commands.add("main");
+                        break;
+                    case SMS.Codec.AVC_HIGH:
+                        commands.add("high");
+                        break;
+                    default:
+                        commands.add("high");
+                        break;
                 }
 
                 if(maxrate != null) {
@@ -550,28 +556,22 @@ public class TranscodeService {
                 return null;
             }
             
-            for(VideoStream stream : mediaElement.getVideoStreams()) {
-                if(isTranscodeRequired(profile, mediaElement, stream)) {
-                    return true;
-                }
+            if (mediaElement.getVideoStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream)))) {
+                return true;
             }
         }
         
         // Check audio streams
         if(mediaElement.getAudioStreams() != null) {
-            for(AudioStream stream : mediaElement.getAudioStreams()) {
-                if(isTranscodeRequired(profile, mediaElement, stream)) {
-                    return true;
-                }
+            if (mediaElement.getAudioStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream)))) {
+                return true;
             }
         }
 
         // Check subtitle streams
         if(mediaElement.getSubtitleStreams() != null) {
-            for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
-                if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
-                    return true;
-                }
+            if (mediaElement.getSubtitleStreams().stream().anyMatch((stream) -> (!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())))) {
+                return true;
             }
         }
         
@@ -584,7 +584,7 @@ public class TranscodeService {
         }
         
         // Check maximum bitrate
-        if(profile.getMaxBitrate() != null) {
+        if(profile.getMaxBitrate() != null && profile.getMaxBitrate() > 0) {
             if(MediaUtils.getMaxBitrate(stream, mediaElement.getBitrate()) > profile.getMaxBitrate()) {
                 return true;
             }
@@ -662,7 +662,7 @@ public class TranscodeService {
         List<SubtitleTranscode> transcodes = new ArrayList<>();
         
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
-            Integer codec = null;
+            Integer codec;
             boolean hardcode = false;
             
             if(transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
@@ -726,26 +726,21 @@ public class TranscodeService {
         for(VideoStream stream : mediaElement.getVideoStreams()) {
             int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
             int maxQuality = TranscodeUtils.getHighestVideoQuality(stream.getResolution());
-            
             // Process quality
             if(maxQuality < 0 || maxQuality > clientProfile.getVideoQuality()) {
                 maxQuality = clientProfile.getVideoQuality();
             }
-            
             // Determine number of streams to transcode
             if(transcodeProfile.getType() < TranscodeProfile.StreamType.REMOTE || maxQuality == 0) {
                 streamCount = 1;
             } else if(streamCount > clientProfile.getVideoQuality()) {
                 streamCount = maxQuality;
             }
-            
             // Test if transcoding is necessary
             boolean transcodeRequired = isTranscodeRequired(clientProfile, mediaElement, stream);
-
             if(!transcodeRequired) {
                 transcodeRequired = !transcodeProfile.getEncoder().isSupported(stream.getCodec());
             }
-
             // Check for hardcoded subtitles
             if(transcodeProfile.getSubtitleStream() != null) {
                 SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(transcodeProfile.getSubtitleTranscodes(), transcodeProfile.getSubtitleStream());
@@ -754,9 +749,8 @@ public class TranscodeService {
                     transcodeRequired = transcode.isHardcoded();
                 }
             }
-
             for(int i = 0; i < streamCount; i++) {
-                Integer codec = null;
+                Integer codec;
                 Dimension resolution = null;
                 Integer quality = maxQuality;
                 Integer maxBitrate = clientProfile.getMaxBitrate();
@@ -843,8 +837,8 @@ public class TranscodeService {
         // Process each audio stream
         List<AudioTranscode> transcodes = new ArrayList<>();
 
-        for(AudioStream stream : mediaElement.getAudioStreams()) {
-            Integer codec = null;
+        mediaElement.getAudioStreams().forEach((AudioStream stream) -> {
+            Integer codec;
             int bitrate = -1;
             Integer sampleRate = null;
             int numChannels = stream.getChannels();
@@ -898,7 +892,7 @@ public class TranscodeService {
             
             // Add transcode properties to array
             transcodes.add(new AudioTranscode(stream.getStreamId(), stream.getCodec(), codec, bitrate, sampleRate, numChannels));
-        }
+        });
         
         // Update profile with audio transcode properties
         transcodeProfile.setAudioTranscodes(transcodes.toArray(new AudioTranscode[transcodes.size()]));

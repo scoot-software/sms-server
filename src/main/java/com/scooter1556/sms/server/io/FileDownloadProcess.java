@@ -49,12 +49,14 @@ public class FileDownloadProcess extends SMSProcess {
     
     Path filepath;
     String contentType;
+    boolean head = false;
     HttpServletRequest request;
     HttpServletResponse response;
         
-    public FileDownloadProcess(Path path, String contentType, HttpServletRequest request, HttpServletResponse response) {
+    public FileDownloadProcess(Path path, String contentType, boolean head, HttpServletRequest request, HttpServletResponse response) {
         this.filepath = path;
         this.contentType = contentType;
+        this.head = head;
         this.request = request;
         this.response = response;
     }
@@ -152,7 +154,6 @@ public class FileDownloadProcess extends SMSProcess {
 
             // If any valid If-Range header, then process each part of byte range.
             if (ranges.isEmpty()) {
-                
                 if (range.matches("^bytes=\\d*-\\d*(,\\d*-\\d*)*$")) {
                     for (String part : range.substring(6).split(",")) {
                         long start = Range.sublong(part, 0, part.indexOf("-"));
@@ -231,12 +232,15 @@ public class FileDownloadProcess extends SMSProcess {
             if (ranges.isEmpty() || ranges.get(0) == full) {
 
                 // Return full file.
-                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Return complete file", null);
                 response.setContentType(contentType);
                 response.setHeader("Content-Length", String.valueOf(full.length));
                 response.setHeader("Content-Range", "bytes " + full.start + "-" + full.end + "/" + full.total);
                 
-                bytesTransferred += Range.copy(input, output, length, full.start, full.length);
+                // Don't return data if HEAD request
+                if(!head) {
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Return complete file", null);
+                    bytesTransferred += Range.copy(input, output, length, full.start, full.length);
+                }
 
             } else if (ranges.size() == 1) {
 
