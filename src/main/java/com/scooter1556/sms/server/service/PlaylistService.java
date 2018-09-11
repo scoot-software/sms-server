@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,13 +38,6 @@ public class PlaylistService {
         if(contents == null || contents.isEmpty()) {
             return null;
         }
-        
-        // Check for duplicates
-        LinkedHashSet<String> tmp = new LinkedHashSet<>();
-        tmp.addAll(contents);
-        contents.clear();
-        contents.addAll(tmp);
-        
         
         // Parse playlist contents
         for(String line : contents) {
@@ -74,6 +68,16 @@ public class PlaylistService {
                 mediaElements.add(results.get(0));
             }
         }
+        
+        // Check for duplicates
+        Set<MediaElement> tmp = new LinkedHashSet<>();
+        
+        mediaElements.stream().filter((mediaElement) -> (!tmp.contains(mediaElement))).forEachOrdered((mediaElement) -> {
+            tmp.add(mediaElement);
+        });
+        
+        mediaElements.clear();
+        tmp.forEach((m) -> mediaElements.add(m));
                 
         return mediaElements;
     }

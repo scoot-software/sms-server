@@ -12,6 +12,7 @@ import com.scooter1556.sms.server.domain.PlaylistContent;
 import com.scooter1556.sms.server.service.LogService;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -118,17 +119,19 @@ public class PlaylistController {
         }
         
         // Remove duplicate entries
-        LinkedHashSet<UUID> tmp = new LinkedHashSet<>();
-        tmp.addAll(content.getMedia());
+        Set<UUID> tmp = new LinkedHashSet<>();
+        
+        content.getMedia().stream().filter((id) -> (!tmp.contains(id))).forEachOrdered((id) -> {
+            tmp.add(id);
+        });
+        
         content.getMedia().clear();
-        content.getMedia().addAll(tmp);
+        tmp.forEach((m) -> content.getMedia().add(m));
         
         // Check media elements
-        for(UUID mediaElement : content.getMedia()) {
-            if(mediaDao.getMediaElementByID(mediaElement) == null) {
-                content.getMedia().remove(mediaElement);
-            }
-        }
+        content.getMedia().stream().filter((mediaElement) -> (mediaDao.getMediaElementByID(mediaElement) == null)).forEachOrdered((mediaElement) -> {
+            content.getMedia().remove(mediaElement);
+        });
         
         // Remove existing content for playlist
         if(!mediaDao.removePlaylistContent(content.getID())) {
