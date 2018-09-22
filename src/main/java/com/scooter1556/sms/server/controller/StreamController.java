@@ -263,8 +263,8 @@ public class StreamController {
             // Check how we detect the segment is available
             int count = 0;
             
-            // Wait for segment to become available using necessary method
-            while(!segment.exists() && count < 20) {
+            // Check segment exists
+            while(!segment.exists() && (count < 20)) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
@@ -275,7 +275,7 @@ public class StreamController {
             }
             
             // Check if segment is definitely available
-            if(count >= 20 || !segment.exists()) {
+            if(!segment.exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + job.getId() + ".", null);
                 response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                 return;

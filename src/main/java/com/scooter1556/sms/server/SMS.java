@@ -13,6 +13,7 @@ public class SMS {
         public static final int UNSUPPORTED = -1;
         
         public static final int COPY = 0;
+        public static final int HARDCODED = 1;
         
         public static final int AVC_BASELINE = 10;
         public static final int AVC_MAIN = 11;
@@ -83,5 +84,15 @@ public class SMS {
         public static final int ANDROID_TV = 2;
         public static final int CHROMECAST = 3;
         public static final int KODI = 4;
+    }
+    
+    public static class TranscodeReason {
+        public static final int UNKNOWN = -1;
+        public static final int NONE = 0;
+        public static final int CODEC_UNSUPPORTED_BY_CLIENT = 1;
+        public static final int CODEC_UNSUPPORTED_BY_ENCODER = 2;
+        public static final int BITRATE = 3;
+        public static final int RESOLUTION = 4;
+        public static final int SUBTITLES = 5;
     }
 }

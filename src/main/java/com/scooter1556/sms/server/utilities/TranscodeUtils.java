@@ -56,6 +56,7 @@ public class TranscodeUtils {
     public static final String ISO_AC3 = "mp4a.a5";
     public static final String ISO_EAC3 = "mp4a.a6";
     public static final String ISO_VORBIS = "vorbis";
+    public static final String ISO_PCM = "1";
         
     public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
             
@@ -447,6 +448,9 @@ public class TranscodeUtils {
                 
             case SMS.Codec.EAC3:
                 return ISO_EAC3;
+                
+            case SMS.Codec.PCM:
+                return ISO_PCM;
                 
             default:
                 return "";

@@ -304,6 +304,12 @@ public class MediaUtils {
             case SMS.Format.AC3:
                 return "ac3";
                 
+            case SMS.Format.SUBRIP:
+                return "srt";
+                
+            case SMS.Format.WEBVTT:
+                return "webvtt";
+                
             default:
                 return null;
         }
@@ -384,6 +390,34 @@ public class MediaUtils {
         }
         
         return mimeType.toString();
+    }
+    
+    public static boolean isCodecSupportedByFormat(int format, int codec) {
+        switch(format) {
+            case SMS.Format.MPEGTS:
+                switch(codec) {
+                        case SMS.Codec.AVC_BASELINE:
+                        case SMS.Codec.AVC_HIGH:
+                        case SMS.Codec.AVC_HIGH10:
+                        case SMS.Codec.AVC_MAIN:
+                        case SMS.Codec.MPEG2:
+                        case SMS.Codec.AAC:
+                        case SMS.Codec.AC3:
+                        case SMS.Codec.EAC3:
+                        case SMS.Codec.TRUEHD:
+                        case SMS.Codec.DTS:
+                        case SMS.Codec.DTSHD:
+                        case SMS.Codec.MP3:
+                        case SMS.Codec.DVB:
+                            return true;
+                            
+                        default:
+                            return false;
+                }
+                                
+            default:
+                return false;
+        }
     }
     
     public static boolean isLossless(int codec) {

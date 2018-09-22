@@ -20,7 +20,7 @@ public class AudioTranscode {
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Original Codec=%s, Transcode Codec = %s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
+        return String.format("{ID=%s, Original Codec=%s, Transcode Codec=%s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
                 id == null ? "null" : id.toString(),
                 oCodec == null ? "null" : oCodec.toString(),
                 tCodec == null ? "null" : tCodec.toString(),
@@ -49,7 +49,7 @@ public class AudioTranscode {
         return tCodec;
     }
     
-    public void setCodec(Integer tcodec) {
+    public void setCodec(Integer tCodec) {
         this.tCodec = tCodec;
     }
 

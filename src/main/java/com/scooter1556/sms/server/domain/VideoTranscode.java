@@ -2,30 +2,36 @@ package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.scooter1556.sms.server.SMS;
 import java.awt.Dimension;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class VideoTranscode {
     private Integer id, quality, maxBitrate;
-    private Integer codec;
+    private Integer oCodec, tCodec;
     private Dimension resolution;
+    private Integer transcodeReason = SMS.TranscodeReason.NONE;
 
-    public VideoTranscode(Integer id, Integer codec, Dimension resolution, Integer quality, Integer maxBitrate) {
+    public VideoTranscode(Integer id, Integer oCodec, Integer tCodec, Dimension resolution, Integer quality, Integer maxBitrate, Integer reason) {
         this.id = id;
-        this.codec = codec;
+        this.oCodec = oCodec;
+        this.tCodec = tCodec;
         this.resolution = resolution;
         this.quality = quality;
         this.maxBitrate = maxBitrate;
+        this.transcodeReason = reason;
     }
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Codec=%s, Resolution=%s, Quality=%s, Max Bitrate=%s}",
+        return String.format("{ID=%s, Original Codec=%s, Transcode Codec=%s, Resolution=%s, Quality=%s, Max Bitrate=%s, Transcode Reason=%s}",
                 id == null ? "null" : id.toString(),
-                codec == null ? "null" : codec,
+                oCodec == null ? "null" : oCodec,
+                tCodec == null ? "null" : tCodec,
                 resolution == null ? "null" : String.format("%dx%d", resolution.width, resolution.height),
                 quality == null ? "null" : quality.toString(),
-                maxBitrate == null ? "null" : maxBitrate);
+                maxBitrate == null ? "null" : maxBitrate,
+                transcodeReason == null ? "null" : transcodeReason);
     }
     
     public Integer getId() {
@@ -35,13 +41,21 @@ public class VideoTranscode {
     public void setId(Integer id) {
         this.id = id;
     }
+    
+    public Integer getOriginalCodec() {
+        return oCodec;
+    }
+    
+    public void setOriginalCodec(Integer codec) {
+        this.oCodec = codec;
+    }
 
     public Integer getCodec() {
-        return codec;
+        return tCodec;
     }
 
     public void setCodec(Integer codec) {
-        this.codec = codec;
+        this.tCodec = codec;
     }
 
     @JsonIgnore
@@ -67,6 +81,14 @@ public class VideoTranscode {
 
     public void setMaxBitrate(int maxBitrate) {
         this.maxBitrate = maxBitrate;
+    }
+    
+    public Integer getTrandscodeReaon() {
+        return this.transcodeReason;
+    }
+    
+    public void setTranscodeReason(int reason) {
+        this.transcodeReason = reason;
     }
     
     public static class VideoQuality {

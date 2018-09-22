@@ -26,23 +26,26 @@ package com.scooter1556.sms.server.io;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.MediaElement;
+import com.scooter1556.sms.server.domain.SubtitleTranscode;
+import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.Transcoder;
-import com.scooter1556.sms.server.utilities.DirectoryWatcher;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.apache.commons.io.input.TailerListenerAdapter;
 
 public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
@@ -52,12 +55,12 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     int segmentNum = 0;
     int subtitleNum = 0;
     boolean subtitlesEnabled = false;
-    boolean postProcessEnabled = false;
-    DirectoryWatcher watcher;
-    ExecutorService postProcessExecutor = null;
-    AudioTranscode[] audioTranscodes = null;
+    TranscodeProfile profile = null;
     MediaElement mediaElement = null;
     Transcoder transcoder = null;
+    
+    Tailer tailer = null;
+    ExecutorService postProcessExecutor = null;
         
     public AdaptiveStreamingProcess() {};
     
@@ -94,90 +97,21 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Reset flags
             ended = false;
             
-            // Setup post-processing of audio segments if required
-            if(audioTranscodes != null && transcoder != null && mediaElement != null) {                
-                //  Setup thread pool for post-processing segments
-                postProcessExecutor = Executors.newCachedThreadPool();
-                
-                // Setup directory watcher
-                watcher = new DirectoryWatcher.Builder()
-                    .addDirectories(streamDirectory.getPath())
-                    .setPreExistingAsCreated(true)
-                    .build(new DirectoryWatcher.Listener() {
-                        
-                        @Override
-                        public void onEvent(DirectoryWatcher.Event event, final Path path) {
-                            switch (event) {
-                                case ENTRY_CREATE:
-                                    // Check if we are interested in this file
-                                    if(!FilenameUtils.getExtension(path.toString()).equals("pp")) {
-                                        break;
-                                    }
-                                                                        
-                                    // Get the information we require
-                                    String[] segmentData = FilenameUtils.getBaseName(path.getFileName().toString()).split("-");
-                                    
-                                    if(segmentData.length < 3) {
-                                        break;
-                                    }
-                                    
-                                    // Variables
-                                    final int transcode = Integer.parseInt(segmentData[2]);
-                                    
-                                    // Retrieve transcode format
-                                    if(audioTranscodes.length < transcode || mediaElement == null) {
-                                        break;
-                                    }
-                                    
-                                    // Determine codec
-                                    AudioTranscode aTranscode = audioTranscodes[transcode];
-                                    Integer codec = aTranscode.getCodec();
-
-                                    if(codec == SMS.Codec.COPY) {
-                                        codec = MediaUtils.getAudioStreamById(mediaElement.getAudioStreams(), aTranscode.getId()).getCodec();
-                                    }
-                                    
-                                    final String format = MediaUtils.getFormat(MediaUtils.getFormatForCodec(codec));
-                                    
-                                    if(format == null) {
-                                        break;
-                                    }
-                                    
-                                    // Transcode
-                                    postProcessExecutor.submit(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            postProcess(path.toString(), format);
-                                        }
-                                    });
-                                    break;
-
-                                case ENTRY_MODIFY:                                    
-                                    break;
-
-                                case ENTRY_DELETE:
-                                    break;
-                            }
-                        }
-                    });
-                
-                // Start directory watcher
-                watcher.start();
-            }
+            //  Setup thread pool for post-processing segments
+            postProcessExecutor = Executors.newCachedThreadPool();
+            
+            // Setup tailer for segment list
+            TailerListener listener = new SegmentListener();
+            tailer = new Tailer(new File(streamDirectory + "/segments.txt"), listener);
+            Thread thread = new Thread(tailer);
+            thread.setDaemon(true);
+            thread.start();
         
             // Start transcoding
             start();
         } catch(Exception ex) {
             if(process != null) {
                 process.destroy();
-            }
-            
-            if(watcher != null) {
-                watcher.stop();
-            }
-            
-            if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
-                postProcessExecutor.shutdownNow();
             }
             
             ended = true;
@@ -198,11 +132,10 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             process.destroy();
         }
         
-        // Check if directory watcher is active
-        if(watcher != null) {
-            watcher.stop();
-        }
+        //  Stop segment tracking
+        tailer.stop();
         
+        // Stop post-processing pool
         if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
             postProcessExecutor.shutdownNow();
         }
@@ -226,26 +159,130 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         ended = true;
     }
     
-    private void postProcess(String path, String format) {
+    public class SegmentListener extends TailerListenerAdapter {
+        @Override
+        public void handle(String line) {
+            // Check segment exists
+            String segmentPath = streamDirectory + "/" + line;
+            File segment = new File(segmentPath);
+            
+            if(!segment.exists()) {
+                LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Segment does not exist: " + segmentPath, null);
+                return;
+            }
+            
+            postProcessExecutor.submit(() -> {
+                postProcess(segment);
+            });
+      }
+  }
+    
+    private void postProcess(File segment) {
+        // Path to extracted stream segments
+        List<String> segmentPaths = new ArrayList<>();
+        
         // Process for transcoding
         Process postProcess = null;
         
-        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Post processing segment " + path + " with format '" + format + "'", null);
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Post-processing segment: " + segment.getAbsolutePath(), null);
         
         try {
-            // Get segment path
-            String segmentPath = FilenameUtils.getFullPath(path) + FilenameUtils.getBaseName(path);
-            
             // Generate post-process command
             List<String> command = new  ArrayList<>();
             command.add(transcoder.getPath().toString());
             command.add("-i");
-            command.add(path);
-            command.add("-c:a");
-            command.add("copy");
-            command.add("-f");
-            command.add(format);
-            command.add(segmentPath + ".tmp");
+            command.add(segment.getAbsolutePath());
+            command.add("-copyts");
+            
+            if(profile.getVideoTranscodes() != null) {
+                for(int i = 0; i < profile.getVideoTranscodes().length; i++) {                    
+                    command.add("-map");
+                    command.add("0:v:" + i);
+                    
+                    command.add("-c");
+                    command.add("copy");
+                    
+                    command.add("-f");
+                    command.add("mpegts");
+                    
+                    String path = segment.getAbsolutePath() + "-video-" + i + ".tmp";
+                    
+                    command.add(path);
+                    
+                    // Add to segment list
+                    segmentPaths.add(path);
+                }
+            }
+            
+            if(profile.getAudioTranscodes() != null) {
+                for(int i = 0; i < profile.getAudioTranscodes().length; i++) {
+                    AudioTranscode transcode = profile.getAudioTranscodes()[i];
+                    
+                    // Determine format to use
+                    int format = SMS.Format.MPEGTS;
+                    int codec = transcode.getCodec();
+                    
+                    if(codec == SMS.Codec.COPY) {
+                        codec = transcode.getOriginalCodec();
+                    }
+                    
+                    if(!MediaUtils.isCodecSupportedByFormat(SMS.Format.MPEGTS, codec) || profile.getPackedAudio()) {
+                        format = MediaUtils.getFormatForCodec(codec);
+                    }
+                    
+                    command.add("-map");
+                    command.add("0:a:" + i);
+                    
+                    command.add("-c");
+                    command.add("copy");
+                    
+                    command.add("-f");
+                    command.add(MediaUtils.getFormat(format));
+                    
+                    String path = segment.getAbsolutePath() + "-audio-" + i + ".tmp";
+                    
+                    command.add(path);
+                    
+                    // Add to segment list
+                    segmentPaths.add(path);
+                }
+            }
+            
+            /*
+            if(profile.getSubtitleTranscodes() != null) {
+                for(int i = 0; i < profile.getSubtitleTranscodes().length; i++) {
+                    SubtitleTranscode transcode = profile.getSubtitleTranscodes()[i];
+                    
+                    // Determine format to use
+                    int codec = transcode.getCodec();
+                    
+                    if(codec == SMS.Codec.HARDCODED) {
+                        continue;
+                    }
+                    
+                    if(codec == SMS.Codec.COPY) {
+                        codec = transcode.getOriginalCodec();
+                    }
+                    
+                    int format = MediaUtils.getFormatForCodec(codec);
+                    
+                    command.add("-map");
+                    command.add("0:s:" + i);
+                    
+                    command.add("-c");
+                    command.add("copy");
+                    
+                    command.add("-f");
+                    command.add(MediaUtils.getFormat(format));
+                    
+                    String path = segment.getAbsolutePath() + "-subtitle-" + i + ".tmp";
+                    
+                    command.add(path);
+                    
+                    // Add to segment list
+                    segmentPaths.add(path);
+                }
+            }*/
             
             LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
             
@@ -256,21 +293,23 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Wait for process to finish
             postProcess.waitFor();
             
-            // Rename file once complete
-            File source = new File(path);
-            File temp = new File(segmentPath + ".tmp");
-            File segment = new File(segmentPath);
-            
-            if(temp.exists()) {
-                temp.renameTo(segment);
-            }
+            // Rename temporary files once complete
+            segmentPaths.stream().map((path) -> new File(path)).forEachOrdered((tmpSegment) -> {
+                File finalSegment = new File(FilenameUtils.getFullPath(tmpSegment.getPath()) + FilenameUtils.getBaseName(tmpSegment.getPath()));
+
+                if(tmpSegment.exists()) {
+                    tmpSegment.renameTo(finalSegment);
+                } else {
+                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to rename post-processed segment: " + tmpSegment.toString(), null);
+                }
+            });
             
             // Remove original segment
-            if(source.exists()) {
-                source.delete();
+            if(segment.exists()) {
+                segment.delete();
             }
         } catch(IOException ex) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to post-process file " + path, ex);
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to post-process segment: " + segment.getAbsolutePath(), ex);
         } catch(InterruptedException ex) {
             //Do nothing...
         } finally {
@@ -304,16 +343,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         return this.subtitlesEnabled;
     }
     
-    public void setPostProcessEnabled(boolean enabled) {
-        this.postProcessEnabled = enabled;
-    }
-    
-    public boolean getPostProcessEnabled() {
-        return this.postProcessEnabled;
-    }
-    
-    public void setAudioTranscodes(AudioTranscode[] audioTranscodes) {
-        this.audioTranscodes = audioTranscodes;
+    public void setTranscodeProfile(TranscodeProfile profile) {
+        this.profile = profile;
     }
     
     public void setMediaElement(MediaElement element) {
@@ -359,14 +390,13 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 process.destroy();
             }
             
-            if(watcher != null) {
-                watcher.stop();
-            }
+            //  Stop segment tracking
+            tailer.stop();
             
             if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
                 postProcessExecutor.shutdownNow();
             }
-            
+                        
             ended = true;
         }
     }

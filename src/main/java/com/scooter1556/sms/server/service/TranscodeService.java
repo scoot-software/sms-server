@@ -44,11 +44,9 @@ import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -148,7 +146,7 @@ public class TranscodeService {
                     SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(profile.getSubtitleTranscodes(), profile.getSubtitleStream());
                     
                     if(transcode != null) {
-                        hardcodedSubtitles = transcode.isHardcoded();
+                        hardcodedSubtitles = transcode.getCodec() == SMS.Codec.HARDCODED;
                         
                         // Don't decode in hardware if burning in subtitles
                         if(hardwareAccelerator != null) {
@@ -191,13 +189,14 @@ public class TranscodeService {
                 initialised = true;
                 commands.get(i).getCommands().add("-i");
                 commands.get(i).getCommands().add(job.getMediaElement().getPath());
+                
+                // Enable experimental codecs
+                commands.get(i).getCommands().add("-strict");
+                commands.get(i).getCommands().add("experimental");
 
                 // Remove metadata
                 commands.get(i).getCommands().add("-map_metadata");
                 commands.get(i).getCommands().add("-1");
-                
-                // Copy Timestamps
-                commands.get(i).getCommands().add("-copyts");
                 
                 // Filter commands
                 commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getFilters()));
@@ -228,9 +227,6 @@ public class TranscodeService {
                         commands.get(i).getCommands().add("-force_key_frames");
                         commands.get(i).getCommands().add("expr:gte(t,n_forced*2)");
                     }
-                    
-                    // Segment
-                    commands.get(i).getCommands().addAll(getHlsCommands(job.getId(), "video-" + v, profile.getOffset()));
                 }
             }
 
@@ -242,27 +238,16 @@ public class TranscodeService {
                     commands.get(i).getCommands().add(job.getMediaElement().getPath());
                 }
                 
-                // Enable experimental codecs
-                commands.get(i).getCommands().add("-strict");
-                commands.get(i).getCommands().add("experimental");
-                
                 for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
                     AudioTranscode transcode = profile.getAudioTranscodes()[a];
-                    String format = null;
                     
                     // Transcode commands
                     commands.get(i).getCommands().addAll(getAudioCommands(transcode));
-                    
-                    // Segment commands
-                    String fileName = "audio-" + a;
-                    
-                    if(profile.getPackedAudio()) {
-                        fileName += ".pp";
-                    }
-                    
-                    commands.get(i).getCommands().addAll(getHlsCommands(job.getId(), fileName, profile.getOffset()));
                 }
             }
+            
+            // Segmenter
+            commands.get(i).getCommands().addAll(getSegmentCommands(job.getId(), profile.getOffset()));
         }
         
         // Prepare result
@@ -275,37 +260,43 @@ public class TranscodeService {
         return result;
     }
     
-    private Collection<String> getHlsCommands(UUID id, String name, Integer offset) {
-        if(id == null || name == null) {
+    private Collection<String> getSegmentCommands(UUID id, Integer offset) {
+        if(id == null) {
             return null;
         }
         
         Collection<String> commands = new LinkedList<>();
         
         commands.add("-f");
-        commands.add("hls");
+        commands.add("segment");
 
-        commands.add("-hls_time");
+        commands.add("-segment_time");
         commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
+        
+        commands.add("-segment_time_delta");
+        commands.add("0.0625");
 
-        commands.add("-hls_segment_type");
-        commands.add("mpegts");
+        commands.add("-segment_format");
+        commands.add("matroska");
 
         if(offset != null && offset > 0) {
-            commands.add("-start_number");
+            commands.add("-segment_start_number");
             commands.add(String.valueOf(offset / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
+            
+            commands.add("-initial_offset");
+            commands.add(String.valueOf(offset));
         }
 
-        commands.add("-hls_list_size");
+        commands.add("-segment_list_size");
         commands.add("0");
+        
+        commands.add("-segment_list_type");
+        commands.add("flat");
 
-        commands.add("-hls_flags");
-        commands.add("temp_file");
-
-        commands.add("-hls_segment_filename");
-        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d-" + name);
-
-        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/" + FilenameUtils.getBaseName(name) + ".m3u8");
+        commands.add("-segment_list");
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/segments.txt");
+        
+        commands.add(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id + "/%d");
         
         return commands;
     }
@@ -556,7 +547,7 @@ public class TranscodeService {
                 return null;
             }
             
-            if (mediaElement.getVideoStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream)))) {
+            if (mediaElement.getVideoStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream) > SMS.TranscodeReason.NONE))) {
                 return true;
             }
         }
@@ -578,15 +569,15 @@ public class TranscodeService {
         return false;
     }
     
-    public boolean isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, VideoStream stream) {
+    public int isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, VideoStream stream) {
         if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
-            return true;
+            return SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_CLIENT;
         }
         
         // Check maximum bitrate
         if(profile.getMaxBitrate() != null && profile.getMaxBitrate() > 0) {
             if(MediaUtils.getMaxBitrate(stream, mediaElement.getBitrate()) > profile.getMaxBitrate()) {
-                return true;
+                return SMS.TranscodeReason.BITRATE;
             }
         }
 
@@ -594,11 +585,11 @@ public class TranscodeService {
         if(!profile.getLocal()) {
             // Check resolution
             if(TranscodeUtils.compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), TranscodeUtils.VIDEO_QUALITY_RESOLUTION[profile.getVideoQuality()]) == 1) {
-                return true;
+                return SMS.TranscodeReason.RESOLUTION;
             }
         }
         
-        return false;
+        return SMS.TranscodeReason.NONE;
     }
     
     public boolean isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, AudioStream stream) {
@@ -663,7 +654,6 @@ public class TranscodeService {
         
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
             Integer codec;
-            boolean hardcode = false;
             
             if(transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
                 codec = SMS.Codec.COPY;
@@ -676,8 +666,7 @@ public class TranscodeService {
 
                     // Picture Based
                     case SMS.Codec.DVD: case SMS.Codec.DVB: case SMS.Codec.PGS:
-                        codec = stream.getCodec();
-                        hardcode = true;
+                        codec = SMS.Codec.HARDCODED;
                         break;
 
                     default:
@@ -691,7 +680,7 @@ public class TranscodeService {
                 transcodeProfile.setSubtitleStream(stream.getStreamId());
             }
             
-            transcodes.add(new SubtitleTranscode(stream.getStreamId(), codec, hardcode));
+            transcodes.add(new SubtitleTranscode(stream.getStreamId(), stream.getCodec(), codec));
         }
         
         // Update profile
@@ -726,41 +715,43 @@ public class TranscodeService {
         for(VideoStream stream : mediaElement.getVideoStreams()) {
             int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
             int maxQuality = TranscodeUtils.getHighestVideoQuality(stream.getResolution());
+            
             // Process quality
             if(maxQuality < 0 || maxQuality > clientProfile.getVideoQuality()) {
                 maxQuality = clientProfile.getVideoQuality();
             }
+            
             // Determine number of streams to transcode
             if(transcodeProfile.getType() < TranscodeProfile.StreamType.REMOTE || maxQuality == 0) {
                 streamCount = 1;
             } else if(streamCount > clientProfile.getVideoQuality()) {
                 streamCount = maxQuality;
             }
+            
             // Test if transcoding is necessary
-            boolean transcodeRequired = isTranscodeRequired(clientProfile, mediaElement, stream);
-            if(!transcodeRequired) {
-                transcodeRequired = !transcodeProfile.getEncoder().isSupported(stream.getCodec());
+            int transcodeReason = isTranscodeRequired(clientProfile, mediaElement, stream);
+            if(transcodeReason == SMS.TranscodeReason.NONE) {
+                if(!transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
+                    transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
+                }
             }
+            
             // Check for hardcoded subtitles
             if(transcodeProfile.getSubtitleStream() != null) {
                 SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(transcodeProfile.getSubtitleTranscodes(), transcodeProfile.getSubtitleStream());
 
-                if(transcode != null) {
-                    transcodeRequired = transcode.isHardcoded();
+                if(transcode != null && transcode.getCodec() == SMS.Codec.HARDCODED) {
+                    transcodeReason = SMS.TranscodeReason.SUBTITLES;
                 }
             }
+            
             for(int i = 0; i < streamCount; i++) {
                 Integer codec;
                 Dimension resolution = null;
                 Integer quality = maxQuality;
                 Integer maxBitrate = clientProfile.getMaxBitrate();
-                
-                // Determine max bitrate
-                if(maxBitrate == null) {
-                    maxBitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[quality];
-                }
 
-                if(transcodeRequired) {
+                if(transcodeReason > SMS.TranscodeReason.NONE) {
                     // Determine quality for transcode
                     if(i > 0) {
                         quality = i - 1;
@@ -790,7 +781,7 @@ public class TranscodeService {
                 }
 
                 // Add video transcode to array
-                transcodes.add(new VideoTranscode(stream.getStreamId(), codec, resolution, quality, maxBitrate));
+                transcodes.add(new VideoTranscode(stream.getStreamId(), stream.getCodec(), codec, resolution, quality, maxBitrate, transcodeReason));
             }
         }
         
@@ -863,7 +854,7 @@ public class TranscodeService {
                 
                 // Combine supported codecs
                 Integer[] codecs = ArrayUtils.addAll(clientProfile.getCodecs(), clientProfile.getMchCodecs());
-                codec = transcodeProfile.getEncoder().getAudioCodec(codecs, numChannels);
+                codec = transcodeProfile.getEncoder().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {

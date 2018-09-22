@@ -97,7 +97,7 @@ public class AdaptiveStreamingService {
         // Update process with required information
         process.setCommands(commands);
         process.setMediaElement(job.getMediaElement());
-        process.setAudioTranscodes(job.getTranscodeProfile().getAudioTranscodes());
+        process.setTranscodeProfile(job.getTranscodeProfile());
         process.setTranscoder(transcodeService.getTranscoder());
         
         /*
