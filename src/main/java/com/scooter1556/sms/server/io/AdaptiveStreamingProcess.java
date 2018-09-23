@@ -391,13 +391,6 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             if(process != null) {
                 process.destroy();
             }
-            
-            //  Stop segment tracking
-            tailer.stop();
-            
-            if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
-                postProcessExecutor.shutdownNow();
-            }
                         
             ended = true;
         }
