@@ -373,14 +373,14 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 // Wait for process to finish
                 int code = process.waitFor();
                 
-                LogService.getInstance().addLogEntry(Level.DEBUG, CLASS_NAME, "Transcode Finished with code " + code, null);
+                LogService.getInstance().addLogEntry(Level.DEBUG, CLASS_NAME, "Transcode process exited with code " + code, null);
 
                 // Check for error
-                if(code == 1) {
-                    LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
-                } else {
+                if(code == 0 || code == 255) {
                     LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcode finished for job " + id + " (fps=" + transcodeAnalysis.getFps() + ")", null);
                     break;
+                } else {
+                    LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Transcode command failed for job " + id + ". Attempting alternatives if available...", null);
                 }
             }
         } catch(IOException ex) {
