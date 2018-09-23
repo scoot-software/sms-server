@@ -51,6 +51,10 @@ public class Session implements Comparable {
         return jobs.toArray(new Job[jobs.size()]);
     }
     
+    public int getNumJobs() {
+        return jobs.size();
+    }
+    
     public Job getJobById(UUID id) {
         for(Job job : jobs) {
             if(job.getId().compareTo(id) == 0) {

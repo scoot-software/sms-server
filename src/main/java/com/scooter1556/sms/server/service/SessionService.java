@@ -56,6 +56,19 @@ public class SessionService implements DisposableBean {
         return sessions.size();
     }
     
+    public int getNumJobs() {
+        int jobs = 0;
+        
+        Iterator<Session> sIter = sessions.iterator();
+
+        while (sIter.hasNext()) {
+            Session session = sIter.next();
+            jobs += session.getNumJobs();
+        }
+        
+        return jobs;
+    }
+    
     public UUID addSession(UUID id, String username, ClientProfile profile) {
         // Check required parameters
         if(username == null) {

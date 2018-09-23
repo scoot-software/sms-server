@@ -372,6 +372,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
                 // Wait for process to finish
                 int code = process.waitFor();
+                
+                LogService.getInstance().addLogEntry(Level.DEBUG, CLASS_NAME, "Transcode Finished with code " + code, null);
 
                 // Check for error
                 if(code == 1) {

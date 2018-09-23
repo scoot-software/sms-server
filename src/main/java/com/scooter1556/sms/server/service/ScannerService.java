@@ -134,7 +134,7 @@ public class ScannerService implements DisposableBean {
         }
         
         // Check there are no active sessions which may be affected
-        if(sessionService.getNumSessions() > 0) {
+        if(sessionService.getNumJobs() > 0) {
             return SMS.Status.NOT_ALLOWED;
         }
         
