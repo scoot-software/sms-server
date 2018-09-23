@@ -56,7 +56,6 @@ public class AdaptiveStreamingService {
     
     private static final String CLASS_NAME = "AdaptiveStreamingService";
     
-    public static final Integer HLS_SEGMENT_DURATION = 10;
     public static final Integer DASH_SEGMENT_DURATION = 5;
     
     // The number of stream alternatives to transcode by default
@@ -75,7 +74,7 @@ public class AdaptiveStreamingService {
         if(num > 0) {
             // Start transcoding from the previous segment
             num -= 1;
-            job.getTranscodeProfile().setOffset(num * HLS_SEGMENT_DURATION);
+            job.getTranscodeProfile().setOffset(num * job.getTranscodeProfile().getSegmentDuration());
         }
         
         // Get transcode command
@@ -99,20 +98,6 @@ public class AdaptiveStreamingService {
         process.setMediaElement(job.getMediaElement());
         process.setTranscodeProfile(job.getTranscodeProfile());
         process.setTranscoder(transcodeService.getTranscoder());
-        
-        /*
-        // Check if post-processing of segments is required for client
-        if(profile.getMediaElement().getType().equals(MediaElementType.VIDEO)) {
-            switch(profile.getClient()) {
-                case "chromecast":
-                    process.setPostProcessEnabled(true);
-                    break;
-
-                default:
-                    break; 
-            }
-        }
-        */
             
         process.initialise();
         
@@ -283,20 +268,20 @@ public class AdaptiveStreamingService {
         
         playlist.add("#EXTM3U");
         playlist.add("#EXT-X-VERSION:4");
-        playlist.add("#EXT-X-TARGETDURATION:" + String.valueOf(HLS_SEGMENT_DURATION + 1));
+        playlist.add("#EXT-X-TARGETDURATION:" + String.valueOf(job.getTranscodeProfile().getSegmentDuration() + 1));
         playlist.add("#EXT-X-MEDIA-SEQUENCE:0");
         playlist.add("#EXT-X-PLAYLIST-TYPE:VOD");
         
         // Get Video Segments
-        for (int i = 0; i < Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION); i++) {
-            playlist.add("#EXTINF:" + HLS_SEGMENT_DURATION.floatValue() + ",");
+        for (int i = 0; i < Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration()); i++) {
+            playlist.add("#EXTINF:" + job.getTranscodeProfile().getSegmentDuration().floatValue() + ",");
             playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);
         }   
 
         // Determine the duration of the final segment.
-        double remainder = mediaElement.getDuration() % HLS_SEGMENT_DURATION;
+        double remainder = mediaElement.getDuration() % job.getTranscodeProfile().getSegmentDuration();
         if (remainder > 0) {
-            long i = Double.valueOf(Math.floor(mediaElement.getDuration() / HLS_SEGMENT_DURATION)).longValue();
+            long i = Double.valueOf(Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration())).longValue();
             
             playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
             playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);

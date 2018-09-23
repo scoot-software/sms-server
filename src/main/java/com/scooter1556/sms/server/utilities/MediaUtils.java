@@ -502,21 +502,6 @@ public class MediaUtils {
     }
     
     // Returns a max bitrate for a given media element
-    public static int getMaxBitrate(VideoStream stream, int defaultValue) {
-        // Return max bitrate if it is available
-        if(stream.getMaxBitrate() != null && stream.getMaxBitrate() > 0) {
-            return stream.getMaxBitrate();
-        }
-        
-        // Return double the average bitrate by default
-        if(stream.getBitrate() != null && stream.getBitrate() > 0) {
-            return stream.getBitrate() * 2;
-        }
-        
-        return defaultValue * 2;
-    }
-    
-    // Returns a max bitrate for a given media element
     public static int getAverageBitrate(VideoStream stream, int defaultValue) {
         // Return stream bitrate if it is available
         if(stream.getBitrate() != null && stream.getBitrate() > 0) {

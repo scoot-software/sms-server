@@ -225,7 +225,7 @@ public class TranscodeService {
                         }
 
                         commands.get(i).getCommands().add("-force_key_frames");
-                        commands.get(i).getCommands().add("expr:gte(t,n_forced*2)");
+                        commands.get(i).getCommands().add("expr:gte(t,n_forced*" + profile.getSegmentDuration()  + ")");
                     }
                 }
             }
@@ -247,7 +247,7 @@ public class TranscodeService {
             }
             
             // Segmenter
-            commands.get(i).getCommands().addAll(getSegmentCommands(job.getId(), profile.getOffset()));
+            commands.get(i).getCommands().addAll(getSegmentCommands(job.getId(), profile.getOffset(), profile.getSegmentDuration()));
         }
         
         // Prepare result
@@ -260,8 +260,8 @@ public class TranscodeService {
         return result;
     }
     
-    private Collection<String> getSegmentCommands(UUID id, Integer offset) {
-        if(id == null) {
+    private Collection<String> getSegmentCommands(UUID id, Integer offset, Integer duration) {
+        if(id == null || duration == null) {
             return null;
         }
         
@@ -271,7 +271,7 @@ public class TranscodeService {
         commands.add("segment");
 
         commands.add("-segment_time");
-        commands.add(AdaptiveStreamingService.HLS_SEGMENT_DURATION.toString());
+        commands.add(duration.toString());
         
         commands.add("-segment_time_delta");
         commands.add("0.0625");
@@ -281,7 +281,7 @@ public class TranscodeService {
 
         if(offset != null && offset > 0) {
             commands.add("-segment_start_number");
-            commands.add(String.valueOf(offset / AdaptiveStreamingService.HLS_SEGMENT_DURATION));
+            commands.add(String.valueOf(offset / duration));
             
             commands.add("-initial_offset");
             commands.add(String.valueOf(offset));
@@ -576,7 +576,7 @@ public class TranscodeService {
         
         // Check maximum bitrate
         if(profile.getMaxBitrate() != null && profile.getMaxBitrate() > 0) {
-            if(MediaUtils.getMaxBitrate(stream, mediaElement.getBitrate()) > profile.getMaxBitrate()) {
+            if(stream.getMaxBitrate() == null || stream.getMaxBitrate() == 0 || (stream.getMaxBitrate() > profile.getMaxBitrate())) {
                 return SMS.TranscodeReason.BITRATE;
             }
         }
@@ -730,6 +730,14 @@ public class TranscodeService {
             
             // Test if transcoding is necessary
             int transcodeReason = isTranscodeRequired(clientProfile, mediaElement, stream);
+            
+            // Test for missing required stream data
+            if(transcodeReason == SMS.TranscodeReason.NONE) {
+                if(stream.getGOPSize() == null || stream.getGOPSize() == 0 || stream.getFPS() == null || stream.getFPS() == 0) {
+                    transcodeReason = SMS.TranscodeReason.MISSING_DATA;
+                }
+            }
+            
             if(transcodeReason == SMS.TranscodeReason.NONE) {
                 if(!transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
                     transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
@@ -737,7 +745,7 @@ public class TranscodeService {
             }
             
             // Check for hardcoded subtitles
-            if(transcodeProfile.getSubtitleStream() != null) {
+            if(transcodeReason == SMS.TranscodeReason.NONE && transcodeProfile.getSubtitleStream() != null) {
                 SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(transcodeProfile.getSubtitleTranscodes(), transcodeProfile.getSubtitleStream());
 
                 if(transcode != null && transcode.getCodec() == SMS.Codec.HARDCODED) {

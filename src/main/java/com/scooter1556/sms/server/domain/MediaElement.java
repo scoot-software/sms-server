@@ -505,7 +505,7 @@ public class MediaElement implements Serializable {
     
     public static class VideoStream extends Stream {
         private Double fps;
-        private Integer width, height, bitrate, maxBitrate, bps;
+        private Integer width, height, bitrate, maxBitrate, bps, gopSize;
         private Boolean interlaced;
         
         public VideoStream() {};
@@ -521,6 +521,7 @@ public class MediaElement implements Serializable {
                            Integer bitrate,
                            Integer maxBitrate,
                            Integer bps,
+                           Integer gopSize,
                            String language,
                            Boolean isDefault,
                            Boolean isForced) {
@@ -535,6 +536,7 @@ public class MediaElement implements Serializable {
             this.bitrate = bitrate;
             this.maxBitrate = maxBitrate;
             this.bps = bps;
+            this.gopSize = gopSize;
             this.language = language;
             this.isDefault = isDefault;
             this.isForced = isForced;
@@ -543,7 +545,7 @@ public class MediaElement implements Serializable {
         @Override
         public String toString() {
             return String.format(
-                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Width=%s, Height=%s, Interlaced=%s, FPS=%s, Bitrate=%s kb/s, Max Bitrate=%s kb/s, Bits Per Sample=%s, Language=%s, Default=%s, Forced=%s}",
+                        "{Media Element ID=%s, Stream ID=%s, Title=%s, Codec=%s, Width=%s, Height=%s, Interlaced=%s, FPS=%s, Bitrate=%s kb/s, Max Bitrate=%s kb/s, Bits Per Sample=%s, GOP Size=%s, Language=%s, Default=%s, Forced=%s}",
                         mediaElementId == null ? "N/A" : mediaElementId.toString(),
                         streamId == null ? "N/A" : streamId.toString(),
                         title == null ? "N/A" : title,
@@ -555,6 +557,7 @@ public class MediaElement implements Serializable {
                         bitrate == null ? "N/A" : bitrate.toString(),
                         maxBitrate == null ? "N/A" : maxBitrate.toString(),
                         bps == null ? "N/A" : bps.toString(),
+                        gopSize == null ? "N/A" : gopSize.toString(),
                         language == null ? "N/A" : language,
                         isDefault == null ? "False" : isDefault.toString(),
                         isForced == null ? "False" : isForced.toString());
@@ -618,6 +621,14 @@ public class MediaElement implements Serializable {
         
         public void setBPS(Integer bps) {
             this.bps = bps;
+        }
+        
+        public Integer getGOPSize() {
+            return gopSize;
+        }
+        
+        public void setGOPSize(Integer gopSize) {
+            this.gopSize = gopSize;
         }
     }
     

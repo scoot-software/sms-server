@@ -563,8 +563,8 @@ public class MediaDao {
     //
     
     public boolean createVideoStreams(final List<VideoStream> videoStreams) {
-        String sql = "INSERT INTO VideoStream (MEID,SID,Title,Codec,Width,Height,Interlaced,FPS,Bitrate,MaxBitrate,BPS,Language,Default,Forced) " +
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO VideoStream (MEID,SID,Title,Codec,Width,Height,Interlaced,FPS,Bitrate,MaxBitrate,BPS,GOP,Language,Default,Forced) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -582,9 +582,10 @@ public class MediaDao {
                     ps.setInt(9, videoStream.getBitrate());
                     ps.setInt(10, videoStream.getMaxBitrate());
                     ps.setInt(11, videoStream.getBPS());
-                    ps.setString(12, videoStream.getLanguage());
-                    ps.setBoolean(13, videoStream.isDefault());
-                    ps.setBoolean(14, videoStream.isForced());
+                    ps.setInt(12, videoStream.getGOPSize());
+                    ps.setString(13, videoStream.getLanguage());
+                    ps.setBoolean(14, videoStream.isDefault());
+                    ps.setBoolean(15, videoStream.isForced());
                 }
 
                 @Override
@@ -602,7 +603,7 @@ public class MediaDao {
     
     public boolean updateVideoStream(VideoStream stream) {
         try {
-            mediaDatabase.getJdbcTemplate().update("UPDATE VideoStream SET Title=?, Codec=?, Width=?, Height=?, Interlaced=?, FPS=?, Bitrate=?, MaxBitrate=?, BPS=?, Language=?, Default=?, Forced=? WHERE MEID=? AND SID=?",
+            mediaDatabase.getJdbcTemplate().update("UPDATE VideoStream SET Title=?, Codec=?, Width=?, Height=?, Interlaced=?, FPS=?, Bitrate=?, MaxBitrate=?, BPS=?, GOP=?, Language=?, Default=?, Forced=? WHERE MEID=? AND SID=?",
                     new Object[]{stream.getTitle(),
                                  stream.getCodec(),
                                  stream.getWidth(),
@@ -612,6 +613,7 @@ public class MediaDao {
                                  stream.getBitrate(),
                                  stream.getMaxBitrate(),
                                  stream.getBPS(),
+                                 stream.getGOPSize(),
                                  stream.getLanguage(),
                                  stream.isDefault(),
                                  stream.isForced(),
@@ -665,7 +667,7 @@ public class MediaDao {
     public List<VideoStream> getIncompleteVideoStreams() {
         try {
             List<VideoStream> videoStreams;
-            videoStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM VideoStream WHERE MaxBitrate=0", new VideoStreamMapper());
+            videoStreams = mediaDatabase.getJdbcTemplate().query("SELECT * FROM VideoStream WHERE MaxBitrate=0 OR GOP=0     ", new VideoStreamMapper());
             
             return videoStreams;
         } catch (DataAccessException e) {
@@ -688,6 +690,7 @@ public class MediaDao {
             videoStream.setBitrate(rs.getInt("Bitrate"));
             videoStream.setMaxBitrate(rs.getInt("MaxBitrate"));
             videoStream.setBPS(rs.getInt("BPS"));
+            videoStream.setGOPSize(rs.getInt("GOP"));
             videoStream.setLanguage(rs.getString("Language"));
             videoStream.setDefault(rs.getBoolean("Default"));
             videoStream.setForced(rs.getBoolean("Forced"));

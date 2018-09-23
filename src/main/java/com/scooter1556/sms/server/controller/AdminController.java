@@ -27,8 +27,6 @@ import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
-import com.scooter1556.sms.server.domain.Job;
-import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.User;

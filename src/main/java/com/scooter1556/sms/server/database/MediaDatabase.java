@@ -96,6 +96,7 @@ public class MediaDatabase extends Database {
                     + "Bitrate INT,"
                     + "MaxBitrate INT,"
                     + "BPS INT,"
+                    + "GOP INT,"
                     + "Language VARCHAR,"
                     + "Default BOOLEAN DEFAULT 0 NOT NULL,"
                     + "Forced BOOLEAN DEFAULT 0 NOT NULL,"

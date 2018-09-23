@@ -267,25 +267,22 @@ public class ScannerService implements DisposableBean {
         // Create media scanning threads
         deepScanExecutor = Executors.newSingleThreadExecutor();
 
-        deepScanExecutor.submit(new Runnable() {
-            @Override
-            public void run() {
-                LogUtils.writeToLog(deepScanLog, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
+        deepScanExecutor.submit(() -> {
+            LogUtils.writeToLog(deepScanLog, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
+            
+            for(VideoStream stream : streams) {
+                dTotal ++;
                 
-                for(VideoStream stream : streams) {
-                    dTotal ++;
-                    
-                    LogUtils.writeToLog(deepScanLog, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
-
-                    VideoStream update = frameParser.parse(stream);
-                    
-                    if(update != null) {
-                        mediaDao.updateVideoStream(update);
-                        LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG);
-                    }
-                    
-                    LogUtils.writeToLog(deepScanLog, "Finished Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                LogUtils.writeToLog(deepScanLog, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                
+                VideoStream update = frameParser.parse(stream);
+                
+                if(update != null) {
+                    mediaDao.updateVideoStream(update);
+                    LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG);
                 }
+                
+                LogUtils.writeToLog(deepScanLog, "Finished Scanning stream: " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
             }
         });
         

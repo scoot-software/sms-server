@@ -57,6 +57,8 @@ public class TranscodeUtils {
     public static final String ISO_EAC3 = "mp4a.a6";
     public static final String ISO_VORBIS = "vorbis";
     public static final String ISO_PCM = "1";
+    
+    public static final Integer DEFAULT_SEGMENT_DURATION = 10;
         
     public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
             
@@ -717,6 +719,30 @@ public class TranscodeUtils {
         streamProfile.setCodecs(codecs.toArray(new Integer[codecs.size()]));
         
         return streamProfile;
+    }
+    
+    public static int getSegmentDuration(VideoStream stream) {
+        // If we don't have the data we need return the default  value
+        if(stream == null || stream.getFPS() == null || stream.getGOPSize() == null || stream.getFPS() <= 0 || stream.getGOPSize() <= 0) {
+            return DEFAULT_SEGMENT_DURATION;
+        }
+        
+        // Calculate duration between key frames
+        int interval = (int) Math.round(stream.getGOPSize() / stream.getFPS());
+        
+        // If interval is 1 or less return our default value
+        if(interval <= 1) {
+            return DEFAULT_SEGMENT_DURATION;
+        }
+        
+        // If interval is greater than our default, return the calculated interval value
+        if(interval >= DEFAULT_SEGMENT_DURATION) {
+            return interval;
+        }
+        
+        // Return a multiple of the calculated interval
+        int multiplier = (int) Math.floor(DEFAULT_SEGMENT_DURATION / interval);
+        return interval * multiplier;
     }
     
     public static Path[] getRenderDevices() {

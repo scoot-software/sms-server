@@ -169,6 +169,9 @@ public class MetadataParser {
                             bps = stream.asObject().getString("bits_per_raw_sample", "8");
                             vStream.setBPS(Integer.parseInt(bps));
                             
+                            // Initialise GOP
+                            vStream.setGOPSize(0);
+                            
                             // Tags
                             if(tags != null && tags.isObject()) {
                                 // Title

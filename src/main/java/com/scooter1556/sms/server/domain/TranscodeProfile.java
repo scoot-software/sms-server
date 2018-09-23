@@ -15,13 +15,14 @@ public class TranscodeProfile {
     private SubtitleTranscode[] subtitleTranscodes;
     private Integer videoStream, audioStream, subtitleStream;
     private Integer offset = 0;
+    private Integer segmentDuration;
     private boolean active = true, packedAudio = false;
 
     public TranscodeProfile() {}
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[Type=%s, Encoder=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Packed Audio=%s",
+        return String.format("TranscodeProfile[Type=%s, Encoder=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s",
                 String.valueOf(type),
                 encoder == null ? "null" : encoder.toString(),
                 mimeType == null ? "null" : mimeType,
@@ -32,6 +33,7 @@ public class TranscodeProfile {
                 audioStream == null ? "null" : audioStream.toString(),
                 subtitleStream == null ? "null" : subtitleStream.toString(),
                 offset == null ? "null" : offset.toString(),
+                segmentDuration == null ? "null" : segmentDuration,
                 Boolean.toString(packedAudio)
                 );
     }
@@ -117,6 +119,14 @@ public class TranscodeProfile {
         this.offset = offset;
     }
 
+    public Integer getSegmentDuration() {
+        return segmentDuration;
+    }
+
+    public void setSegmentDuration(int segmentDuration) {
+        this.segmentDuration = segmentDuration;
+    }
+    
     public boolean isActive() {
         return active;
     }

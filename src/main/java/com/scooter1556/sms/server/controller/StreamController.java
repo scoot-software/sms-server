@@ -630,6 +630,9 @@ public class StreamController {
 
             // Set encoder in transcode profile
             transcodeProfile.setEncoder(encoder);
+            
+            // Set default segment duration
+            transcodeProfile.setSegmentDuration(TranscodeUtils.DEFAULT_SEGMENT_DURATION);
 
             if(mediaElement.getType() == MediaElementType.VIDEO) {
                 // If a suitable format was not given we can't continue
@@ -648,6 +651,13 @@ public class StreamController {
                 if(!transcodeService.processVideo(transcodeProfile, clientProfile, mediaElement)) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process video streams: " + ArrayUtils.toString(mediaElement.getVideoStreams()) + " " + clientProfile, null);
                     return null;
+                }
+                
+                // Get segment duration
+                int segmentDuration = TranscodeUtils.getSegmentDuration(mediaElement.getVideoStreams().get(0));
+                
+                if(segmentDuration > 0) {
+                    transcodeProfile.setSegmentDuration(segmentDuration);
                 }
             }
 

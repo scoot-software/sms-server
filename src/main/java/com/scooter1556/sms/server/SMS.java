@@ -94,5 +94,6 @@ public class SMS {
         public static final int BITRATE = 3;
         public static final int RESOLUTION = 4;
         public static final int SUBTITLES = 5;
+        public static final int MISSING_DATA = 6;
     }
 }

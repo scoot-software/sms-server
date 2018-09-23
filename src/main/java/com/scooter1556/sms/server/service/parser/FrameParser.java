@@ -98,8 +98,8 @@ public class FrameParser {
             
             // Flags
             Boolean interlaced = false;
-            long totalBitrate = 0L;
-            int maxBitrate = 0, frameCount = 0, intervalCount = 0, intervalTotal= 0;
+            long totalBitrate = 0L, totalGop = 0L;
+            int maxBitrate = 0, frameCount = 0, intervalCount = 0, intervalTotal= 0, intervalGop = 0, gopCount = 0;
             double intervalDuration = 0;
             
             // Process Streams
@@ -149,6 +149,23 @@ public class FrameParser {
                     if(interlacedFrame != -1) {
                         interlaced = interlacedFrame > 0;
                     }
+                    
+                    // GOP Size
+                    if(keyFrame > 0) {
+                        if(intervalGop > 0) {                            
+                            intervalGop++;
+
+                            // Add to gop total and gop count
+                            totalGop += intervalGop;
+                            gopCount++;
+
+                            // Reset interval
+                            intervalGop = 0;
+                        }
+                    } else {
+                        // Increment interval on non-key frames
+                        intervalGop++;
+                    }
                             
                 }
                 
@@ -159,8 +176,14 @@ public class FrameParser {
                 
                 // Calculate average bitrate
                 if(totalBitrate > 0 && (stream.getBitrate() == null || stream.getBitrate() == 0)) {
-                    int avgBitrate = Double.valueOf(totalBitrate / frameCount).intValue();
+                    int avgBitrate = (int) Math.round(totalBitrate / frameCount);
                     stream.setBitrate(avgBitrate);
+                }
+                
+                //  Calculate average GOP size
+                if(totalGop > 0 && gopCount > 0) {
+                    int gopSize = (int) Math.round(totalGop / gopCount);
+                    stream.setGOPSize(gopSize);
                 }
                 
                 // Interlaced
