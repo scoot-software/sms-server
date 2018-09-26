@@ -397,7 +397,7 @@ public class MetadataParser {
                         date = tags.asObject().getString("TYER", "0");
                     }
                     
-                    if(date != null && date.length() > 4) {
+                    if(date != null && date.length() >= 4) {
                         String[] split = null;
                       
                         if(date.length() == 4) {
