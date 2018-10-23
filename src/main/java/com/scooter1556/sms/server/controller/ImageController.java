@@ -102,7 +102,7 @@ public class ImageController {
 
             // Check if we were able to retrieve cover art
             if(image == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find cover art.");
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to find cover art.");
                 return;
             }
             
@@ -159,7 +159,7 @@ public class ImageController {
             List<MediaElement> mediaElements = mediaDao.getRandomMediaElementsByParentPath(path);
 
             if(mediaElements == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to retrieve child media elements for " + (isFolder ? "folder" : "media element") + " with id " + id + ".");
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to retrieve child media elements for " + (isFolder ? "folder" : "media element") + " with id " + id + ".");
                 return;
             }
             
@@ -174,7 +174,7 @@ public class ImageController {
 
             // Check if we were able to retrieve cover art
             if(image == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find cover art.");
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to find cover art.");
                 return;
             }
             
@@ -228,7 +228,7 @@ public class ImageController {
 
             // Check if we were able to retrieve fan art
             if(image == null) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Unable to find fan art.");
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Unable to find fan art.");
                 return;
             }
             
@@ -259,7 +259,7 @@ public class ImageController {
             
             // Check this is a video element. We can't get thumbnails from any other type of file.
             if(!mediaElement.getType().equals(MediaElementType.VIDEO)) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND, "Media element with id " + id + " is not a video element.");
+                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Media element with id " + id + " is not a video element.");
                 return;
             }
             
@@ -271,7 +271,7 @@ public class ImageController {
             // Check offset
             if(offset != null) {
                 if(offset > mediaElement.getDuration()) {
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "Offset " + offset + " is out of range for the given media element.");
+                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Offset " + offset + " is out of range for the given media element.");
                     return;
                 }
             } else {
