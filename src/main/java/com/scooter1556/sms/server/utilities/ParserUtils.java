@@ -21,7 +21,8 @@ public class ParserUtils {
     public static final String LINUX_HARDWARE_PARSER = "lshw";
     
     public static final String[] METADATA_PARSER_PATH_LINUX = {
-        "/usr/bin/ffprobe"
+        "/usr/bin/ffprobe",
+        "/usr/local/bin/ffprobe",
     };
     
     public static final String[] METADATA_PARSER_PATH_WINDOWS = {

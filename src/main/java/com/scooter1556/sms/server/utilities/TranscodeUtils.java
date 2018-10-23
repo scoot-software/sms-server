@@ -39,7 +39,8 @@ public class TranscodeUtils {
     private static final String[] TRANSCODE_CONFIGS = {"libmp3lame","libvorbis","libx264","libvpx"};
     
     public static final String[] TRANSCODER_PATH_LINUX = {
-        "/usr/bin/ffmpeg"
+        "/usr/bin/ffmpeg",
+        "/usr/local/bin/ffmpeg",
     };
     
     public static final String[] TRANSCODER_PATH_WINDOWS = {
