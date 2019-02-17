@@ -390,6 +390,10 @@ public class AdaptiveStreamingService {
         
         return null;
     }
+    
+    public boolean isProcessAvailable(UUID id) {
+        return getProcessById(id) != null;
+    }
      
     public void removeProcessById(UUID id) {
         int index = 0;

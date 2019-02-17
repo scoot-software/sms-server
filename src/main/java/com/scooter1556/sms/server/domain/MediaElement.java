@@ -264,7 +264,6 @@ public class MediaElement implements Serializable {
         this.excluded = excluded;
     }
     
-    @JsonIgnore
     public Integer getFormat() {
         return format;
     }

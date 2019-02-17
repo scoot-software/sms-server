@@ -600,19 +600,14 @@ public class StreamController {
             transcodeProfile.setType(TranscodeProfile.StreamType.REMOTE);
         }
 
-        // Test if we can stream the file directly without transcoding
-        if(clientProfile.getFormats() != null) {
-            // If the file type is supported and all codecs are supported without transcoding, stream the file directly
-            if(ArrayUtils.contains(clientProfile.getFormats(), mediaElement.getFormat())) {
-                transcodeRequired = transcodeService.isTranscodeRequired(mediaElement, clientProfile);
+        // If the file type is supported and all codecs are supported without transcoding, stream the file directly
+        transcodeRequired = TranscodeUtils.isTranscodeRequired(mediaElement, clientProfile);
 
-                if(transcodeRequired == null) {
-                    return null;
-                } else if(!transcodeRequired) {
-                    transcodeProfile.setType(StreamType.DIRECT);
-                    transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), mediaElement.getFormat()));
-                }
-            }
+        if(transcodeRequired == null) {
+            return null;
+        } else if(!transcodeRequired) {
+            transcodeProfile.setType(StreamType.DIRECT);
+            transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), mediaElement.getFormat()));
         }
 
         // If necessary process all streams ready for streaming and/or transcoding

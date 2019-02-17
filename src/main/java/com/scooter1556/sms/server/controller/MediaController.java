@@ -25,14 +25,22 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
+import com.scooter1556.sms.server.domain.AudioTranscode;
+import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Directory;
+import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
+import com.scooter1556.sms.server.domain.Session;
+import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.SessionService;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.SystemUtils;
@@ -54,6 +62,9 @@ public class MediaController {
     
     @Autowired
     private MediaDao mediaDao;
+    
+    @Autowired
+    private SessionService sessionService;
     
     private static final String CLASS_NAME = "MediaController";
 
@@ -82,7 +93,8 @@ public class MediaController {
     }
 
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
-    public ResponseEntity<MediaElement> getMediaElement(@PathVariable("id") UUID id)
+    public ResponseEntity<MediaElement> getMediaElement(@PathVariable("id") UUID id,
+                                                        @RequestParam(value = "sid", required = false) UUID sid)
     {
         MediaElement mediaElement = mediaDao.getMediaElementByID(id);
         
@@ -90,11 +102,19 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        return new ResponseEntity<>(mediaElement, HttpStatus.OK);
+        List<MediaElement> mediaElements = Arrays.asList(mediaElement);
+        
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
+        return new ResponseEntity<>(mediaElements.get(0), HttpStatus.OK);
     }
     
     @RequestMapping(value="/random/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRandomElements(@PathVariable("limit") Integer limit,
+                                                                @RequestParam(value="sid", required = false) UUID sid,
                                                                 @RequestParam(value = "type", required = false) Byte type) {
         List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(limit, type);
         
@@ -102,16 +122,20 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") UUID id)
-    {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") UUID id,
+                                                                              @RequestParam(value="sid", required = false) UUID sid) {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
-        if(mediaFolder == null)
-        {
+        if(mediaFolder == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
@@ -121,11 +145,17 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") UUID id) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") UUID id,
+                                                                   @RequestParam(value="sid", required = false) UUID sid) {
         MediaElement element = mediaDao.getMediaElementByID(id);
         
         if(element == null) {
@@ -153,6 +183,11 @@ public class MediaController {
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        }
+        
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -273,8 +308,9 @@ public class MediaController {
     }
 
     @RequestMapping(value="/artist/{artist}/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(@PathVariable("artist") String artist, @PathVariable("album") String album)
-    {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(@PathVariable("artist") String artist,
+                                                                               @PathVariable("album") String album,
+                                                                               @RequestParam(value="sid", required = false) UUID sid) {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "' and album '" + album + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtistAndAlbum(artist, album);
@@ -283,26 +319,37 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/albumartist/{albumartist}/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(@PathVariable("albumartist") String albumArtist, @PathVariable("album") String album)
-    {
-       LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "' and album '" + album + "'", null);
-        
-       List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtistAndAlbum(albumArtist, album);
-        
-       if (mediaElements == null) {
-           return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-       }
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(@PathVariable("albumartist") String albumArtist,
+                                                                                    @PathVariable("album") String album,
+                                                                                    @RequestParam(value="sid", required = false) UUID sid) {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "' and album '" + album + "'", null);
+
+        List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtistAndAlbum(albumArtist, album);
+
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+       
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
         
        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/artist/{artist}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(@PathVariable("artist") String artist)
-    {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(@PathVariable("artist") String artist,
+                                                                       @RequestParam(value="sid", required = false) UUID sid) {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtist(artist);
@@ -311,12 +358,17 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @RequestMapping(value="/albumartist/{albumartist}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(@PathVariable("albumartist") String albumArtist)
-    {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(@PathVariable("albumartist") String albumArtist,
+                                                                            @RequestParam(value="sid", required = false) UUID sid) {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtist(albumArtist);
@@ -325,17 +377,28 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
     @RequestMapping(value="/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(@PathVariable("album") String album) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(@PathVariable("album") String album,
+                                                                      @RequestParam(value="sid", required = false) UUID sid) {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album '" + album + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbum(album);
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            processMediaElements(sid, mediaElements);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -410,4 +473,29 @@ public class MediaController {
         
         return new ResponseEntity<>(directories, HttpStatus.OK);
     }
+    
+    /**
+     * Helper Functions
+     */
+    
+    private void processMediaElements(UUID sid, List<MediaElement> mediaElements) {
+        // Check session is valid
+        Session session = sessionService.getSessionById(sid);
+
+        if(session != null && session.getClientProfile() != null) {
+            // Populate streams for media elements
+            mediaElements.forEach((mediaElement) -> {
+                if(mediaElement.getType() == MediaElementType.AUDIO) {
+                    mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
+                } else if(mediaElement.getType() == MediaElementType.VIDEO) {
+                    mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID()));
+                    mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
+                    mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(mediaElement.getID()));
+                }
+            });
+        
+            TranscodeUtils.processMediaElementsForClient(mediaElements, session.getClientProfile());
+        }
+    }
+    
 }

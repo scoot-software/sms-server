@@ -3,8 +3,10 @@ package com.scooter1556.sms.server.utilities;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.AudioTranscode.AudioQuality;
+import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
+import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaElement.Stream;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
@@ -28,6 +30,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
 
@@ -720,6 +724,132 @@ public class TranscodeUtils {
         streamProfile.setCodecs(codecs.toArray(new Integer[codecs.size()]));
         
         return streamProfile;
+    }
+    
+    public static Boolean isTranscodeRequired(MediaElement mediaElement, ClientProfile profile) {
+        // Make sure we have the information we require
+        if(mediaElement == null || profile.getCodecs() == null || profile.getFormats() == null) {
+            return null;
+        }
+        
+        // Check this is not a directory or otherwise unsupported
+        if(mediaElement.getType() == MediaElementType.NONE || mediaElement.getType() == MediaElementType.DIRECTORY) {
+            return null;
+        }
+        
+        // Check format
+        if(!ArrayUtils.contains(profile.getFormats(), mediaElement.getFormat())) {
+            return true;
+        }
+        
+        // Check video codec
+        if(mediaElement.getVideoStreams() != null) {
+            // Check video quality is set
+            if(profile.getVideoQuality() == null) {
+                return null;
+            }
+            
+            if (mediaElement.getVideoStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream) > SMS.TranscodeReason.NONE))) {
+                return true;
+            }
+        }
+        
+        // Check audio streams
+        if(mediaElement.getAudioStreams() != null) {
+            if (mediaElement.getAudioStreams().stream().anyMatch((stream) -> (isTranscodeRequired(profile, mediaElement, stream)))) {
+                return true;
+            }
+        }
+
+        // Check subtitle streams
+        if(mediaElement.getSubtitleStreams() != null) {
+            if (mediaElement.getSubtitleStreams().stream().anyMatch((stream) -> (!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())))) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public static int isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, VideoStream stream) {
+        if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
+            return SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_CLIENT;
+        }
+        
+        // Check maximum bitrate
+        if(profile.getMaxBitrate() != null && profile.getMaxBitrate() > 0) {
+            if(stream.getMaxBitrate() == null || stream.getMaxBitrate() == 0 || (stream.getMaxBitrate() > profile.getMaxBitrate())) {
+                return SMS.TranscodeReason.BITRATE;
+            }
+        }
+
+        // If client is not on the local network check stream parameters
+        if(!profile.getLocal()) {
+            // Check resolution
+            if(TranscodeUtils.compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), TranscodeUtils.VIDEO_QUALITY_RESOLUTION[profile.getVideoQuality()]) == 1) {
+                return SMS.TranscodeReason.RESOLUTION;
+            }
+        }
+        
+        return SMS.TranscodeReason.NONE;
+    }
+    
+    public static boolean isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, AudioStream stream) {
+        // Check audio codec
+        if(stream.getChannels() > 2) {
+            if(profile.getMchCodecs() == null || !ArrayUtils.contains(profile.getMchCodecs(), stream.getCodec())) {
+                return true;
+            }
+        } else {
+            if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
+                return true;
+            }
+        }
+
+        // Check audio sample rate
+        if((stream.getSampleRate() > profile.getMaxSampleRate()) && (stream.getCodec() != SMS.Codec.DSD)) {
+            return true;
+        }
+
+        // If client is not on the local network check stream parameters
+        if(!profile.getLocal() || !profile.getDirectPlay()) {
+            // Check bitrate
+            int bitrate;
+            
+            if(mediaElement.getType() == MediaElement.MediaElementType.VIDEO) {
+                bitrate = TranscodeUtils.VIDEO_QUALITY_AUDIO_BITRATE[profile.getVideoQuality()];
+            } else {
+                bitrate = TranscodeUtils.AUDIO_QUALITY_MAX_BITRATE[profile.getAudioQuality()];
+            }
+            
+            //  Calculate overall bitrate to compare
+            if(bitrate > 0) {
+                bitrate = new Double(bitrate * (stream.getChannels() * 0.5)).intValue();
+            }
+
+            if(bitrate > 0 && stream.getBitrate() > 0 && stream.getBitrate() > bitrate) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public static void processMediaElementsForClient(List<MediaElement> mediaElements, ClientProfile profile) {
+        // Do some basic checks
+        if(profile == null || mediaElements == null || mediaElements.isEmpty()) {
+            return;
+        }
+        
+        // Process each media element to determine transcoded format for client
+        mediaElements.forEach((MediaElement mediaElement) -> {
+            Boolean transcodeRequired = isTranscodeRequired(mediaElement, profile);
+            if (!(transcodeRequired == null)) {
+                if (transcodeRequired) {
+                    mediaElement.setFormat(profile.getFormat());
+                }
+            }
+        });
     }
     
     public static int getSegmentDuration(VideoStream stream) {

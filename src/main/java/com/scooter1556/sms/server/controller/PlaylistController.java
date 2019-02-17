@@ -9,7 +9,10 @@ import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.PlaylistContent;
+import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.SessionService;
+import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,6 +35,9 @@ public class PlaylistController {
     
     @Autowired
     private MediaDao mediaDao;
+    
+    @Autowired
+    private SessionService sessionService;
     
     private static final String CLASS_NAME = "PlaylistController";
     
@@ -191,7 +198,9 @@ public class PlaylistController {
     }
 
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getPlaylistContents(@PathVariable("id") UUID id, HttpServletRequest request) {
+    public ResponseEntity<List<MediaElement>> getPlaylistContents(@PathVariable("id") UUID id,
+                                                                  @RequestParam(value="sid", required = false) UUID sid,
+                                                                  HttpServletRequest request) {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
         if(playlist == null) {
@@ -206,12 +215,33 @@ public class PlaylistController {
         }
         
         // Retrieve content
-        List<MediaElement> elements = mediaDao.getPlaylistContent(id);
+        List<MediaElement> mediaElements = mediaDao.getPlaylistContent(id);
         
-        if(elements == null) {
+        if(mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        return new ResponseEntity<>(elements, HttpStatus.OK);
+        // Check if we need to process media elements prior to sending
+        if(sid != null) {
+            // Check session is valid
+            Session session = sessionService.getSessionById(sid);
+            
+            if(session != null && session.getClientProfile() != null) {
+                // Populate streams for media elements
+                mediaElements.forEach((mediaElement) -> {
+                    if(mediaElement.getType() == MediaElement.MediaElementType.AUDIO) {
+                        mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
+                    } else if(mediaElement.getType() == MediaElement.MediaElementType.VIDEO) {
+                        mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID()));
+                        mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
+                        mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(mediaElement.getID()));
+                    }
+                });
+                
+                TranscodeUtils.processMediaElementsForClient(mediaElements, session.getClientProfile());
+            }
+        }
+        
+        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 }

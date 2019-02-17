@@ -456,6 +456,7 @@ public class ScannerService implements DisposableBean {
         public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {            
             // Check if we need to scan this directory
             if(!MediaUtils.containsMedia(dir.toFile(), true) && !PlaylistUtils.containsPlaylists(dir.toFile())) {
+                LogUtils.writeToLog(log, "Skipping directory " + dir.toString(), Level.DEBUG);
                 return SKIP_SIBLINGS;
             }
             
