@@ -144,7 +144,7 @@ public class SessionController {
     @CrossOrigin
     @RequestMapping(value="/end/{sid}/{meid}", method=RequestMethod.GET)
     public ResponseEntity<String> endJob(@PathVariable("sid") UUID sid,
-                                         @PathVariable("meid") UUID meid) {        
+                                         @PathVariable("meid") String meid) {        
         Session session = sessionService.getSessionById(sid);
         
         // Check session is valid
@@ -153,19 +153,27 @@ public class SessionController {
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
         }
         
-        Job job = session.getJobByMediaElementId(meid);
+        // Check for special case where all jobs for a given session should be ended
+        if(meid.equalsIgnoreCase("all")) {
+            sessionService.endJobs(session, null);
+            
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended all jobs for session with ID: " + sid, null);
+            return new ResponseEntity<>("Ended all jobs for session with ID: " + sid, HttpStatus.OK);
+        }
         
+        Job job = session.getJobByMediaElementId(UUID.fromString(meid));
+
         // Check job exists
         if (job == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Job does not exist for media element with ID: " + meid, null);
             return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NOT_FOUND);
         }
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, session.getUsername() + " finished streaming '" + job.getMediaElement().getTitle() + "'.", null);
-        
+
         // End job
-        sessionService.endJobs(session, meid);
-        
+        sessionService.endJobs(session, UUID.fromString(meid));
+
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
         return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);
     }
