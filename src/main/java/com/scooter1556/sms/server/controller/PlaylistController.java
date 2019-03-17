@@ -13,6 +13,7 @@ import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -200,6 +201,7 @@ public class PlaylistController {
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getPlaylistContents(@PathVariable("id") UUID id,
                                                                   @RequestParam(value="sid", required = false) UUID sid,
+                                                                  @RequestParam(value="random", required = false) Boolean random,
                                                                   HttpServletRequest request) {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
@@ -239,6 +241,13 @@ public class PlaylistController {
                 });
                 
                 TranscodeUtils.processMediaElementsForClient(mediaElements, session.getClientProfile());
+            }
+        }
+        
+        // Check if we need to send a randomised playlist
+        if(random != null) {
+            if(random) {
+                Collections.shuffle(mediaElements);
             }
         }
         
