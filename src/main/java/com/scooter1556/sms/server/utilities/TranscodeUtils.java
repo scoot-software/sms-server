@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -43,8 +42,8 @@ public class TranscodeUtils {
     private static final String[] TRANSCODE_CONFIGS = {"libmp3lame","libvorbis","libx264"};
     
     public static final String[] TRANSCODER_PATH_LINUX = {
-        "/usr/bin/ffmpeg",
         "/usr/local/bin/ffmpeg",
+        "/usr/bin/ffmpeg",
     };
     
     public static final String[] TRANSCODER_PATH_WINDOWS = {
