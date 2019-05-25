@@ -248,17 +248,12 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 }
             }
             
-            /*
             if(profile.getSubtitleTranscodes() != null) {
                 for(int i = 0; i < profile.getSubtitleTranscodes().length; i++) {
                     SubtitleTranscode transcode = profile.getSubtitleTranscodes()[i];
                     
                     // Determine format to use
                     int codec = transcode.getCodec();
-                    
-                    if(codec == SMS.Codec.HARDCODED) {
-                        continue;
-                    }
                     
                     if(codec == SMS.Codec.COPY) {
                         codec = transcode.getOriginalCodec();
@@ -282,7 +277,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     // Add to segment list
                     segmentPaths.add(path);
                 }
-            }*/
+            }
             
             LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
             
@@ -325,22 +320,6 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     public int getSegmentNum() {
         return this.segmentNum;
-    }
-    
-    public void setSubtitleNum(int num) {
-        this.subtitleNum = num;
-    }
-    
-    public int getSubtitleNum() {
-        return this.subtitleNum;
-    }
-    
-    public void setSubtitlesEnabled(boolean enabled) {
-        this.subtitlesEnabled = enabled;
-    }
-    
-    public boolean getSubtitlesEnabled() {
-        return this.subtitlesEnabled;
     }
     
     public void setTranscodeProfile(TranscodeProfile profile) {

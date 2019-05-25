@@ -13,7 +13,6 @@ public class SMS {
         public static final int UNSUPPORTED = -1;
         
         public static final int COPY = 0;
-        public static final int HARDCODED = 1;
         
         public static final int AVC_BASELINE = 10;
         public static final int AVC_MAIN = 11;

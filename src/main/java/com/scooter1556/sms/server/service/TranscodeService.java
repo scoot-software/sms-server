@@ -134,25 +134,10 @@ public class TranscodeService {
             // Video
             if(profile.getVideoTranscodes() != null && profile.getVideoStream() != null) {
                 HardwareAccelerator hardwareAccelerator = null;
-                boolean hardcodedSubtitles = false;
             
                 // Software or hardware based transcoding
                 if(accelerators != null && accelerators.size() > i) {
                     hardwareAccelerator = accelerators.get(i);
-                }
-                
-                // Check for hardcoded subtitles
-                if(profile.getSubtitleStream() != null) {
-                    SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(profile.getSubtitleTranscodes(), profile.getSubtitleStream());
-                    
-                    if(transcode != null) {
-                        hardcodedSubtitles = transcode.getCodec() == SMS.Codec.HARDCODED;
-                        
-                        // Don't decode in hardware if burning in subtitles
-                        if(hardwareAccelerator != null) {
-                            hardwareAccelerator.setDecodingSupported(!hardcodedSubtitles);
-                        }
-                    }
                 }
                 
                 //  Get list of transcodes for the desired video stream
@@ -167,11 +152,6 @@ public class TranscodeService {
                     
                     // Add a filter list for video transcode
                     commands.get(i).getFilters().add(new ArrayList<>());
-                    
-                    // Burn in subtitles if required
-                    if(hardcodedSubtitles) {
-                        commands.get(i).getFilters().get(v).add("[0:" + profile.getSubtitleStream() + "]overlay");
-                    }
                     
                     if(hardwareAccelerator == null || !hardwareAccelerator.isEncodingSupported()) {
                         commands.get(i).getFilters().get(v).addAll(getSoftwareVideoEncodingFilters(vTranscodes.get(v).getResolution()));
@@ -226,6 +206,16 @@ public class TranscodeService {
 
                         commands.get(i).getCommands().add("-force_key_frames");
                         commands.get(i).getCommands().add("expr:gte(t,n_forced*" + profile.getSegmentDuration()  + ")");
+                    }
+                }
+                
+                // Subtitles
+                if(profile.getSubtitleTranscodes() != null) {
+                    for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
+                        SubtitleTranscode transcode = profile.getSubtitleTranscodes()[s];
+
+                        // Transcode commands
+                        commands.get(i).getCommands().addAll(getSubtitleCommands(transcode));
                     }
                 }
             }
@@ -496,6 +486,25 @@ public class TranscodeService {
         return commands;
     }
     
+    /*
+     * Returns a list of commands for a subtitle stream.
+     */
+    private Collection<String> getSubtitleCommands(SubtitleTranscode transcode) {
+        Collection<String> commands = new LinkedList<>();
+        
+        if(transcode.getCodec() != null) {
+            // Mapping
+            commands.add("-map");
+            commands.add("0:" + transcode.getId());
+        
+            // Codec
+            commands.add("-c:s");
+            commands.add(TranscodeUtils.getEncoderForCodec(transcode.getCodec()));
+        }
+        
+        return commands;
+    }
+    
     public Collection<String> getFilterCommands(int streamId, ArrayList<ArrayList<String>> filters) {
         Collection<String> commands = new LinkedList<>();
         
@@ -554,7 +563,7 @@ public class TranscodeService {
         List<SubtitleTranscode> transcodes = new ArrayList<>();
         
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
-            Integer codec;
+            int codec;
             
             if(transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
                 codec = SMS.Codec.COPY;
@@ -565,15 +574,15 @@ public class TranscodeService {
                         codec = SMS.Codec.WEBVTT;
                         break;
 
-                    // Picture Based
-                    case SMS.Codec.DVD: case SMS.Codec.DVB: case SMS.Codec.PGS:
-                        codec = SMS.Codec.HARDCODED;
-                        break;
-
                     default:
-                        codec = SMS.Codec.COPY;
+                        codec = SMS.Codec.UNSUPPORTED;
                         break;
                 }
+            }
+            
+            // Check we can transcode this stream
+            if(codec == SMS.Codec.UNSUPPORTED) {
+                continue;
             }
             
             // Enable forced subtitles by default
@@ -642,15 +651,6 @@ public class TranscodeService {
             if(transcodeReason == SMS.TranscodeReason.NONE) {
                 if(!transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
                     transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
-                }
-            }
-            
-            // Check for hardcoded subtitles
-            if(transcodeReason == SMS.TranscodeReason.NONE && transcodeProfile.getSubtitleStream() != null) {
-                SubtitleTranscode transcode = TranscodeUtils.getSubtitleTranscodeById(transcodeProfile.getSubtitleTranscodes(), transcodeProfile.getSubtitleStream());
-
-                if(transcode != null && transcode.getCodec() == SMS.Codec.HARDCODED) {
-                    transcodeReason = SMS.TranscodeReason.SUBTITLES;
                 }
             }
             

@@ -31,9 +31,10 @@ import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
+import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
+import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
-import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.utilities.MediaUtils;
@@ -141,7 +142,7 @@ public class AdaptiveStreamingService {
                 }
                 
                 playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()) + "\"");
-                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i + ".m3u8");
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i);
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
             String audio = "";
@@ -164,30 +165,28 @@ public class AdaptiveStreamingService {
                         audio = TranscodeUtils.getIsoSpecForCodec(transcode.getCodec());
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + "\"");
                 }                
             }
             
-            /*
             // Process subtitle streams
             if(profile.getSubtitleTranscodes() != null) {
                 for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
                     SubtitleTranscode transcode = profile.getSubtitleTranscodes()[s];
-                    SubtitleStream stream = mediaElement.getSubtitleStreams().get(s);
-                    String selected = "NO";
+                    SubtitleStream stream = TranscodeUtils.getSubtitleStreamById(mediaElement.getSubtitleStreams(), transcode.getId());
+                    String isDefault = "NO";
                     
-                    if(profile.getSubtitleTrack() != null) {
-                        if(profile.getSubtitleTrack().equals(s)) {
-                            selected = "YES";
+                    if(profile.getSubtitleStream() != null) {
+                        if(transcode.getId().equals(profile.getSubtitleStream())) {
+                            isDefault = "YES";
                         }
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getName() + "\",AUTOSELECT=YES,DEFAULT=" + selected + ",URI=\"" + baseUrl + "/stream/playlist/" + id + "/subtitle/" + s + ".m3u8\"");
+                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + stream.getTitle() + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/subtitle/" + s + "\"");
                     
                     subtitles = true;
                 }                
             }
-            */
             
             for(int i = 0; i < TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size(); i++) {
                 VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(i);
@@ -230,16 +229,15 @@ public class AdaptiveStreamingService {
                     builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
                 }
                 
-                /*
+                
                 if(subtitles) {
                     builder.append(",SUBTITLES=\"subs\"");
                 }
-                */
-                
+                                
                 playlist.add(builder.toString());
                 
                 // Url
-                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/video/" + i + ".m3u8");
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/video/" + i);
             }
         } else {
             return null;
@@ -349,30 +347,6 @@ public class AdaptiveStreamingService {
         
         // Log playlist
         LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, "\n************\nHLS Playlist\n************\n" + playlistWriter.toString(), null);
-    }
-    
-    public void sendSubtitleSegment(HttpServletResponse response) throws IOException {
-        List<String> segment = new ArrayList<>();
-        segment.add("WEBVTT");
- 
-        // Write segment to buffer so we can get the content length
-        StringWriter segmentWriter = new StringWriter();
-        for(String line : segment) {
-            segmentWriter.write(line + "\n");
-        }
-
-        // Set Header Parameters
-        response.reset();
-        response.setContentType("text/vtt");
-        response.setContentLength(segmentWriter.toString().length());
-        
-        // Enable CORS
-        response.setHeader(("Access-Control-Allow-Origin"), "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET");
-        response.setIntHeader("Access-Control-Max-Age", 3600);
-
-        // Write segment out to the client
-        response.getWriter().write(segmentWriter.toString());
     }
     
     public void addProcess(AdaptiveStreamingProcess process) {
