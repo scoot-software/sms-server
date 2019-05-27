@@ -42,6 +42,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -87,6 +88,9 @@ public class AdminController {
         {
             return new ResponseEntity<>("Username already exists.", HttpStatus.NOT_ACCEPTABLE);
         }
+        
+        // Encrypt password
+        user.setPassword(new BCryptPasswordEncoder().encode(user.getPassword()));
         
         // Add user to the database.
         if(!userDao.createUser(user))
@@ -153,7 +157,7 @@ public class AdminController {
         
         if(update.getPassword() != null)
         {
-            user.setPassword(update.getPassword());
+            user.setPassword(new BCryptPasswordEncoder().encode(update.getPassword()));
         }
         
         // Update database

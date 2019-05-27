@@ -23,10 +23,18 @@
  */
 package com.scooter1556.sms.server.database;
 
+import com.scooter1556.sms.server.domain.User;
+import com.scooter1556.sms.server.domain.UserRole;
+import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -34,7 +42,7 @@ public final class UserDatabase extends Database {
     private static final String CLASS_NAME = "UserDatabase";
     
     public static final String DB_NAME = "User";
-    public static final int DB_VERSION = 1;
+    public static final int DB_VERSION = 2;
     
     public UserDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -56,7 +64,7 @@ public final class UserDatabase extends Database {
             // Users
             getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS User ("
                     + "Username VARCHAR(50) NOT NULL,"
-                    + "Password VARCHAR(50) NOT NULL,"
+                    + "Password VARCHAR(100) NOT NULL,"
                     + "Enabled BOOLEAN DEFAULT 1 NOT NULL,"
                     + "PRIMARY KEY (Username))");
 
@@ -91,15 +99,58 @@ public final class UserDatabase extends Database {
         }
     }
     
+    public static final class UserMapper implements RowMapper {
+        @Override
+        public User mapRow(ResultSet rs, int rowNum) throws SQLException {
+            User user = new User();
+            user.setUsername(rs.getString("Username"));
+            user.setPassword(rs.getString("Password"));
+            user.setEnabled(rs.getBoolean("Enabled"));
+            return user;
+        }
+    }
+    
+    public static final class UserRoleMapper implements RowMapper {
+        @Override
+        public UserRole mapRow(ResultSet rs, int rowNum) throws SQLException {
+            UserRole userRole = new UserRole();
+            userRole.setUsername(rs.getString("Username"));
+            userRole.setRole(rs.getString("Role"));
+            return userRole;
+        }
+    }
+    
+    public static final class UserStatsMapper implements RowMapper {
+        @Override
+        public UserStats mapRow(ResultSet rs, int rowNum) throws SQLException {
+            UserStats userStats = new UserStats();
+            userStats.setUsername(rs.getString("Username"));
+            userStats.setStreamed(rs.getLong("Streamed"));
+            userStats.setDownloaded(rs.getLong("Downloaded"));
+            return userStats;
+        }
+    }
+    
     @Override
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
+
+        if(newVersion == 2) {
+            // Migrate passwords to bcrypt
+            List<User> users = getJdbcTemplate().query("SELECT * FROM User", new UserMapper());
+            getJdbcTemplate().update("ALTER TABLE User ALTER COLUMN Password VARCHAR (100) NOT NULL");
+
+            users.forEach((user) -> {
+                getJdbcTemplate().update("UPDATE User SET Password=? WHERE Username=?",
+                        new Object[] {new BCryptPasswordEncoder().encode(user.getPassword()), user.getUsername()});
+            });
+        }
     }
     
     @Override
     public void downgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Downgrading database from version " + oldVersion + " to " + newVersion, null);
-        
+
         // Delete table and re-create
         getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME);
         getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Role");

@@ -24,16 +24,16 @@
 package com.scooter1556.sms.server.dao;
 
 import com.scooter1556.sms.server.database.UserDatabase;
+import com.scooter1556.sms.server.database.UserDatabase.UserMapper;
+import com.scooter1556.sms.server.database.UserDatabase.UserRoleMapper;
+import com.scooter1556.sms.server.database.UserDatabase.UserStatsMapper;
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jca.cci.InvalidResultSetAccessException;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -151,19 +151,6 @@ public class UserDao {
         return user;
     }
     
-    private static final class UserMapper implements RowMapper
-    {
-        @Override
-        public User mapRow(ResultSet rs, int rowNum) throws SQLException
-        {
-            User user = new User();
-            user.setUsername(rs.getString("Username"));
-            user.setPassword(rs.getString("Password"));
-            user.setEnabled(rs.getBoolean("Enabled"));
-            return user;
-        }
-    }
-    
     //
     // User Roles
     //
@@ -229,18 +216,6 @@ public class UserDao {
         }
     }
     
-    private static final class UserRoleMapper implements RowMapper
-    {
-        @Override
-        public UserRole mapRow(ResultSet rs, int rowNum) throws SQLException
-        {
-            UserRole userRole = new UserRole();
-            userRole.setUsername(rs.getString("Username"));
-            userRole.setRole(rs.getString("Role"));
-            return userRole;
-        }
-    }
-    
     //
     // User Statistics
     //
@@ -302,18 +277,5 @@ public class UserDao {
         }
         
         return userStats;
-    }
-    
-    private static final class UserStatsMapper implements RowMapper
-    {
-        @Override
-        public UserStats mapRow(ResultSet rs, int rowNum) throws SQLException
-        {
-            UserStats userStats = new UserStats();
-            userStats.setUsername(rs.getString("Username"));
-            userStats.setStreamed(rs.getLong("Streamed"));
-            userStats.setDownloaded(rs.getLong("Downloaded"));
-            return userStats;
-        }
     }
 }
