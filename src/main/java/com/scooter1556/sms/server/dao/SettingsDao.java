@@ -24,15 +24,13 @@
 package com.scooter1556.sms.server.dao;
 
 import com.scooter1556.sms.server.database.SettingsDatabase;
+import com.scooter1556.sms.server.database.SettingsDatabase.MediaFolderMapper;
 import com.scooter1556.sms.server.domain.MediaFolder;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jca.cci.InvalidResultSetAccessException;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -141,22 +139,5 @@ public class SettingsDao {
         }
 
         return mediaFolder;
-    }
-
-    private static final class MediaFolderMapper implements RowMapper {
-
-        @Override
-        public MediaFolder mapRow(ResultSet rs, int rowNum) throws SQLException {
-            MediaFolder mediaFolder = new MediaFolder();
-            mediaFolder.setID(UUID.fromString(rs.getString("ID")));
-            mediaFolder.setName(rs.getString("Name"));
-            mediaFolder.setType(rs.getByte("Type"));
-            mediaFolder.setPath(rs.getString("Path"));
-            mediaFolder.setFolders(rs.getLong("Folders"));
-            mediaFolder.setFiles(rs.getLong("Files"));
-            mediaFolder.setLastScanned(rs.getTimestamp("LastScanned"));
-            mediaFolder.setEnabled(rs.getBoolean("Enabled"));
-            return mediaFolder;
-        }
     }
 }

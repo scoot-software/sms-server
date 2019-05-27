@@ -24,6 +24,11 @@
 package com.scooter1556.sms.server.dao;
 
 import com.scooter1556.sms.server.database.MediaDatabase;
+import com.scooter1556.sms.server.database.MediaDatabase.AudioStreamMapper;
+import com.scooter1556.sms.server.database.MediaDatabase.MediaElementMapper;
+import com.scooter1556.sms.server.database.MediaDatabase.PlaylistMapper;
+import com.scooter1556.sms.server.database.MediaDatabase.SubtitleStreamMapper;
+import com.scooter1556.sms.server.database.MediaDatabase.VideoStreamMapper;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
@@ -32,7 +37,6 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.service.LogService;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
@@ -41,7 +45,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jca.cci.InvalidResultSetAccessException;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -522,42 +525,6 @@ public class MediaDao {
         }
     }
     
-    private static final class MediaElementMapper implements RowMapper {
-        @Override
-        public MediaElement mapRow(ResultSet rs, int rowNum) throws SQLException {
-            MediaElement mediaElement = new MediaElement();
-            mediaElement.setID((UUID)rs.getObject("ID"));
-            mediaElement.setType(rs.getByte("Type"));
-            mediaElement.setDirectoryType(rs.getByte("DirectoryType"));
-            mediaElement.setPath(rs.getString("Path"));
-            mediaElement.setParentPath(rs.getString("ParentPath"));
-            mediaElement.setCreated(rs.getTimestamp("Created"));
-            mediaElement.setLastPlayed(rs.getTimestamp("LastPlayed"));
-            mediaElement.setLastScanned(rs.getTimestamp("LastScanned"));
-            mediaElement.setExcluded(rs.getBoolean("Excluded"));
-            mediaElement.setFormat(rs.getInt("Format"));
-            mediaElement.setSize(rs.getLong("Size"));
-            mediaElement.setDuration(rs.getDouble("Duration"));
-            mediaElement.setBitrate(rs.getInt("Bitrate"));
-            mediaElement.setTitle(rs.getString("Title"));
-            mediaElement.setArtist(rs.getString("Artist"));
-            mediaElement.setAlbumArtist(rs.getString("AlbumArtist"));
-            mediaElement.setAlbum(rs.getString("Album"));
-            mediaElement.setYear(rs.getShort("Year"));
-            mediaElement.setDiscNumber(rs.getShort("DiscNumber"));
-            mediaElement.setDiscSubtitle(rs.getString("DiscSubtitle"));
-            mediaElement.setTrackNumber(rs.getShort("TrackNumber"));
-            mediaElement.setGenre(rs.getString("Genre"));
-            mediaElement.setRating(rs.getFloat("Rating"));
-            mediaElement.setTagline(rs.getString("Tagline"));
-            mediaElement.setDescription(rs.getString("Description"));
-            mediaElement.setCertificate(rs.getString("Certificate"));
-            mediaElement.setCollection(rs.getString("Collection"));
-            
-            return mediaElement;
-        }
-    }
-    
     //
     // Video Stream
     //
@@ -675,30 +642,6 @@ public class MediaDao {
         }
     }
     
-    private static final class VideoStreamMapper implements RowMapper {
-        @Override
-        public VideoStream mapRow(ResultSet rs, int rowNum) throws SQLException {
-            VideoStream videoStream = new VideoStream();
-            videoStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
-            videoStream.setStreamId(rs.getInt("SID"));
-            videoStream.setTitle(rs.getString("Title"));
-            videoStream.setCodec(rs.getInt("Codec"));
-            videoStream.setWidth(rs.getInt("Width"));
-            videoStream.setHeight(rs.getInt("Height"));
-            videoStream.setInterlaced(rs.getBoolean("Interlaced"));
-            videoStream.setFPS(rs.getDouble("FPS"));
-            videoStream.setBitrate(rs.getInt("Bitrate"));
-            videoStream.setMaxBitrate(rs.getInt("MaxBitrate"));
-            videoStream.setBPS(rs.getInt("BPS"));
-            videoStream.setGOPSize(rs.getInt("GOP"));
-            videoStream.setLanguage(rs.getString("Language"));
-            videoStream.setDefault(rs.getBoolean("Default"));
-            videoStream.setForced(rs.getBoolean("Forced"));
-            
-            return videoStream;
-        }
-    }
-    
     //
     // Audio Stream
     //
@@ -773,26 +716,6 @@ public class MediaDao {
         }
     }
     
-    private static final class AudioStreamMapper implements RowMapper {
-        @Override
-        public AudioStream mapRow(ResultSet rs, int rowNum) throws SQLException {
-            AudioStream audioStream = new AudioStream();
-            audioStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
-            audioStream.setStreamId(rs.getInt("SID"));
-            audioStream.setTitle(rs.getString("Title"));
-            audioStream.setCodec(rs.getInt("Codec"));
-            audioStream.setSampleRate(rs.getInt("SampleRate"));
-            audioStream.setChannels(rs.getInt("Channels"));
-            audioStream.setBitrate(rs.getInt("Bitrate"));
-            audioStream.setBPS(rs.getInt("BPS"));
-            audioStream.setLanguage(rs.getString("Language"));
-            audioStream.setDefault(rs.getBoolean("Default"));
-            audioStream.setForced(rs.getBoolean("Forced"));
-            
-            return audioStream;
-        }
-    }
-    
     //
     // Subtitle Stream
     //
@@ -860,22 +783,6 @@ public class MediaDao {
             return subtitleStreams;
         } catch (DataAccessException e) {
             return null;
-        }
-    }
-    
-    private static final class SubtitleStreamMapper implements RowMapper {
-        @Override
-        public SubtitleStream mapRow(ResultSet rs, int rowNum) throws SQLException {
-            SubtitleStream subtitleStream = new SubtitleStream();
-            subtitleStream.setMediaElementId(UUID.fromString(rs.getString("MEID")));
-            subtitleStream.setStreamId(rs.getInt("SID"));
-            subtitleStream.setTitle(rs.getString("Title"));
-            subtitleStream.setCodec(rs.getInt("Codec"));
-            subtitleStream.setLanguage(rs.getString("Language"));
-            subtitleStream.setDefault(rs.getBoolean("Default"));
-            subtitleStream.setForced(rs.getBoolean("Forced"));
-            
-            return subtitleStream;
         }
     }
     
@@ -1096,21 +1003,5 @@ public class MediaDao {
         }
         
         return true;
-    }
-    
-    private static final class PlaylistMapper implements RowMapper {
-        @Override
-        public Playlist mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Playlist playlist = new Playlist();
-            playlist.setID(UUID.fromString(rs.getString("ID")));
-            playlist.setName(rs.getString("Name"));
-            playlist.setDescription(rs.getString("Description"));
-            playlist.setUsername(rs.getString("Username"));
-            playlist.setPath(rs.getString("Path"));
-            playlist.setParentPath(rs.getString("ParentPath"));
-            playlist.setLastScanned(rs.getTimestamp("LastScanned"));
-            
-            return playlist;
-        }
     }
 }

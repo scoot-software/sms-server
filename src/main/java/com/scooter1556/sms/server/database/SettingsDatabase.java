@@ -23,10 +23,15 @@
  */
 package com.scooter1556.sms.server.database;
 
+import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.UUID;
 import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -46,6 +51,22 @@ public final class SettingsDatabase extends Database {
         } catch (DatabaseException ex) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error initialising database.", ex);
         } 
+    }
+    
+    public static final class MediaFolderMapper implements RowMapper {
+        @Override
+        public MediaFolder mapRow(ResultSet rs, int rowNum) throws SQLException {
+            MediaFolder mediaFolder = new MediaFolder();
+            mediaFolder.setID(UUID.fromString(rs.getString("ID")));
+            mediaFolder.setName(rs.getString("Name"));
+            mediaFolder.setType(rs.getByte("Type"));
+            mediaFolder.setPath(rs.getString("Path"));
+            mediaFolder.setFolders(rs.getLong("Folders"));
+            mediaFolder.setFiles(rs.getLong("Files"));
+            mediaFolder.setLastScanned(rs.getTimestamp("LastScanned"));
+            mediaFolder.setEnabled(rs.getBoolean("Enabled"));
+            return mediaFolder;
+        }
     }
     
     @Override
