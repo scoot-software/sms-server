@@ -31,6 +31,7 @@ import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import org.apache.commons.io.FilenameUtils;
 
 public class MediaUtils {
@@ -525,5 +526,16 @@ public class MediaUtils {
         }
         
         return count;
+    }
+    
+    public static String getTitleForStream(String title, String language) {
+        // Return original title if applicable
+        if(title != null && !title.isEmpty()) {
+            return title;
+        }
+        
+        // Process language
+        Locale locale = new Locale(language);
+        return locale.getDisplayLanguage();
     }
 }
