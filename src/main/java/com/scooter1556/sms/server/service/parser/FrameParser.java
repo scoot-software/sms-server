@@ -23,19 +23,20 @@
  */
 package com.scooter1556.sms.server.service.parser;
 
-import com.eclipsesource.json.Json;
-import com.eclipsesource.json.JsonArray;
-import com.eclipsesource.json.JsonValue;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.io.JsonEOFException;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
-import com.scooter1556.sms.server.io.ParserProcess;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
+import java.io.IOException;
 import java.nio.file.Path;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 public class FrameParser {
@@ -46,9 +47,12 @@ public class FrameParser {
     private MediaDao mediaDao;
     
     // Process for parsing streams
-    ParserProcess parserProcess;
+    Process process;
+    JsonParser jsonParser;
         
-    public VideoStream parse(VideoStream stream) {
+    public VideoStream parse(@NonNull VideoStream stream) {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "parse() -> " + stream.getMediaElementId() + "(" + stream.getStreamId() + ")", null);
+        
         // Use parser to parse frames of a video stream
         Path parser = ParserUtils.getMetadataParser();
 
@@ -59,7 +63,7 @@ public class FrameParser {
         }
         
         // Check stream parameters
-        if(stream == null || stream.getBPS() == null || stream.getFPS() == null) {
+        if(stream.getBPS() == null || stream.getFPS() == null) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Video stream missing parameters required for parsing frames.", null);
             return stream;
         }
@@ -74,132 +78,173 @@ public class FrameParser {
         }
 
         try {
-            String[] command = new String[]{parser.toString(), "-threads", "0", "-v", "quiet", "-print_format", "json", "-select_streams", "0:" + stream.getStreamId(), "-show_entries", "frame=interlaced_frame,key_frame,pkt_size,pkt_duration_time", element.getPath()};
+            String[] command = new String[]{parser.toString(), "-threads", "0", "-v", "quiet", "-print_format", "json", "-select_streams", "v:" + stream.getStreamId(), "-show_entries", "frame=interlaced_frame,key_frame,pkt_size,pkt_duration_time", element.getPath()};
             
-            // Run parser process for output
-            parserProcess = new ParserProcess(command);
-            parserProcess.start();
+            // Start process
+            ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(true);
+            this.process = processBuilder.start();
             
-            // Wait for process to finish
-            parserProcess.getProcess().waitFor();
+            // Start Json Parser
+            JsonFactory factory = new JsonFactory();
+            this.jsonParser  = factory.createParser(this.process.getInputStream());
             
-            // Do some checks to make sure we got some data
-            if(parserProcess == null || !parserProcess.hasEnded() || parserProcess.getOutput() == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to gather frame information for video stream!", null);
-                return stream;
-            }
+            JsonToken jsonToken = this.jsonParser.nextToken();
             
-            // Retrieve output from process
-            String[] data = parserProcess.getOutput().toArray(new String[0]);
-            
-            // Parse JSON
-            JsonValue json = Json.parse(StringUtils.arrayToDelimitedString(data, ""));
-            JsonArray frames = json.asObject().get("frames").asArray();
-            
-            // Flags
-            Boolean interlaced = false;
+            // Stream Variables    
+            boolean interlaced = false;
             long totalBitrate = 0L, totalGop = 0L;
             int maxBitrate = 0, frameCount = 0, intervalCount = 0, intervalTotal= 0, intervalGop = 0, gopCount = 0;
             double intervalDuration = 0;
             
-            // Process Streams
-            if(frames != null) {
-                for(JsonValue frame : frames) {
-                    // Bit Rate
-                    int keyFrame = frame.asObject().getInt("key_frame", -1);
-                    String sizeStr = frame.asObject().getString("pkt_size", "0");
-                    int size = Integer.parseInt(sizeStr);
-                    String durationStr = frame.asObject().getString("pkt_duration_time", "0");
-                    double duration = Double.parseDouble(durationStr);
+            // Frame Variables
+            boolean keyFrame = false;
+            int size = 0;
+            double duration = 0;
+            
+            while(!this.jsonParser.isClosed()){
+                if(jsonToken == null) {
+                    break;
+                }
+                
+                if(jsonToken.equals(JsonToken.FIELD_NAME)) {
+                    String fieldName = this.jsonParser.getCurrentName();
 
-                    if(size > 0 && duration > 0) {
-                        int bitrate = Double.valueOf(size * 0.001 * stream.getBPS() * stream.getFPS()).intValue();
+                    // Get next token which should be the field value
+                    this.jsonParser.nextToken();
+                    
+                    // Process fields
+                    switch(fieldName) {
+                        case "key_frame":
+                            keyFrame = this.jsonParser.getValueAsBoolean(false);
+                            
+                            // GOP Size
+                            if(keyFrame) {                                
+                                if(intervalGop > 0) {                            
+                                    intervalGop++;
 
-                        // Add to bitrate total
-                        if(bitrate > 0) {
-                            // Check max bitrate
-                            // We accumulate at least 1 seconds worth of frames and compare the average bitrate
-                            // ensuring we are at a GOP boundary before processing
-                            if(intervalDuration > 1.0 && keyFrame > 0) {                            
-                                int test = intervalTotal / intervalCount;
-
-                                if(test > maxBitrate) {
-                                    maxBitrate = test;
+                                    // Add to gop total and gop count
+                                    totalGop += intervalGop;
+                                    gopCount++;
                                 }
                                 
-                                // Reset variables
-                                intervalCount = 0;
-                                intervalDuration = 0;
-                                intervalTotal = 0;
+                                // Reset interval
+                                intervalGop = 0;
+                            } else {
+                                // Increment interval on non-key frames
+                                intervalGop++;
                             }
-
-                            totalBitrate += bitrate;
-                            intervalTotal += bitrate;
-                            intervalDuration += duration;
-                            frameCount++;
-                            intervalCount++;
-                        }
-
-                        
-                    }
-                       
-                    // Interlaced
-                    int interlacedFrame = frame.asObject().getInt("interlaced_frame", -1);
-
-                    if(interlacedFrame != -1) {
-                        interlaced = interlacedFrame > 0;
+                                
+                            break;
+                            
+                        case "interlaced_frame":
+                            boolean interlacedFrame = this.jsonParser.getValueAsBoolean(false);
+                            
+                            if(interlacedFrame) {
+                                interlaced = true;
+                            }
+                            
+                            break;
+                            
+                        case "pkt_size":
+                            size = this.jsonParser.getValueAsInt(0);
+                            break;
+                            
+                        case "pkt_duration_time":
+                            duration = this.jsonParser.getValueAsDouble(0);
+                            break;
                     }
                     
-                    // GOP Size
-                    if(keyFrame > 0) {
-                        if(intervalGop > 0) {                            
-                            intervalGop++;
+                }
+                
+                // Check if we have complete frame data
+                if(size > 0 && duration > 0) {
+                    int bitrate = Double.valueOf(size * 0.001 * stream.getBPS() * stream.getFPS()).intValue();
 
-                            // Add to gop total and gop count
-                            totalGop += intervalGop;
-                            gopCount++;
+                    // Add to bitrate total
+                    if(bitrate > 0) {
+                        // Check max bitrate
+                        // We accumulate at least 1 seconds worth of frames and compare the average bitrate
+                        // ensuring we are at a GOP boundary before processing
+                        if(intervalDuration > 1.0 && keyFrame) {                            
+                            int test = intervalTotal / intervalCount;
 
-                            // Reset interval
-                            intervalGop = 0;
+                            if(test > maxBitrate) {
+                                maxBitrate = test;
+                            }
+                                
+                            // Reset variables
+                            intervalCount = 0;
+                            intervalDuration = 0;
+                            intervalTotal = 0;
                         }
-                    } else {
-                        // Increment interval on non-key frames
-                        intervalGop++;
-                    }
-                            
-                }
-                
-                // Process result
-                if(maxBitrate > 0) {
-                    stream.setMaxBitrate(maxBitrate);
-                }
-                
-                // Calculate average bitrate
-                if(totalBitrate > 0 && (stream.getBitrate() == null || stream.getBitrate() == 0)) {
-                    int avgBitrate = (int) Math.round(totalBitrate / frameCount);
-                    stream.setBitrate(avgBitrate);
-                }
-                
-                //  Calculate average GOP size
-                if(totalGop > 0 && gopCount > 0) {
-                    int gopSize = (int) Math.round(totalGop / gopCount);
-                    stream.setGOPSize(gopSize);
-                }
-                
-                // Interlaced
-                stream.setInterlaced(interlaced);
-            }
-        } catch(NumberFormatException ex) {
-            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to parse frames for file " + element.getPath(), ex);
-        } catch(InterruptedException ex) {}
 
+                        totalBitrate += bitrate;
+                        intervalTotal += bitrate;
+                        intervalDuration += duration;
+                        frameCount++;
+                        intervalCount++;
+                    }
+                    
+                    // Reset frame variables
+                    size = 0;
+                    duration = 0;
+                }
+                
+                jsonToken = this.jsonParser.nextToken();
+            }
+            
+            // Close streams
+            this.process.getInputStream().close();
+            this.jsonParser.close();
+                
+            // Process result
+            if(maxBitrate > 0) {
+                stream.setMaxBitrate(maxBitrate);
+            }
+
+            // Calculate average bitrate
+            if(totalBitrate > 0 && (stream.getBitrate() == null || stream.getBitrate() == 0)) {
+                int avgBitrate = (int) Math.round(totalBitrate / frameCount);
+                stream.setBitrate(avgBitrate);
+            }
+
+            //  Calculate average GOP size
+            if(totalGop > 0 && gopCount > 0) {
+                int gopSize = (int) Math.round(totalGop / gopCount);
+                stream.setGOPSize(gopSize);
+            }
+
+            // Interlaced
+            stream.setInterlaced(interlaced);
+            
+        } catch(JsonEOFException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "parse() -> " + ex.getClass().getName(), null);
+        } catch(RuntimeException | IOException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Unable to parse frames for file " + element.getPath(), ex);
+        } finally {
+            this.stop();
+        }
+        
         return stream;
     }
-    
-    // Stop parser process if running
+        
+    // Stop Json parser if running
     public void stop() {
-        if(parserProcess != null) {
-            parserProcess.end();
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "stop()", null);
+        
+        try {
+            if (this.jsonParser != null && !this.jsonParser.isClosed()) {
+                this.jsonParser.close();
+            }
+            
+            if(this.process != null) {
+                this.process.destroy();
+            }
+            
+            this.process = null;
+            this.jsonParser = null;
+        } catch (IOException ex) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to stop frame parser.", ex);
         }
     }
 }

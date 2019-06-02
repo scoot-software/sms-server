@@ -427,6 +427,9 @@ public class AdminController {
             case SMS.Status.NOT_ALLOWED:
                 return new ResponseEntity<>("Deep scan cannot be run at this time.", HttpStatus.NOT_ACCEPTABLE);
                 
+            case SMS.Status.REQUIRED_DATA_MISSING:
+                return new ResponseEntity<>("Failed to retrieve media for scanning.", HttpStatus.INTERNAL_SERVER_ERROR);
+                
             case SMS.Status.NOT_REQUIRED:
                 return new ResponseEntity<>("No media requires scanning.", HttpStatus.NOT_FOUND);
                 

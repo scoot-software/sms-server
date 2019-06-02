@@ -111,6 +111,7 @@ public class ScannerService implements DisposableBean {
     
     // Deep scan executor
     ExecutorService deepScanExecutor = null;
+    boolean abortDeepScan = false;
     
     // Logs
     String deepScanLog;
@@ -128,6 +129,8 @@ public class ScannerService implements DisposableBean {
     // Check for inactive jobs at midnight
     @Scheduled(cron="#{config.deepScanSchedule}")
     public int startDeepScan() {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "startDeepScan()", null);
+        
         // Check a scanning process is not already active
         if (isScanning() || isDeepScanning()) {
             return SMS.Status.NOT_ALLOWED;
@@ -141,15 +144,20 @@ public class ScannerService implements DisposableBean {
         // List of streams to scan
         List<VideoStream> streams = mediaDao.getIncompleteVideoStreams();
         
-        // Start scanning
+        // Do some Checks
+        if(streams == null) {
+            return SMS.Status.REQUIRED_DATA_MISSING;
+        }
+        
         if(streams.isEmpty()) {
             return SMS.Status.NOT_REQUIRED;
         }
         
         // Start scanning
+        abortDeepScan = false;
         deepScan(streams);
         
-        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started deep scan of media.", null);
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Started deep scan of " + streams.size() + " streams.", null);
         
         return SMS.Status.OK;
     }
@@ -256,7 +264,9 @@ public class ScannerService implements DisposableBean {
     //
     // Performs a deep scan of media streams
     //
-    private synchronized void deepScan(final List<VideoStream> streams) {        
+    private synchronized void deepScan(final List<VideoStream> streams) {   
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "deepScan()", null);
+        
         // Create log file
         Timestamp scanTime = new Timestamp(new Date().getTime());
         deepScanLog = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";
@@ -277,6 +287,11 @@ public class ScannerService implements DisposableBean {
                 
                 VideoStream update = frameParser.parse(stream);
                 
+                // Check for abort
+                if(abortDeepScan) {
+                    break;
+                }
+                
                 if(update != null) {
                     mediaDao.updateVideoStream(update);
                     LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG);
@@ -284,17 +299,25 @@ public class ScannerService implements DisposableBean {
                 
                 LogUtils.writeToLog(deepScanLog, "Finished Scanning stream: " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
             }
+            
+            if(!abortDeepScan) {
+                LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deep scan completed successfully.", null);
+            }
         });
         
-        deepScanExecutor.shutdownNow();
+        deepScanExecutor.shutdown();
     }
     
     public void stopDeepScan() {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "stopDeepScan()", null);
+        
         if(deepScanExecutor != null && !deepScanExecutor.isTerminated()) {
+            abortDeepScan = true;
             deepScanExecutor.shutdownNow();
             frameParser.stop();
             
             LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG);
+            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deep scan stopped.", null);
         }
     }
     

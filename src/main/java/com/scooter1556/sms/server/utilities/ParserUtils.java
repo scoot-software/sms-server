@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -91,27 +92,14 @@ public class ParserUtils {
         ProcessBuilder processBuilder = new ProcessBuilder(command).redirectErrorStream(redirectErrorStream);
         Process process = processBuilder.start();
         
-        List<String> result = null;
-        
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-            result = new ArrayList<>();
-            String line;
-            while((line = reader.readLine()) != null) {
-                line = line.trim();
-                
-                if (line.length() > 0) {
-                    result.add(line);
-                }
-            }
-        } catch(Exception ex) {
-            return null;
-        } finally {
-            // Close streams
-            process.getInputStream().close();
+        try {
+            List<String> result = IOUtils.readLines(process.getInputStream(), "UTF-8");
             
-            if(result != null && !result.isEmpty()) {
+            if(!result.isEmpty()) {
                 return result.toArray(new String[result.size()]);
             }
+        } catch(IOException ex) {
+            return null;
         }
 
         return null;     
