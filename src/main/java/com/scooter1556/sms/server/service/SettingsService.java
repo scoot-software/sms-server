@@ -47,16 +47,23 @@ public final class SettingsService {
     // Configuration
     public static final String CONFIG_TRANSCODE_PATH = "transcode.path";
     public static final String CONFIG_PARSER_PATH = "parser.path";
-    public static final String CONFIG_DEEPSCAN_SCHEDULE = "deepscan.schedule";
+    public static final String CONFIG_DEEP_SCAN_SCHEDULE = "deepscan.schedule";
+    public static final String CONFIG_MEDIA_SCAN_SCHEDULE = "mediascan.schedule";
+    public static final String CONFIG_PLAYLIST_SCAN_SCHEDULE = "playlistscan.schedule";
     
     // Default Values
-    public static final String DEFAULT_DEEPSCAN_SCHEDULE = "0 0 0 * * *";
+    public static final String DEFAULT_DEEP_SCAN_SCHEDULE = "0 0 0 * * *";
+    public static final String DEFAULT_MEDIA_SCAN_SCHEDULE = "0 0 22 * * *";
+    public static final String DEFAULT_PLAYLIST_SCAN_SCHEDULE = "0 0 6 * * *";
+    
     Properties config;
     
     // Component values
     private String transcodePath = "";
     private String parserPath = "";
-    private String deepScanSchedule = DEFAULT_DEEPSCAN_SCHEDULE;
+    private String deepScanSchedule = DEFAULT_DEEP_SCAN_SCHEDULE;
+    private String mediaScanSchedule = DEFAULT_MEDIA_SCAN_SCHEDULE;
+    private String playlistScanSchedule = DEFAULT_PLAYLIST_SCAN_SCHEDULE;
     
     private static final SettingsService INSTANCE = new SettingsService();
     
@@ -216,14 +223,34 @@ public final class SettingsService {
         }
         
         // Deep Scan Schedule
-        if(config.containsKey(CONFIG_DEEPSCAN_SCHEDULE)) {
-            String test = config.getProperty(CONFIG_DEEPSCAN_SCHEDULE);
+        if(config.containsKey(CONFIG_DEEP_SCAN_SCHEDULE)) {
+            String test = config.getProperty(CONFIG_DEEP_SCAN_SCHEDULE);
             if(CronSequenceGenerator.isValidExpression(test)) {
                 deepScanSchedule = test;
             }
         } else {
-            config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, deepScanSchedule);
-        }        
+            config.setProperty(CONFIG_DEEP_SCAN_SCHEDULE, deepScanSchedule);
+        }
+        
+        // Media Scan Schedule
+        if(config.containsKey(CONFIG_MEDIA_SCAN_SCHEDULE)) {
+            String test = config.getProperty(CONFIG_MEDIA_SCAN_SCHEDULE);
+            if(CronSequenceGenerator.isValidExpression(test)) {
+                mediaScanSchedule = test;
+            }
+        } else {
+            config.setProperty(CONFIG_MEDIA_SCAN_SCHEDULE, mediaScanSchedule);
+        } 
+        
+        // Playlist Scan Schedule
+        if(config.containsKey(CONFIG_PLAYLIST_SCAN_SCHEDULE)) {
+            String test = config.getProperty(CONFIG_PLAYLIST_SCAN_SCHEDULE);
+            if(CronSequenceGenerator.isValidExpression(test)) {
+                playlistScanSchedule = test;
+            }
+        } else {
+            config.setProperty(CONFIG_PLAYLIST_SCAN_SCHEDULE, playlistScanSchedule);
+        } 
     }
     
     private void saveConfig() {
@@ -292,7 +319,7 @@ public final class SettingsService {
             return deepScanSchedule;
         }
         
-        return DEFAULT_DEEPSCAN_SCHEDULE;
+        return DEFAULT_DEEP_SCAN_SCHEDULE;
     }
     
     public void setDeepScanSchedule(String value) {
@@ -306,7 +333,55 @@ public final class SettingsService {
         }
 
         deepScanSchedule = value;
-        config.setProperty(CONFIG_DEEPSCAN_SCHEDULE, value);
+        config.setProperty(CONFIG_DEEP_SCAN_SCHEDULE, value);
+        
+        saveConfig();
+    }
+    
+    public String getMediaScanSchedule() {                
+        if(mediaScanSchedule != null && !mediaScanSchedule.isEmpty()) {
+            return mediaScanSchedule;
+        }
+        
+        return DEFAULT_MEDIA_SCAN_SCHEDULE;
+    }
+    
+    public void setMediaScanSchedule(String value) {
+        if(config == null || value == null) {
+            return;
+        }
+        
+        if(!CronSequenceGenerator.isValidExpression(value)) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, value + " is not a valid cron expression!", null);
+            return;
+        }
+
+        mediaScanSchedule = value;
+        config.setProperty(CONFIG_MEDIA_SCAN_SCHEDULE, value);
+        
+        saveConfig();
+    }
+    
+    public String getPlaylistScanSchedule() {                
+        if(playlistScanSchedule != null && !playlistScanSchedule.isEmpty()) {
+            return playlistScanSchedule;
+        }
+        
+        return DEFAULT_PLAYLIST_SCAN_SCHEDULE;
+    }
+    
+    public void setPlaylistScanSchedule(String value) {
+        if(config == null || value == null) {
+            return;
+        }
+        
+        if(!CronSequenceGenerator.isValidExpression(value)) {
+            LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, value + " is not a valid cron expression!", null);
+            return;
+        }
+
+        playlistScanSchedule = value;
+        config.setProperty(CONFIG_PLAYLIST_SCAN_SCHEDULE, value);
         
         saveConfig();
     }

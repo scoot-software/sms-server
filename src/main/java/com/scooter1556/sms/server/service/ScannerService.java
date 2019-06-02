@@ -126,7 +126,18 @@ public class ScannerService implements DisposableBean {
         stopDeepScan();
     }
     
-    // Check for inactive jobs at midnight
+    @Scheduled(cron="#{config.mediaScanSchedule}")
+    public void startMediaScan() {
+        List<MediaFolder> mediaFolders = settingsDao.getMediaFolders(null);
+        startMediaScanning(mediaFolders);
+    }
+    
+    @Scheduled(cron="#{config.playlistScanSchedule}")
+    public void startPlaylistScan() {
+        List<Playlist> playlists = mediaDao.getPlaylists();
+        startPlaylistScanning(playlists);
+    }
+    
     @Scheduled(cron="#{config.deepScanSchedule}")
     public int startDeepScan() {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "startDeepScan()", null);
@@ -209,6 +220,10 @@ public class ScannerService implements DisposableBean {
             return;
         }
         
+        if(folders == null || folders.isEmpty()) {
+            return;
+        }
+        
         // Stop deep scanning if in progress
         stopDeepScan();
         
@@ -241,6 +256,11 @@ public class ScannerService implements DisposableBean {
     public synchronized void startPlaylistScanning(List<Playlist> playlists) {
         // Check if media is already being scanned
         if (isScanning()) {
+            return;
+        }
+        
+        // Check we have something to scan
+        if(playlists == null || playlists.isEmpty()) {
             return;
         }
         
