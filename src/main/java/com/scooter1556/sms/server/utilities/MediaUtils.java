@@ -41,7 +41,7 @@ public class MediaUtils {
     public static int getSMSCodec(String codec, String profile, String pixelFormat, String cTransfer, String cPrimaries) {
         // Check codec
         if(codec == null) {
-            return 0;
+            return SMS.Codec.UNSUPPORTED;
         }
         
         // Make sure we have no null parameters
@@ -184,7 +184,7 @@ public class MediaUtils {
                 return SMS.Codec.PGS;
                 
             default:
-                return 0;
+                return SMS.Codec.UNSUPPORTED;
         }
     }
     
