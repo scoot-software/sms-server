@@ -60,7 +60,7 @@ public class ImageController {
     @Autowired
     private ImageService imageService;
     
-    @RequestMapping(value="/{id}/cover", method=RequestMethod.GET, produces = "image/jpeg")
+    @RequestMapping(value="/{id}/cover", method=RequestMethod.GET)
     @ResponseBody
     public void getCoverArt(@PathVariable("id") UUID id, 
                             @RequestParam(value = "scale", required = false) Integer scale,
@@ -113,7 +113,7 @@ public class ImageController {
         }
     }
     
-    @RequestMapping(value="/{id}/random", method=RequestMethod.GET, produces = "image/jpeg")
+    @RequestMapping(value="/{id}/random", method=RequestMethod.GET)
     @ResponseBody
     public void getRandomCoverArt(@PathVariable("id") UUID id,
                                   @RequestParam(value = "scale", required = false) Integer scale,
