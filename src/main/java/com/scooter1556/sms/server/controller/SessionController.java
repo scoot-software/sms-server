@@ -88,7 +88,7 @@ public class SessionController {
         UUID sid  = sessionService.addSession(id, request.getUserPrincipal().getName(), profile);
         
         if(sid == null) {
-            return new ResponseEntity<>("Failed to add session, maybe it already exists?", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>("Failed to add session!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
         return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
@@ -129,7 +129,7 @@ public class SessionController {
     @RequestMapping(value="/end/{sid}", method=RequestMethod.GET)
     public ResponseEntity<String> endSession(@PathVariable("sid") UUID sid) {        
         // Check session is valid
-        if (!sessionService.isSessionValid(sid)) {
+        if (!sessionService.isSessionAvailable(sid)) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
         }

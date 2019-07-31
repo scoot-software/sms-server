@@ -80,8 +80,8 @@ public class SessionService implements DisposableBean {
             id = UUID.randomUUID();
         } else {
             // Check session doesn't already exist
-            if(isSessionValid(id)) {
-                return null;
+            if(isSessionAvailable(id)) {
+                return id;
             }
         }
         
@@ -161,7 +161,7 @@ public class SessionService implements DisposableBean {
         return null;
     }
     
-    public boolean isSessionValid(UUID id) {
+    public boolean isSessionAvailable(UUID id) {
         return getSessionById(id) != null;
     }
     
