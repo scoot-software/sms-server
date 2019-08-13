@@ -89,11 +89,12 @@ public class StreamController {
     private ScannerService scannerService;
     
     @ResponseBody
-    @RequestMapping(value="/playlist/{sid}/{meid}/{type}/{extra}", method=RequestMethod.GET)
+    @RequestMapping(value="/playlist/{sid}/{meid}/{type}/{extra}/{extension}", method=RequestMethod.GET)
     public void getPlaylist(@PathVariable("sid") UUID sid,
                             @PathVariable("meid") UUID meid,
                             @PathVariable("type") String type,
                             @PathVariable("extra") Integer extra,
+                            @PathVariable("extension") String extension,
                             HttpServletRequest request, 
                             HttpServletResponse response) {
         
@@ -173,7 +174,7 @@ public class StreamController {
             // Return playlist
             switch (session.getClientProfile().getFormat()) {
                 case SMS.Format.HLS:
-                    adaptiveStreamingService.sendHLSPlaylist(job, session.getClientProfile(), type, extra, false, response);
+                    adaptiveStreamingService.sendHLSPlaylist(job, session.getClientProfile(), type, extra, extension, false, response);
                     break;
                     
                 default:
@@ -186,12 +187,13 @@ public class StreamController {
     }
     
     @ResponseBody
-    @RequestMapping(value="/segment/{sid}/{meid}/{type}/{extra}/{file}", method=RequestMethod.GET)
+    @RequestMapping(value="/segment/{sid}/{meid}/{type}/{extra}/{file}/{extension}", method=RequestMethod.GET)
     public void getSegment(@PathVariable("sid") UUID sid,
                            @PathVariable("meid") UUID meid,
                            @PathVariable("type") String type,
                            @PathVariable("extra") Integer extra,
                            @PathVariable("file") String file,
+                           @PathVariable("extension") String extension,
                            HttpServletRequest request, 
                            HttpServletResponse response) {
         Session session;
@@ -244,8 +246,8 @@ public class StreamController {
                 return;
             }
             
-            // Get segment
-            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + job.getId() + "/" + file + "-" + type + "-" + extra);
+            // Initialise segment information
+            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + File.separator + "streams" + File.separator + job.getId() + File.separator + file + "-" + type + "-" + extra + "." + extension);
             
             if(session.getClientProfile().getFormat() == SMS.Format.HLS) {
                 // Update segment tracking
@@ -282,8 +284,7 @@ public class StreamController {
             }
             
             // Get file type
-            String mimeType;
-            mimeType = Files.probeContentType(segment.toPath());
+            String mimeType = Files.probeContentType(segment.toPath());
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra + " MimeType=" + mimeType, null);
             
@@ -455,7 +456,7 @@ public class StreamController {
             switch(transcodeProfile.getType()) {
                 case StreamType.LOCAL: case StreamType.REMOTE:
                     if(clientProfile.getFormat() == SMS.Format.HLS) {
-                        adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, request.getMethod().equals("HEAD"), response);
+                        adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, null, request.getMethod().equals("HEAD"), response);
                     }
                 
                     break;

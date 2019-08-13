@@ -205,7 +205,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     command.add("-f");
                     command.add("mpegts");
                     
-                    String path = segment.getAbsolutePath() + "-video-" + i + ".tmp";
+                    String path = segment.getAbsolutePath() + "-video-" + i + ".ts.tmp";
                     
                     command.add(path);
                     
@@ -239,7 +239,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     command.add("-f");
                     command.add(MediaUtils.getFormat(format));
                     
-                    String path = segment.getAbsolutePath() + "-audio-" + i + ".tmp";
+                    String path = segment.getAbsolutePath() + "-audio-" + i + "." + MediaUtils.getExtensionForFormat(SMS.MediaType.AUDIO, format) + ".tmp";
                     
                     command.add(path);
                     
@@ -270,7 +270,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     command.add("-f");
                     command.add(MediaUtils.getFormat(format));
                     
-                    String path = segment.getAbsolutePath() + "-subtitle-" + i + ".tmp";
+                    String path = segment.getAbsolutePath() + "-subtitle-" + i + "." + MediaUtils.getExtensionForFormat(SMS.MediaType.SUBTITLE, format) + ".tmp";
                     
                     command.add(path);
                     
@@ -295,7 +295,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 if(tmpSegment.exists()) {
                     tmpSegment.renameTo(finalSegment);
                 } else {
-                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to rename post-processed segment: " + tmpSegment.toString(), null);
+                    LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to rename segment: " + tmpSegment.toString(), null);
                 }
             });
             

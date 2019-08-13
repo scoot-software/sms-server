@@ -141,8 +141,23 @@ public class AdaptiveStreamingService {
                     bandwidth = 384000;
                 }
                 
-                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()) + "\"");
-                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i);
+                // Determine format to use
+                int format = SMS.Format.MPEGTS;
+                int codec = transcode.getCodec();
+
+                if(codec == SMS.Codec.COPY) {
+                    codec = transcode.getOriginalCodec();
+                }
+
+                if(!MediaUtils.isCodecSupportedByFormat(SMS.Format.MPEGTS, codec) || profile.getPackedAudio()) {
+                    format = MediaUtils.getFormatForCodec(codec);
+                }
+
+                // Determine extension for segment
+                String extension = MediaUtils.getExtensionForFormat(format, SMS.MediaType.AUDIO);
+
+                playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(codec) + "\"");
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i + "/" + extension);
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
             String audio = "";
@@ -159,13 +174,25 @@ public class AdaptiveStreamingService {
                         isDefault = "YES";
                     }
 
-                    if(transcode.getCodec() == SMS.Codec.COPY) {
-                        audio = TranscodeUtils.getIsoSpecForCodec(stream.getCodec());
-                    } else {
-                        audio = TranscodeUtils.getIsoSpecForCodec(transcode.getCodec());
+                    // Determine format to use
+                    int format = SMS.Format.MPEGTS;
+                    int codec = transcode.getCodec();
+
+                    if(codec == SMS.Codec.COPY) {
+                        codec = stream.getCodec();
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage()) + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + "\"");
+                    if(!MediaUtils.isCodecSupportedByFormat(SMS.Format.MPEGTS, codec) || profile.getPackedAudio()) {
+                        format = MediaUtils.getFormatForCodec(codec);
+                    }
+
+                    // Determine extension for segment
+                    String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.AUDIO, format);
+
+                    // Represent audio track
+                    audio = TranscodeUtils.getIsoSpecForCodec(codec);
+
+                    playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage()) + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + "/" + extension + "\"");
                 }                
             }
             
@@ -182,17 +209,27 @@ public class AdaptiveStreamingService {
                         }
                     }
                     
-                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage()) + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/subtitle/" + s + "\"");
-                    
+                    // Determine format to use
+                    int codec = transcode.getCodec();
+
+                    if(codec == SMS.Codec.COPY) {
+                        codec = transcode.getOriginalCodec();
+                    }
+
+                    int format = MediaUtils.getFormatForCodec(codec);
+
+                    // Determine extension for segment
+                    String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.SUBTITLE, format);
+
+                    playlist.add("#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage()) + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/subtitle/" + s + "/" + extension + "\"");
+
                     subtitles = true;
                 }                
             }
             
             for(int i = 0; i < TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size(); i++) {
                 VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(i);
-                
-                // Get video stream
-                VideoStream videoStream = MediaUtils.getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId());
+                VideoStream stream = MediaUtils.getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId());
                 
                 // Determine bitrate
                 int bitrate = -1;
@@ -202,14 +239,17 @@ public class AdaptiveStreamingService {
                 }
                 
                 if(bitrate < 0) {
-                    bitrate = MediaUtils.getAverageBitrate(videoStream, mediaElement.getBitrate());
+                    bitrate = MediaUtils.getAverageBitrate(stream, mediaElement.getBitrate());
                 }
-                                
+
+                // Determine extension for segment
+                String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.VIDEO, SMS.Format.MPEGTS);
+
                 // Determine resolution
                 Dimension resolution = transcode.getResolution();
                 
                 if(resolution == null) {
-                    resolution = videoStream.getResolution();
+                    resolution = stream.getResolution();
                 }
                 
                 StringBuilder builder = new StringBuilder();
@@ -220,7 +260,7 @@ public class AdaptiveStreamingService {
                 builder.append(",CODECS=\"");
                 
                 if(transcode.getCodec() == SMS.Codec.COPY) {
-                    builder.append(TranscodeUtils.getIsoSpecForCodec(videoStream.getCodec()));
+                    builder.append(TranscodeUtils.getIsoSpecForCodec(stream.getCodec()));
                 } else {
                     builder.append(TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()));
                 }
@@ -229,7 +269,6 @@ public class AdaptiveStreamingService {
                     builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
                 }
                 
-                
                 if(subtitles) {
                     builder.append(",SUBTITLES=\"subs\"");
                 }
@@ -237,7 +276,7 @@ public class AdaptiveStreamingService {
                 playlist.add(builder.toString());
                 
                 // Url
-                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/video/" + i);
+                playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/video/" + i + "/" + extension);
             }
         } else {
             return null;
@@ -246,12 +285,13 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public List<String> generateHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra) {
+    public List<String> generateHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, String extension) {
         // Check variables
-        if(type == null || extra == null) {
+        if(type == null || extra == null || extension == null) {
             return null;
         }
-                
+
+        // Check job
         if(job == null) {
             return null;
         }
@@ -273,7 +313,7 @@ public class AdaptiveStreamingService {
         // Get Video Segments
         for (int i = 0; i < Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration()); i++) {
             playlist.add("#EXTINF:" + job.getTranscodeProfile().getSegmentDuration().floatValue() + ",");
-            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "/" + extension);
         }   
 
         // Determine the duration of the final segment.
@@ -282,7 +322,7 @@ public class AdaptiveStreamingService {
             long i = Double.valueOf(Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration())).longValue();
             
             playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
-            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i);
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "/" + extension);
         }
 
         playlist.add("#EXT-X-ENDLIST");
@@ -290,14 +330,14 @@ public class AdaptiveStreamingService {
         return playlist;
     }
     
-    public void sendHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, boolean head, HttpServletResponse response) throws IOException {
+    public void sendHLSPlaylist(Job job, ClientProfile clientProfile, String type, Integer extra, String extension, boolean head, HttpServletResponse response) throws IOException {
         List<String> playlist;
         
         // Get playlist as a string array
         if(type == null) {
             playlist = generateHLSVariantPlaylist(job, clientProfile);
         } else {
-            playlist = generateHLSPlaylist(job, clientProfile, type, extra);
+            playlist = generateHLSPlaylist(job, clientProfile, type, extra, extension);
         }
 
         if(playlist == null) {

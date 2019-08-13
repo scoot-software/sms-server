@@ -316,6 +316,57 @@ public class MediaUtils {
         }
     }
     
+    public static String getExtensionForFormat(int type, int format) {
+        switch(format) {
+            case SMS.Format.AVI:
+                return "avi";
+
+            case SMS.Format.FLAC:
+                return "flac";
+
+            case SMS.Format.MATROSKA:
+                if(type == SMS.MediaType.AUDIO) {
+                    return "mka";
+                }
+
+                return "mkv";
+
+            case SMS.Format.MP3:
+                return "mp3";
+
+            case SMS.Format.MP4:
+                if(type == SMS.MediaType.AUDIO) {
+                    return "m4a";
+                }
+
+                return "mp4";
+
+            case SMS.Format.MPEGTS:
+                return "ts";
+
+            case SMS.Format.OGG:
+                return "ogg";
+
+            case SMS.Format.WAV:
+                return "wav";
+
+            case SMS.Format.AAC:
+                return "aac";
+
+            case SMS.Format.AC3:
+                return "ac3";
+
+            case SMS.Format.SUBRIP:
+                return "srt";
+
+            case SMS.Format.WEBVTT:
+                return "vtt";
+
+            default:
+                return null;
+        }
+    }
+
     public static String getMimeType(int type, int format) {        
         StringBuilder mimeType = new StringBuilder();
         
