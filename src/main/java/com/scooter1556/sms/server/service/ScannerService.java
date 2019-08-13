@@ -47,7 +47,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import static java.nio.file.FileVisitResult.CONTINUE;
-import static java.nio.file.FileVisitResult.SKIP_SIBLINGS;
+import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -500,14 +500,14 @@ public class ScannerService implements DisposableBean {
             // Check if we need to scan this directory
             if(!MediaUtils.containsMedia(dir.toFile(), true) && !PlaylistUtils.containsPlaylists(dir.toFile())) {
                 LogUtils.writeToLog(log, "Skipping directory " + dir.toString(), Level.DEBUG);
-                return SKIP_SIBLINGS;
+                return SKIP_SUBTREE;
             }
             
             LogUtils.writeToLog(log, "Parsing directory " + dir.toString(), Level.DEBUG);
             
             // Initialise variables
             directoryChanged = false;
-            directoryElements.add(new ArrayDeque<MediaElement>());
+            directoryElements.add(new ArrayDeque<>());
             
             // Determine if this directory has changed
             directoryChanged = folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned());
