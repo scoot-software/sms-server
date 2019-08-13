@@ -284,7 +284,7 @@ public class StreamController {
             }
             
             // Get file type
-            String mimeType = Files.probeContentType(segment.toPath());
+            String mimeType = MediaUtils.getMimeType(MediaUtils.getType(type), MediaUtils.getFormatForExtension(extension));
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra + " MimeType=" + mimeType, null);
             

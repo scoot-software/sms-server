@@ -316,6 +316,57 @@ public class MediaUtils {
         }
     }
     
+    public static int getFormatForExtension(String extension) {
+        // Check extension
+        if(extension == null || extension.isEmpty()) {
+            return SMS.Format.NONE;
+        }
+        
+        switch(extension) {
+            case "aac":
+                return SMS.Format.AAC;
+                
+            case "avi":
+                return SMS.Format.AVI;
+                
+            case "dsf":
+                return SMS.Format.DSF;
+                
+            case "flac":
+                return SMS.Format.FLAC;
+                
+            case "mp3":
+                return SMS.Format.MP3;
+                
+            case "m4v": case "m4a": case "mp4":
+                return SMS.Format.MP4;
+                
+            case "mpg": case "mpeg":
+                return SMS.Format.MPEG;
+                
+            case "ts":
+                return SMS.Format.MPEGTS;
+                
+            case "mkv": case "mka":
+                return SMS.Format.MATROSKA;
+                
+            case "ogg": case "oga":
+                return SMS.Format.OGG;
+                
+            case "wav":
+                return SMS.Format.WAV;
+                
+            case "srt":
+                return SMS.Format.SUBRIP;
+                
+            case "vtt":
+                return SMS.Format.WEBVTT;
+                
+            default:
+                return SMS.Format.UNSUPPORTED;
+        }
+    }
+    
     public static String getExtensionForFormat(int type, int format) {
         switch(format) {
             case SMS.Format.AVI:
@@ -433,15 +484,37 @@ public class MediaUtils {
                 
             case SMS.Format.AAC:
                 mimeType.append("aac");
+                break;
                 
             case SMS.Format.AC3:
                 mimeType.append("ac3");
-                                
+                break;
+                
             default:
                 return null;
         }
         
         return mimeType.toString();
+    }
+    
+    public static int getType(String type) {
+        if(type == null || type.isEmpty()) {
+            return -1;
+        }
+        
+        switch(type) {
+            case "audio":
+                return SMS.MediaType.AUDIO;
+                
+            case "subtitle":
+                return SMS.MediaType.SUBTITLE;
+                
+            case "video":
+                return SMS.MediaType.VIDEO;
+                
+            default:
+                return -1;
+        }
     }
     
     public static boolean isCodecSupportedByFormat(int format, int codec) {
