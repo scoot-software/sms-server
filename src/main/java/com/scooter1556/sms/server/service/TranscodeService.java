@@ -48,15 +48,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 import org.apache.commons.lang3.ArrayUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TranscodeService {
 
-    @Autowired
-    private AdaptiveStreamingService adaptiveStreamingService;
- 
     private static final String CLASS_NAME = "TranscodeService";
     
     private Transcoder transcoder = null;
@@ -211,9 +207,7 @@ public class TranscodeService {
                 
                 // Subtitles
                 if(profile.getSubtitleTranscodes() != null) {
-                    for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
-                        SubtitleTranscode transcode = profile.getSubtitleTranscodes()[s];
-
+                    for(SubtitleTranscode transcode : profile.getSubtitleTranscodes()) {
                         // Transcode commands
                         commands.get(i).getCommands().addAll(getSubtitleCommands(transcode));
                     }
@@ -228,9 +222,7 @@ public class TranscodeService {
                     commands.get(i).getCommands().add(job.getMediaElement().getPath());
                 }
                 
-                for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
-                    AudioTranscode transcode = profile.getAudioTranscodes()[a];
-                    
+                for(AudioTranscode transcode : profile.getAudioTranscodes()) {
                     // Transcode commands
                     commands.get(i).getCommands().addAll(getAudioCommands(transcode));
                 }
