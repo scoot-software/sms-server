@@ -50,10 +50,16 @@ import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.Enumeration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.ArrayUtils;
@@ -262,25 +268,55 @@ public class StreamController {
                 }
             }
             
-            // Check how we detect the segment is available
-            int count = 0;
-            
-            // Check segment exists
-            while(!segment.exists() && (count < 20)) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ex) {
-                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Error occured waiting for segment to become available.");
-                }
-
-                count++;
-            }
-            
-            // Check if segment is definitely available
+            // Check if segment is available and wait for it if not
             if(!segment.exists()) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + job.getId() + ".", null);
-                response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
-                return;
+                // Watch work directory for segments
+                WatchService watcher;
+                watcher = FileSystems.getDefault().newWatchService();
+                Path workdir = Paths.get(segment.getParent());
+                workdir.register(watcher, ENTRY_CREATE);
+                boolean isFound = false;
+                
+                while(!isFound) {
+                    WatchKey key;
+                    
+                    try {
+                        key = watcher.poll(TranscodeUtils.DEFAULT_SEGMENT_DURATION, TimeUnit.SECONDS);
+                    } catch (InterruptedException ex) {
+                        return;
+                    }
+                    
+                    // Check for timeout
+                    if(key == null) {
+                        break;
+                    }
+
+                    for(WatchEvent<?> event : key.pollEvents()) {
+                        WatchEvent.Kind<?> kind = event.kind();
+                        WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
+                        Path filePath = pathEvent.context();
+
+                        if(kind == ENTRY_CREATE && filePath.toString().equals(segment.getPath())) {
+                            isFound = true;
+                            break;
+                        }
+                    }
+
+                    // Reset key
+                    if(!key.reset()) {
+                        break;
+                    }
+                }
+                
+                // Cancel watch service
+                watcher.close();
+                    
+                if(!isFound) {
+                    // Timed out waiting for segment
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + job.getId() + ".", null);
+                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
+                    return;
+                }
             }
             
             // Get file type
@@ -592,8 +628,6 @@ public class StreamController {
         // Create and populate transcode profile
         TranscodeProfile transcodeProfile = new TranscodeProfile();
         
-        Boolean transcodeRequired = true;
-
         // Set stream type
         if(clientProfile.getLocal()) {
             transcodeProfile.setType(TranscodeProfile.StreamType.LOCAL);
@@ -602,7 +636,7 @@ public class StreamController {
         }
 
         // If the file type is supported and all codecs are supported without transcoding, stream the file directly
-        transcodeRequired = TranscodeUtils.isTranscodeRequired(mediaElement, clientProfile);
+        Boolean transcodeRequired = TranscodeUtils.isTranscodeRequired(mediaElement, clientProfile);
 
         if(transcodeRequired == null) {
             return null;
