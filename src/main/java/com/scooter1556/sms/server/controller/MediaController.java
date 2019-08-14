@@ -25,15 +25,11 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
-import com.scooter1556.sms.server.domain.AudioTranscode;
-import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Directory;
-import com.scooter1556.sms.server.domain.Job;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Session;
-import com.scooter1556.sms.server.domain.VideoTranscode;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
@@ -213,10 +209,12 @@ public class MediaController {
         
         if(type == null) {
             mediaElements = mediaDao.getRecentlyAddedDirectoryElements(limit);
-        } else if(type == MediaElement.DirectoryMediaType.AUDIO) {
-            mediaElements = mediaDao.getRecentlyAddedAudioDirectoryElements(limit);
-        } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
-            mediaElements = mediaDao.getRecentlyAddedVideoDirectoryElements(limit);
+        } else {
+            if(type == MediaElement.DirectoryMediaType.AUDIO) {
+                mediaElements = mediaDao.getRecentlyAddedAudioDirectoryElements(limit);
+            } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
+                mediaElements = mediaDao.getRecentlyAddedVideoDirectoryElements(limit);
+            }
         }
         
         if (mediaElements == null) {
@@ -234,10 +232,12 @@ public class MediaController {
         
         if(type == null) {
             mediaElements = mediaDao.getRecentlyPlayedDirectoryElements(limit);
-        } else if(type == MediaElement.DirectoryMediaType.AUDIO) {
-            mediaElements = mediaDao.getRecentlyPlayedAudioDirectoryElements(limit);
-        } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
-            mediaElements = mediaDao.getRecentlyPlayedVideoDirectoryElements(limit);
+        } else {
+            if(type == MediaElement.DirectoryMediaType.AUDIO) {
+                mediaElements = mediaDao.getRecentlyPlayedAudioDirectoryElements(limit);
+            } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
+                mediaElements = mediaDao.getRecentlyPlayedVideoDirectoryElements(limit);
+            }
         }
         
         if (mediaElements == null) {
