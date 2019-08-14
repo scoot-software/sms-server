@@ -56,9 +56,7 @@ import org.springframework.stereotype.Service;
 public class AdaptiveStreamingService {
     
     private static final String CLASS_NAME = "AdaptiveStreamingService";
-    
-    public static final Integer DASH_SEGMENT_DURATION = 5;
-    
+        
     // The number of stream alternatives to transcode by default
     public static final Integer DEFAULT_STREAM_COUNT = 2;
     
