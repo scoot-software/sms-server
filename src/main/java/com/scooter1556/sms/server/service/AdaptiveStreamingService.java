@@ -24,7 +24,6 @@
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.SMS;
-import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.AudioTranscode;
 import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Job;
@@ -59,9 +58,6 @@ public class AdaptiveStreamingService {
         
     // The number of stream alternatives to transcode by default
     public static final Integer DEFAULT_STREAM_COUNT = 2;
-    
-    @Autowired
-    private MediaDao mediaDao;
     
     @Autowired
     private TranscodeService transcodeService;
@@ -346,9 +342,9 @@ public class AdaptiveStreamingService {
 
         // Write playlist to buffer so we can get the content length
         StringWriter playlistWriter = new StringWriter();
-        for(String line : playlist) {
+        playlist.forEach((line) -> {
             playlistWriter.write(line + "\n");
-        }
+        });
 
         // Set Header Parameters
         response.reset();
