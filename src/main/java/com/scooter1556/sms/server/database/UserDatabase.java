@@ -90,7 +90,7 @@ public final class UserDatabase extends Database {
           
         try {
             // Add Default User
-            getJdbcTemplate().update("INSERT INTO User (Username,Password) VALUES ('admin','admin')");
+            getJdbcTemplate().update("INSERT INTO User (Username,Password) VALUES ('admin',?)", new Object[] {new BCryptPasswordEncoder().encode("admin")});
             getJdbcTemplate().update("INSERT INTO UserRole (Username,Role) VALUES ('admin','ROLE_ADMIN')");
             getJdbcTemplate().update("INSERT INTO UserRole (Username,Role) VALUES ('admin','ROLE_USER')");
             getJdbcTemplate().update("INSERT INTO UserStats (Username) VALUES ('admin')");
