@@ -385,29 +385,10 @@ public class ScannerService implements DisposableBean {
                 mediaDao.updateMediaElementsByID(fileParser.getUpdatedMediaElements());
             }
             
-            // Extract media streams from parsed media elements
-            List<VideoStream> vStreams = new ArrayList<>();
-            List<AudioStream> aStreams = new ArrayList<>();
-            List<SubtitleStream> sStreams = new ArrayList<>();
-            
-            for(MediaElement element : fileParser.getAllMediaElements()) {
-                if(element.getVideoStreams() != null) {
-                    vStreams.addAll(element.getVideoStreams());
-                }
-                
-                if(element.getAudioStreams() != null) {
-                    aStreams.addAll(element.getAudioStreams());
-                }
-                
-                if(element.getSubtitleStreams() != null) {
-                    sStreams.addAll(element.getSubtitleStreams());
-                }
-            }
-            
             // Add media streams to database
-            mediaDao.createVideoStreams(vStreams);
-            mediaDao.createAudioStreams(aStreams);
-            mediaDao.createSubtitleStreams(sStreams);
+            mediaDao.createVideoStreams(fileParser.getVideoStreams());
+            mediaDao.createAudioStreams(fileParser.getAudioStreams());
+            mediaDao.createSubtitleStreams(fileParser.getSubtitleStreams());
             
             // Add new playlists
             if(!fileParser.getNewPlaylists().isEmpty()) {
@@ -434,23 +415,12 @@ public class ScannerService implements DisposableBean {
             
             // Determine primary media type in folder
             if(folder.getType() == null || folder.getType() == MediaFolder.ContentType.UNKNOWN) {
-                int audio = 0, video = 0, playlist;
+                long audio, video, playlist;
                 
-                // Get number of playlists
-                playlist = fileParser.getAllPlaylists().size();
-                
-                // Iterate over media elements to determine number of each type
-                for(MediaElement element : fileParser.getAllMediaElements()) {
-                    switch(element.getType()) {
-                        case MediaElementType.AUDIO:
-                            audio++;
-                            break;
-                            
-                        case MediaElementType.VIDEO:
-                            video++;
-                            break;
-                    }
-                }
+                // Get counters from parser
+                audio = fileParser.getAudio();
+                video = fileParser.getVideo();
+                playlist = fileParser.getPlaylists();
                 
                 if(audio == 0 && video == 0 && playlist > 0) {
                     folder.setType(MediaFolder.ContentType.PLAYLIST);
@@ -470,28 +440,43 @@ public class ScannerService implements DisposableBean {
     }
 
     private class ParseFiles extends SimpleFileVisitor<Path> {
-        Timestamp scanTime = new Timestamp(new Date().getTime());
+        private final String log;
+        private final Timestamp scanTime = new Timestamp(new Date().getTime());
+        
         private final MediaFolder folder;
         private final Deque<MediaElement> directories = new ArrayDeque<>();
         private final Deque<Deque<MediaElement>> directoryElements = new ArrayDeque<>();
         private final Deque<NFOData> nfoData = new ArrayDeque<>();
         private final HashSet<Path> directoriesToUpdate = new HashSet<>();
-        String log;
-        boolean directoryChanged = false;
+        
+        private boolean directoryChanged = false;
 
+        private final List<MediaElement> newElements;
+        private final List<MediaElement> updatedElements;
+        private final List<Playlist> newPlaylists;
+        private final List<Playlist> updatedPlaylists;
+        private final List<VideoStream> videoStreams;
+        private final List<AudioStream> audioStreams;
+        private final List<SubtitleStream> subtitleStreams;
         
-        private final List<MediaElement> newElements = new ArrayList<>();
-        private final List<MediaElement> updatedElements = new ArrayList<>();
-        private final List<Playlist> newPlaylists = new ArrayList<>();
-        private final List<Playlist> updatedPlaylists = new ArrayList<>();
-        
-        private long files = 0, folders = 0, playlists = 0;
+        private long audio, video, playlists, folders;
         
         public ParseFiles(MediaFolder folder, String log) {
             this.folder = folder;
             this.log = log;
+            
+            // Initialise Variables
+            newElements = new ArrayList<>();
+            updatedElements = new ArrayList<>();
+            newPlaylists = new ArrayList<>();
+            updatedPlaylists = new ArrayList<>();
+            videoStreams = new ArrayList<>();
+            audioStreams = new ArrayList<>();
+            subtitleStreams = new ArrayList<>();
+            
             folders = 0;
-            files = 0;
+            audio = 0;
+            video = 0;
             playlists = 0;
         }
 
@@ -552,7 +537,6 @@ public class ScannerService implements DisposableBean {
                 
                 // Update statistics
                 mTotal++;
-                files++;
                 
                 // Check if media file already has an associated media element
                 MediaElement mediaElement = mediaDao.getMediaElementByPath(file.toString());
@@ -591,12 +575,18 @@ public class ScannerService implements DisposableBean {
                 // Add media element to list
                 directoryElements.peekLast().add(mediaElement);
                 
+                // Update counters
+                if(mediaElement.getType() == MediaElementType.AUDIO) {
+                    audio++;
+                } else if(mediaElement.getType() == MediaElementType.VIDEO) {
+                    video++;
+                }
+                
             } else if(PlaylistUtils.isPlaylist(file)) {
                 LogUtils.writeToLog(log, "Parsing playlist " + file.toString(), Level.DEBUG);
                 
                 // Update statistics
                 mTotal++;
-                files++;
                 playlists++;
                 
                 // Check if playlist already has an associated database entry
@@ -986,7 +976,7 @@ public class ScannerService implements DisposableBean {
         }
         
         public long getTotal() {
-            return files + folders + playlists;
+            return audio + video + folders + playlists;
         }
 
         public long getPlaylists() {
@@ -994,11 +984,19 @@ public class ScannerService implements DisposableBean {
         }
         
         public long getFiles() {
-            return files;
+            return audio + video;
         }
 
         public long getFolders() {
             return folders;
+        }
+        
+        public long getAudio() {
+            return audio;
+        }
+        
+        public long getVideo() {
+            return video;
         }
 
         public Timestamp getScanTime() {
@@ -1013,15 +1011,6 @@ public class ScannerService implements DisposableBean {
             return updatedElements;
         }
         
-        public List<MediaElement> getAllMediaElements() {
-            List<MediaElement> all = new ArrayList<>();
-            
-            all.addAll(newElements);
-            all.addAll(updatedElements);
-            
-            return all;
-        }
-        
         public List<Playlist> getNewPlaylists() {
             return newPlaylists;
         }
@@ -1030,13 +1019,16 @@ public class ScannerService implements DisposableBean {
             return updatedPlaylists;
         }
         
-        public List<Playlist> getAllPlaylists() {
-            List<Playlist> all = new ArrayList<>();
-            
-            all.addAll(newPlaylists);
-            all.addAll(updatedPlaylists);
-            
-            return all;
+        private List<VideoStream> getVideoStreams() {
+            return videoStreams;
+        }
+        
+        private List<AudioStream> getAudioStreams() {
+            return audioStreams;
+        }
+        
+        private List<SubtitleStream> getSubtitleStreams() {
+            return subtitleStreams;
         }
     }
 }
