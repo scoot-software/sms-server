@@ -569,6 +569,19 @@ public class ScannerService implements DisposableBean {
                         mediaDao.removeMediaElement(mediaElement.getID());
                         return CONTINUE;
                     }
+                    
+                    // Add streams to update lists
+                    if(mediaElement.getVideoStreams() != null && !mediaElement.getVideoStreams().isEmpty()) {
+                        videoStreams.addAll(mediaElement.getVideoStreams());
+                    }
+                    
+                    if(mediaElement.getAudioStreams() != null && !mediaElement.getAudioStreams().isEmpty()) {
+                        audioStreams.addAll(mediaElement.getAudioStreams());
+                    }
+                    
+                    if(mediaElement.getSubtitleStreams() != null && !mediaElement.getSubtitleStreams().isEmpty()) {
+                        subtitleStreams.addAll(mediaElement.getSubtitleStreams());
+                    }
                 }
                 
                 // Add media element to list
