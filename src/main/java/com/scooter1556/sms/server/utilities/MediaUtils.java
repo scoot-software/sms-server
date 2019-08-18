@@ -326,6 +326,9 @@ public class MediaUtils {
             case "aac":
                 return SMS.Format.AAC;
                 
+            case "ac3":
+                return SMS.Format.AC3;
+
             case "avi":
                 return SMS.Format.AVI;
                 
