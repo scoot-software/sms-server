@@ -333,7 +333,6 @@ public class ScannerService implements DisposableBean {
         
         if(deepScanExecutor != null && !deepScanExecutor.isTerminated()) {
             abortDeepScan = true;
-            deepScanExecutor.shutdownNow();
             frameParser.stop();
             
             LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG);
