@@ -148,7 +148,7 @@ public class AdaptiveStreamingService {
                 }
 
                 // Determine extension for segment
-                String extension = MediaUtils.getExtensionForFormat(format, SMS.MediaType.AUDIO);
+                String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.AUDIO, format);
 
                 playlist.add("#EXT-X-STREAM-INF:PROGRAM-ID=1, BANDWIDTH=" + bandwidth + ", CODECS=\"" + TranscodeUtils.getIsoSpecForCodec(codec) + "\"");
                 playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i + "/" + extension);
