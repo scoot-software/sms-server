@@ -74,6 +74,16 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             process.destroy();
         }
         
+        // Stop segment tracking if re-initialising
+        if(tailer != null) {
+            tailer.stop();
+        }
+        
+        // Stop post-processing pool if already running
+        if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
+            postProcessExecutor.shutdownNow();
+        }
+        
         // Determine stream directory
         streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
         
@@ -97,7 +107,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             // Reset flags
             ended = false;
             
-            //  Setup thread pool for post-processing segments
+            // Setup thread pool for post-processing segments
             postProcessExecutor = Executors.newCachedThreadPool();
             
             // Setup tailer for segment list
