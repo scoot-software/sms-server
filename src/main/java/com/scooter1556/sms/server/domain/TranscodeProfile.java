@@ -86,7 +86,7 @@ public class TranscodeProfile {
     public void setSubtitleTranscodes(SubtitleTranscode[] subtitleTranscodes) {
         this.subtitleTranscodes = subtitleTranscodes;
     }
-    
+        
     public Integer getVideoStream() {
         return videoStream;
     }

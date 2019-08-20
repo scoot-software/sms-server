@@ -277,7 +277,11 @@ public class StreamController {
                 workdir.register(watcher, ENTRY_CREATE);
                 boolean isFound = false;
                 
-                while(!isFound) {
+                // Determine count for equivilent of 5 segments
+                int totalTranscodes = profile.getAudioTranscodes().length + profile.getSubtitleTranscodes().length + profile.getVideoTranscodes().length;
+                int attempts = 5 * totalTranscodes;
+                
+                while(!isFound & attempts > 0) {
                     WatchKey key;
                     
                     try {
@@ -296,9 +300,16 @@ public class StreamController {
                         WatchEvent<Path> pathEvent = (WatchEvent<Path>) event;
                         Path filePath = pathEvent.context();
 
-                        if(kind == ENTRY_CREATE && filePath.toString().equals(segment.getPath())) {
-                            isFound = true;
-                            break;
+                        if(kind == ENTRY_CREATE) {
+                            if(filePath.toString().equals(segment.getPath())) {
+                                isFound = true;
+                                break;
+                            }
+                            
+                            // If this is a finished segment reduce the number of remaining attempts
+                            if(!filePath.toString().endsWith("tmp")) {
+                                attempts --;
+                            }
                         }
                     }
 
