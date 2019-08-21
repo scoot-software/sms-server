@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListener;
@@ -79,7 +80,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             tailer.stop();
         }
         
-        // Stop post-processing pool if already running
+        // Stop post-processing execution if already running
         if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
             postProcessExecutor.shutdownNow();
         }
@@ -145,7 +146,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         //  Stop segment tracking
         tailer.stop();
         
-        // Stop post-processing pool
+        // Stop post-processing execution
         if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
             postProcessExecutor.shutdownNow();
         }

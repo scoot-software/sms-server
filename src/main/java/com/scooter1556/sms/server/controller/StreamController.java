@@ -268,6 +268,8 @@ public class StreamController {
                 }
             }
             
+            
+            
             // Check if segment is available and wait for it if not
             if(!segment.exists()) {
                 // Watch work directory for segments
@@ -277,12 +279,14 @@ public class StreamController {
                 workdir.register(watcher, ENTRY_CREATE);
                 boolean isFound = false;
                 
-                // Determine count for equivilent of 5 segments
-                int totalTranscodes = profile.getAudioTranscodes().length + profile.getSubtitleTranscodes().length + profile.getVideoTranscodes().length;
-                int attempts = 5 * totalTranscodes;
-                
-                while(!isFound & attempts > 0) {
+                while(!isFound) {
                     WatchKey key;
+                    
+                    // Do a simple check
+                    if(segment.exists()) {
+                        isFound = true;
+                        break;
+                    }
                     
                     try {
                         key = watcher.poll(TranscodeUtils.DEFAULT_SEGMENT_DURATION, TimeUnit.SECONDS);
@@ -292,6 +296,7 @@ public class StreamController {
                     
                     // Check for timeout
                     if(key == null) {
+                        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "No activity for job " + job.getId() + " in more than " + TranscodeUtils.DEFAULT_SEGMENT_DURATION + " seconds!", null);
                         break;
                     }
 
@@ -304,11 +309,6 @@ public class StreamController {
                             if(filePath.toString().equals(segment.getPath())) {
                                 isFound = true;
                                 break;
-                            }
-                            
-                            // If this is a finished segment reduce the number of remaining attempts
-                            if(!filePath.toString().endsWith("tmp")) {
-                                attempts --;
                             }
                         }
                     }
@@ -324,7 +324,7 @@ public class StreamController {
                     
                 if(!isFound) {
                     // Timed out waiting for segment
-                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to return segment " + file + " for job " + job.getId() + ".", null);
+                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Timed out waiting for segment " + file + " for job " + job.getId() + ".", null);
                     response.sendError(HttpServletResponse.SC_NO_CONTENT, "Requested segment is not available.");
                     return;
                 }
