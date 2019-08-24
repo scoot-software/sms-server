@@ -49,7 +49,9 @@ public class TranscodeUtils {
     public static final String[] TRANSCODER_PATH_WINDOWS = {
         System.getenv("SystemDrive") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffmpeg.exe",
         System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
+        System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffmpeg.exe",
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffmpeg.exe",
+        System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffmpeg.exe",
     };
     
     public static final String ISO_AVC_BASELINE = "avc1.42E01E";
