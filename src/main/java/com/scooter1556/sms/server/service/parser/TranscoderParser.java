@@ -24,28 +24,28 @@ public class TranscoderParser {
     private static final Pattern VERSION = Pattern.compile(".*?version\\s+(\\d+\\.\\d+\\.?\\d*)", Pattern.CASE_INSENSITIVE);
     
     // Codecs
-    private static final String AVC = "VFS..D h264                 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10";
-    private static final String MPEG2 = "V.S.BD mpeg2video           MPEG-2 video";
-    private static final String HEVC = "VFS..D hevc                 HEVC (High Efficiency Video Coding)";
-    private static final String VC1 = "V....D vc1                  SMPTE VC-1";
+    private static final String AVC = "VFS..D h264 ";
+    private static final String MPEG2 = "V.S.BD mpeg2video ";
+    private static final String HEVC = "VFS..D hevc ";
+    private static final String VC1 = "V....D vc1 ";
     
-    private static final String AAC = "A....D aac                  AAC (Advanced Audio Coding)";
-    private static final String AC3 = "A....D ac3                  ATSC A/52A (AC-3)";
-    private static final String EAC3 = "A....D eac3                 ATSC A/52B (AC-3, E-AC-3)";
-    private static final String DTS = "A....D dca                  DCA (DTS Coherent Acoustics) (codec dts)";
-    private static final String PCM = "A....D pcm_s16le            PCM signed 16-bit little-endian";
-    private static final String TRUEHD = "A....D truehd               TrueHD";
-    private static final String MP3 = "A....D mp3                  MP3 (MPEG audio layer 3)";
-    private static final String DSD = "A..... dsd_lsbf             DSD (Direct Stream Digital), least significant bit first";
-    private static final String FLAC = "AF...D flac                 FLAC (Free Lossless Audio Codec)";
-    private static final String ALAC = "AF...D alac                 ALAC (Apple Lossless Audio Codec)";
-    private static final String VORBIS = "A....D vorbis               Vorbis";
+    private static final String AAC = "A....D aac ";
+    private static final String AC3 = "A....D ac3 ";
+    private static final String EAC3 = "A....D eac3 ";
+    private static final String DTS = "A....D dca ";
+    private static final String PCM = "A....D pcm_s16le ";
+    private static final String TRUEHD = "A....D truehd ";
+    private static final String MP3 = "A....D mp3 ";
+    private static final String DSD = "A..... dsd_lsbf ";
+    private static final String FLAC = "AF...D flac ";
+    private static final String ALAC = "AF...D alac ";
+    private static final String VORBIS = "A....D vorbis ";
     
-    private static final String SUBRIP = "S..... subrip               SubRip subtitle";
-    private static final String WEBVTT = "S..... webvtt               WebVTT subtitle";
-    private static final String PGS =  "S..... pgssub               HDMV Presentation Graphic Stream subtitles (codec hdmv_pgs_subtitle)";
-    private static final String DVB = "S..... dvbsub               DVB subtitles (codec dvb_subtitle)";
-    private static final String DVD = "S..... dvdsub               DVD subtitles (codec dvd_subtitle)";
+    private static final String SUBRIP = "S..... subrip ";
+    private static final String WEBVTT = "S..... webvtt ";
+    private static final String PGS =  "S..... pgssub ";
+    private static final String DVB = "S..... dvbsub ";
+    private static final String DVD = "S..... dvdsub ";
 
     
     public static Transcoder parse(Transcoder transcoder) {
@@ -89,93 +89,110 @@ public class TranscoderParser {
         String[] result = ParserUtils.getProcessOutput(command, false);
         List<Integer> codecs = new ArrayList<>();
         
-        for(String line : result) {            
-            switch(line) {
-                case AVC:
-                    codecs.add(SMS.Codec.AVC_BASELINE);
-                    codecs.add(SMS.Codec.AVC_MAIN);
-                    codecs.add(SMS.Codec.AVC_HIGH);
-                    codecs.add(SMS.Codec.AVC_HIGH10);
-                    break;
-                    
-                case MPEG2:
-                    codecs.add(SMS.Codec.MPEG2);
-                    break;
-                    
-                case HEVC:
-                    codecs.add(SMS.Codec.HEVC_MAIN);
-                    codecs.add(SMS.Codec.HEVC_MAIN10);
-                    codecs.add(SMS.Codec.HEVC_HDR10);
-                    break;
-                    
-                case VC1:
-                    codecs.add(SMS.Codec.VC1);
-                    break;
-                    
-                case AAC:
-                    codecs.add(SMS.Codec.AAC);
-                    break;
-                    
-                case AC3:
-                    codecs.add(SMS.Codec.AC3);
-                    break;
-                    
-                case EAC3:
-                    codecs.add(SMS.Codec.EAC3);
-                    break;
-                    
-                case DTS:
-                    codecs.add(SMS.Codec.DTS);
-                    codecs.add(SMS.Codec.DTSHD);
-                    break;
-                    
-                case PCM:
-                    codecs.add(SMS.Codec.PCM);
-                    break;
-                    
-                case TRUEHD:
-                    codecs.add(SMS.Codec.TRUEHD);
-                    break;
-                    
-                case MP3:
-                    codecs.add(SMS.Codec.MP3);
-                    break;
-                    
-                case DSD:
-                    codecs.add(SMS.Codec.DSD);
-                    break;
-                    
-                case FLAC:
-                    codecs.add(SMS.Codec.FLAC);
-                    break;
-                    
-                case ALAC:
-                    codecs.add(SMS.Codec.ALAC);
-                    break;
-                    
-                case VORBIS:
-                    codecs.add(SMS.Codec.VORBIS);
-                    break;
-                    
-                case SUBRIP:
-                    codecs.add(SMS.Codec.SUBRIP);
-                    break;
-                    
-                case WEBVTT:
-                    codecs.add(SMS.Codec.WEBVTT);
-                    break;
-                    
-                case PGS:
-                    codecs.add(SMS.Codec.PGS);
-                    break;
-                    
-                case DVB:
-                    codecs.add(SMS.Codec.DVB);
-                    break;
-                    
-                case DVD:
-                    codecs.add(SMS.Codec.DVD);
-                    break;
+        for(String line : result) {
+            if(line.contains(AVC)) {
+                codecs.add(SMS.Codec.AVC_BASELINE);
+                codecs.add(SMS.Codec.AVC_MAIN);
+                codecs.add(SMS.Codec.AVC_HIGH);
+                codecs.add(SMS.Codec.AVC_HIGH10);
+                continue;
+            }
+            
+            if(line.contains(MPEG2)) {
+                codecs.add(SMS.Codec.MPEG2);
+                continue;
+            }
+            
+            if(line.contains(HEVC)) {
+                codecs.add(SMS.Codec.HEVC_MAIN);
+                codecs.add(SMS.Codec.HEVC_MAIN10);
+                codecs.add(SMS.Codec.HEVC_HDR10);
+                continue;
+            }
+            
+            if(line.contains(VC1)) {
+                codecs.add(SMS.Codec.VC1);
+                continue;
+            }
+            
+            if(line.contains(AAC)) {
+                codecs.add(SMS.Codec.AAC);
+                continue;
+            }
+            
+            if(line.contains(AC3)) {
+                codecs.add(SMS.Codec.AC3);
+                continue;
+            }
+            
+            if(line.contains(EAC3)) {
+                codecs.add(SMS.Codec.EAC3);
+                continue;
+            }
+            
+            if(line.contains(DTS)) {
+                codecs.add(SMS.Codec.DTS);
+                codecs.add(SMS.Codec.DTSHD);
+                continue;
+            }
+            
+            if(line.contains(PCM)) {
+                codecs.add(SMS.Codec.PCM);
+                continue;
+            }
+            
+            if(line.contains(TRUEHD)) {
+                codecs.add(SMS.Codec.TRUEHD);
+                continue;
+            }
+            
+            if(line.contains(MP3)) {
+                codecs.add(SMS.Codec.MP3);
+                continue;
+            }
+            
+            if(line.contains(DSD)) {
+                codecs.add(SMS.Codec.DSD);
+                continue;
+            }
+            
+            if(line.contains(FLAC)) {
+                codecs.add(SMS.Codec.FLAC);
+                continue;
+            }
+            
+            if(line.contains(ALAC)) {
+                codecs.add(SMS.Codec.ALAC);
+                continue;
+            }
+            
+            if(line.contains(VORBIS)) {
+                codecs.add(SMS.Codec.VORBIS);
+                continue;
+            }
+            
+            if(line.contains(SUBRIP)) {
+                codecs.add(SMS.Codec.SUBRIP);
+                continue;
+            }
+            
+            if(line.contains(WEBVTT)) {
+                codecs.add(SMS.Codec.WEBVTT);
+                continue;
+            }
+            
+            if(line.contains(PGS)) {
+                codecs.add(SMS.Codec.PGS);
+                continue;
+            }
+            
+            if(line.contains(DVB)) {
+                codecs.add(SMS.Codec.DVB);
+                continue;
+            }
+            
+            if(line.contains(DVD)) {
+                codecs.add(SMS.Codec.DVD);
             }
         }
         
