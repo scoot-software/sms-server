@@ -2,12 +2,9 @@ package com.scooter1556.sms.server.utilities;
 
 import com.scooter1556.sms.server.service.SettingsService;
 import static com.scooter1556.sms.server.service.parser.MetadataParser.getParserPaths;
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -22,14 +19,16 @@ public class ParserUtils {
     public static final String LINUX_HARDWARE_PARSER = "lshw";
     
     public static final String[] METADATA_PARSER_PATH_LINUX = {
-        "/usr/bin/ffprobe",
         "/usr/local/bin/ffprobe",
+        "/usr/bin/ffprobe",
     };
     
     public static final String[] METADATA_PARSER_PATH_WINDOWS = {
         System.getenv("SystemDrive") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffprobe.exe",
         System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "ffprobe.exe",
+        System.getenv("ProgramFiles") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffprobe.exe",
         System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "ffprobe.exe",
+        System.getenv("%programfiles% (x86)") + File.separator + "ffmpeg" + File.separator + "bin" + File.separator + "ffprobe.exe",
     };
     
     public static Path getMetadataParser() {
