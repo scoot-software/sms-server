@@ -467,6 +467,7 @@ public class StreamController {
                     if(parentElement != null) {
                         mediaDao.updateLastPlayed(parentElement.getID());
                     }
+                    
                     // Add job to session
                     session.addJob(job);
 
@@ -484,6 +485,7 @@ public class StreamController {
                         }
                     }
                     
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, session.getUsername() + " streaming: " + mediaElement, null);
                     LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, session.getUsername() + " started streaming '" + mediaElement.getTitle() + "'.", null);
                 }
             } else {

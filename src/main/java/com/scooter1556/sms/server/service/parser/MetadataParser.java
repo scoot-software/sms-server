@@ -474,6 +474,19 @@ public class MetadataParser {
                             }
                         }
                     }
+                    
+                    // Replaygain
+                    if(tags.asObject().get("replaygain_track_gain") != null) {
+                        mediaElement.setReplaygainTrack(ParserUtils.getReplaygainValue(tags.asObject().getString("replaygain_track_gain", "")));
+                    } else if(tags.asObject().get("REPLAYGAIN_TRACK_GAIN") != null) {
+                        mediaElement.setReplaygainTrack(ParserUtils.getReplaygainValue(tags.asObject().getString("REPLAYGAIN_TRACK_GAIN", "")));
+                    }
+                    
+                    if(tags.asObject().get("replaygain_album_gain") != null) {
+                        mediaElement.setReplaygainAlbum(ParserUtils.getReplaygainValue(tags.asObject().getString("replaygain_album_gain", "")));
+                    } else if(tags.asObject().get("REPLAYGAIN_ALBUM_GAIN") != null) {
+                        mediaElement.setReplaygainAlbum(ParserUtils.getReplaygainValue(tags.asObject().getString("REPLAYGAIN_ALBUM_GAIN", "")));
+                    }
                 }
             }
         } catch (Exception x) {

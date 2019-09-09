@@ -60,8 +60,8 @@ public class MediaDao {
     //
     
     public boolean createMediaElements(final List<MediaElement> mediaElements) {
-        String sql = "INSERT INTO MediaElement (ID,Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection) " +
-                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        String sql = "INSERT INTO MediaElement (ID,Type,DirectoryType,Path,ParentPath,LastScanned,Excluded,Format,Size,Duration,Bitrate,Title,Artist,AlbumArtist,Album,Year,DiscNumber,DiscSubtitle,TrackNumber,Genre,Rating,Tagline,Description,Certificate,Collection,ReplaygainTrack,ReplaygainAlbum) " +
+                                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -93,6 +93,8 @@ public class MediaDao {
                     ps.setString(23, mediaElement.getDescription());
                     ps.setString(24, mediaElement.getCertificate());
                     ps.setString(25, mediaElement.getCollection());
+                    ps.setFloat(26, mediaElement.getReplaygainTrack());
+                    ps.setFloat(27, mediaElement.getReplaygainAlbum());
                 }
 
                 @Override
@@ -137,7 +139,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByID(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE ID=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=?,ReplaygainTrack=?,ReplaygainAlbum=? WHERE ID=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -164,7 +166,9 @@ public class MediaDao {
                     ps.setString(18, mediaElement.getDescription());
                     ps.setString(19, mediaElement.getCertificate());
                     ps.setString(20, mediaElement.getCollection());
-                    ps.setObject(21, mediaElement.getID());
+                    ps.setFloat(21, mediaElement.getReplaygainTrack());
+                    ps.setFloat(22, mediaElement.getReplaygainAlbum());
+                    ps.setObject(23, mediaElement.getID());
                 }
 
                 @Override
@@ -181,7 +185,7 @@ public class MediaDao {
     }
     
     public boolean updateMediaElementsByPath(final List<MediaElement> mediaElements) {
-        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=? WHERE PATH=?";
+        String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=?,ReplaygainTrack=?,ReplaygainAlbum=? WHERE PATH=?";
         
         try {
             mediaDatabase.getJdbcTemplate().batchUpdate(sql, new BatchPreparedStatementSetter() {	
@@ -208,7 +212,9 @@ public class MediaDao {
                     ps.setString(18, mediaElement.getDescription());
                     ps.setString(19, mediaElement.getCertificate());
                     ps.setString(20, mediaElement.getCollection());
-                    ps.setString(21, mediaElement.getPath());
+                    ps.setFloat(21, mediaElement.getReplaygainTrack());
+                    ps.setFloat(22, mediaElement.getReplaygainAlbum());
+                    ps.setString(23, mediaElement.getPath());
                 }
 
                 @Override

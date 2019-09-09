@@ -61,6 +61,8 @@ public class MediaElement implements Serializable {
     private String description;
     private String certificate;
     private String collection;
+    private Float replaygainTrack = 0f;
+    private Float replaygainAlbum = 0f;
     
     List<VideoStream> videoStreams;
     List<AudioStream> audioStreams;
@@ -94,7 +96,9 @@ public class MediaElement implements Serializable {
                         String tagline,
                         String description,
                         String certificate,
-                        String collection) {
+                        String collection,
+                        Float replaygainTrack,
+                        Float replaygainAlbum) {
         this.id = id;
         this.type = type;
         this.directoryType = directoryType;
@@ -122,6 +126,8 @@ public class MediaElement implements Serializable {
         this.description = description;
         this.certificate = certificate;
         this.collection = collection;
+        this.replaygainTrack = replaygainTrack;
+        this.replaygainAlbum = replaygainAlbum;
     }
     
     @Override
@@ -160,7 +166,7 @@ public class MediaElement implements Serializable {
                     subtitleStreams == null ? "N/A" : subtitleStreams.toString());
             case MediaElementType.AUDIO:
                 return String.format(
-                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s, Audio Streams=%s]",
+                    "AudioElement[ID=%s, Title=%s, Path=%s, Created=%s, LastPlayed=%s, Duration=%s seconds, Bitrate=%s kb/s, Artist=%s, Album Artist=%s, Album=%s, Track Number=%s, Disc Number=%s, Disc Subtitle=%s, Year=%s, Genre=%s, Description=%s, Replaygain Track=%s, Replaygain Album=%s, Audio Streams=%s]",
                     id == null ? "?" : id.toString(),
                     title == null ? "N/A" : title,
                     path == null ? "N/A" : path,
@@ -177,6 +183,8 @@ public class MediaElement implements Serializable {
                     year.toString(),
                     genre == null ? "N/A" : genre,
                     description == null ? "N/A" : description,
+                    replaygainTrack == null ? "N/A" : replaygainTrack,
+                    replaygainAlbum == null ? "N/A" : replaygainAlbum,
                     audioStreams == null ? "N/A" : audioStreams.toString());
                 
             default:
@@ -408,6 +416,24 @@ public class MediaElement implements Serializable {
     
     public void setCollection(String collection) {
         this.collection = collection;
+    }
+    
+    @JsonIgnore
+    public Float getReplaygainTrack() {
+        return replaygainTrack;
+    }
+    
+    public void setReplaygainTrack(Float replaygain) {
+        this.replaygainTrack = replaygain;
+    }
+    
+    @JsonIgnore
+    public Float getReplaygainAlbum() {
+        return replaygainAlbum;
+    }
+    
+    public void setReplaygainAlbum(Float replaygain) {
+        this.replaygainAlbum = replaygain;
     }
     
     @JsonIgnore

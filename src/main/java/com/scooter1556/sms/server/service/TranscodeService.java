@@ -473,6 +473,12 @@ public class TranscodeService {
                 commands.add("-ar");
                 commands.add(String.valueOf(transcode.getSampleRate()));
             }
+            
+            // Replaygain
+            if(transcode.getReplaygain() != null && transcode.getReplaygain() != 0f) {
+                commands.add("-af");
+                commands.add("volume=volume="+ String.valueOf(transcode.getReplaygain()) + "dB");
+            }
         }
         
         return commands;
@@ -734,6 +740,7 @@ public class TranscodeService {
             int bitrate = -1;
             Integer sampleRate = null;
             int numChannels = stream.getChannels();
+            Float replaygain = null;
             
             // Check if transcoding is required
             boolean transcodeRequired = TranscodeUtils.isTranscodeRequired(clientProfile, mediaElement, stream);
@@ -779,11 +786,26 @@ public class TranscodeService {
 
                         bitrate = new Double(bitrate  * (numChannels * 0.5)).intValue();
                     }
+                    
+                    // Replaygain
+                    if(clientProfile.getReplaygain() != null) {
+                        if(clientProfile.getReplaygain() == SMS.ReplaygainMode.ALBUM || clientProfile.getReplaygain() == SMS.ReplaygainMode.NATIVE_ALBUM) {
+                            if(mediaElement.getReplaygainAlbum() != null && mediaElement.getReplaygainAlbum() != 0f) {
+                                replaygain = mediaElement.getReplaygainAlbum();
+                            }
+                        }
+
+                        if(clientProfile.getReplaygain() == SMS.ReplaygainMode.TRACK || clientProfile.getReplaygain() == SMS.ReplaygainMode.NATIVE_TRACK) {
+                            if(mediaElement.getReplaygainTrack() != null && mediaElement.getReplaygainTrack() != 0f) {
+                                replaygain = mediaElement.getReplaygainTrack();
+                            }
+                        }
+                    }
                 }
             }
             
             // Add transcode properties to array
-            transcodes.add(new AudioTranscode(stream.getStreamId(), stream.getCodec(), codec, bitrate, sampleRate, numChannels));
+            transcodes.add(new AudioTranscode(stream.getStreamId(), stream.getCodec(), codec, bitrate, sampleRate, numChannels, replaygain));
         });
         
         // Update profile with audio transcode properties

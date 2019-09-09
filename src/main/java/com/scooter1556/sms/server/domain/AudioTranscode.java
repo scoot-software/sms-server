@@ -8,25 +8,28 @@ public class AudioTranscode {
     private Integer oCodec, tCodec;
     private Integer bitrate, sampleRate;
     private Integer channels;
+    private Float replaygain;
 
-    public AudioTranscode(Integer id, Integer oCodec, Integer tCodec, Integer bitrate, Integer sampleRate, Integer channels) {
+    public AudioTranscode(Integer id, Integer oCodec, Integer tCodec, Integer bitrate, Integer sampleRate, Integer channels, Float replaygain) {
         this.id = id;
         this.oCodec = oCodec;
         this.tCodec = tCodec;
         this.bitrate = bitrate;
         this.sampleRate = sampleRate;
         this.channels = channels;
+        this.replaygain = replaygain;
     }
 
     @Override
     public String toString() {
-        return String.format("{ID=%s, Original Codec=%s, Transcode Codec=%s, Bitrate=%s, Sample Rate=%s, Channels=%s}",
+        return String.format("{ID=%s, Original Codec=%s, Transcode Codec=%s, Bitrate=%s, Sample Rate=%s, Channels=%s, Replaygain=%s}",
                 id == null ? "null" : id.toString(),
                 oCodec == null ? "null" : oCodec.toString(),
                 tCodec == null ? "null" : tCodec.toString(),
                 bitrate == null ? "null" : bitrate.toString(),
                 sampleRate == null ? "null" : sampleRate.toString(),
-                channels == null ? "null" : channels.toString());
+                channels == null ? "null" : channels.toString(),
+                replaygain == null ? "null" : replaygain.toString());
     }
     
     public Integer getId() {
@@ -75,6 +78,14 @@ public class AudioTranscode {
     
     public void setChannelCount(int channels) {
         this.channels = channels;
+    }
+    
+    public Float getReplaygain() {
+        return replaygain;
+    }
+    
+    public void setReplaygain(float replaygain) {
+        this.replaygain = replaygain;
     }
     
     public static class AudioQuality {

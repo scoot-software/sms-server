@@ -105,6 +105,26 @@ public class ParserUtils {
     }
     
     //
+    // Replaygain Helpers
+    //
+    public static float getReplaygainValue(String value) {
+        // Check if there is anything to process
+        if(value == null || value.isEmpty()) {
+            return 0f;
+        }
+        
+        // Split string
+        String[] splitVal = value.split("\\s+");
+        
+        // Check we got the expected result
+        if(splitVal.length < 2) {
+            return 0f;
+        }
+        
+        return Float.parseFloat(splitVal[0]);
+    }
+    
+    //
     // XML Helpers
     //
     public static Node getNode(String tagName, NodeList nodes) {

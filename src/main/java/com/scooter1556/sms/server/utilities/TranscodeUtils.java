@@ -811,6 +811,21 @@ public class TranscodeUtils {
         if((stream.getSampleRate() > profile.getMaxSampleRate()) && (stream.getCodec() != SMS.Codec.DSD)) {
             return true;
         }
+        
+        // Replaygain
+        if(profile.getReplaygain() != null) {
+            if(profile.getReplaygain() == SMS.ReplaygainMode.TRACK 
+                    && mediaElement.getReplaygainTrack() != null 
+                    && mediaElement.getReplaygainTrack() != 0f) {
+                return true;
+            }
+            
+            if(profile.getReplaygain() == SMS.ReplaygainMode.ALBUM
+                    && mediaElement.getReplaygainAlbum() != null 
+                    && mediaElement.getReplaygainAlbum() != 0f) {
+                return true;
+            }
+        }
 
         // If client is not on the local network check stream parameters
         if(!profile.getLocal() || !profile.getDirectPlay()) {

@@ -6,14 +6,14 @@ import java.util.Arrays;
 public class ClientProfile implements Serializable {
     private Integer[] formats, codecs, mchCodecs;
     private String url;
-    private Integer client, format, videoQuality, audioQuality, maxBitrate, maxSampleRate = 48000;
+    private Integer client, format, videoQuality, audioQuality, maxBitrate, maxSampleRate = 48000, replaygain;
     private Boolean directPlay = false, local = false;
     
     public void ClientProfile() {} ;
     
     @Override
     public String toString() {
-        return String.format("{Client=%s, URL=%s, Format=%s, Supported Formats=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Video Quality=%s, Audio Quality=%s, Max Bitrate=%s, Max Sample Rate=%s, Direct Play=%s, Local=%s}",
+        return String.format("{Client=%s, URL=%s, Format=%s, Supported Formats=%s, Supported Codecs=%s, Supported Multichannel Codecs=%s, Video Quality=%s, Audio Quality=%s, Max Bitrate=%s, Max Sample Rate=%s, Replaygain Mode=%s, Direct Play=%s, Local=%s}",
                 client == null ? "null" : client.toString(),
                 url == null ? "null" : url,
                 format == null ? "null" : format.toString(),
@@ -24,6 +24,7 @@ public class ClientProfile implements Serializable {
                 audioQuality == null ? "null" : audioQuality.toString(),
                 maxBitrate == null ? "null" : maxBitrate.toString(),
                 maxSampleRate == null ? "null" : maxSampleRate.toString(),
+                replaygain == null ? "null" : replaygain.toString(),
                 directPlay == null ? "null" : directPlay.toString(),
                 local == null ? "null" : local.toString()
         );
@@ -107,6 +108,14 @@ public class ClientProfile implements Serializable {
 
     public void setMaxBitrate(int maxBitrate) {
         this.maxBitrate = maxBitrate;
+    }
+    
+    public Integer getReplaygain() {
+        return replaygain;
+    }
+
+    public void setReplaygain(int replaygain) {
+        this.replaygain = replaygain;
     }
     
     public boolean getDirectPlay() {

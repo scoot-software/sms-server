@@ -85,6 +85,14 @@ public class SMS {
         public static final int KODI = 4;
     }
     
+    public static class ReplaygainMode {
+        public static final int OFF = 0;
+        public static final int NATIVE_TRACK = 1;
+        public static final int NATIVE_ALBUM = 2;
+        public static final int TRACK = 3;
+        public static final int ALBUM = 4;
+    }
+    
     public static class TranscodeReason {
         public static final int UNKNOWN = -1;
         public static final int NONE = 0;

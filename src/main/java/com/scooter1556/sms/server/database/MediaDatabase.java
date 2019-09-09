@@ -39,7 +39,7 @@ public class MediaDatabase extends Database {
     private static final String CLASS_NAME = "MediaDatabase";
     
     public static final String DB_NAME = "Media";
-    public static final int DB_VERSION = 5;
+    public static final int DB_VERSION = 6;
     
     public MediaDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -87,6 +87,8 @@ public class MediaDatabase extends Database {
                     + "Description VARCHAR,"
                     + "Certificate VARCHAR(10),"
                     + "Collection VARCHAR,"
+                    + "ReplaygainTrack REAL,"
+                    + "ReplaygainAlbum REAL,"
                     + "PRIMARY KEY (ID))");
             
             // Video Streams
@@ -200,6 +202,8 @@ public class MediaDatabase extends Database {
             mediaElement.setDescription(rs.getString("Description"));
             mediaElement.setCertificate(rs.getString("Certificate"));
             mediaElement.setCollection(rs.getString("Collection"));
+            mediaElement.setReplaygainTrack(rs.getFloat("ReplaygainTrack"));
+            mediaElement.setReplaygainAlbum(rs.getFloat("ReplaygainAlbum"));
             
             return mediaElement;
         }
@@ -297,6 +301,11 @@ public class MediaDatabase extends Database {
             getJdbcTemplate().execute("DROP TABLE IF EXISTS VideoStream");
             getJdbcTemplate().execute("DROP TABLE IF EXISTS AudioStream");
             getJdbcTemplate().execute("DROP TABLE IF EXISTS SubtitleStream");
+        }
+        
+        if(newVersion == 6) {
+            getJdbcTemplate().update("ALTER TABLE MediaElement ADD ReplaygainTrack REAL");
+            getJdbcTemplate().update("ALTER TABLE MediaElement ADD ReplaygainAlbum REAL");
         }
         
         create();
