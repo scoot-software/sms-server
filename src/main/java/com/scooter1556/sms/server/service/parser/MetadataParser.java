@@ -395,6 +395,8 @@ public class MetadataParser {
                         date = tags.asObject().getString("tyer", "0");
                     } else if(tags.asObject().get("TYER") != null) {
                         date = tags.asObject().getString("TYER", "0");
+                    } else if(tags.asObject().get("DATE_RECORDED") != null) {
+                        date = tags.asObject().getString("DATE_RECORDED", "0");
                     }
                     
                     if(date != null && date.length() >= 4) {
