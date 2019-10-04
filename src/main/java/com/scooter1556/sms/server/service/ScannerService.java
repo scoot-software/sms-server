@@ -48,6 +48,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import static java.nio.file.FileVisitResult.CONTINUE;
 import static java.nio.file.FileVisitResult.SKIP_SUBTREE;
+import static java.nio.file.FileVisitResult.TERMINATE;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
@@ -108,6 +109,7 @@ public class ScannerService implements DisposableBean {
         
     // Media scanning thread pool
     ExecutorService scanningThreads = null;
+    boolean abortScan = false;
     
     // Deep scan executor
     ExecutorService deepScanExecutor = null;
@@ -119,10 +121,7 @@ public class ScannerService implements DisposableBean {
     // End scanning jobs on application exit
     @Override
     public void destroy() {
-        if(isScanning()) {
-            scanningThreads.shutdownNow();
-        }
-        
+        stopScanning();        
         stopDeepScan();
     }
     
@@ -230,6 +229,9 @@ public class ScannerService implements DisposableBean {
         // Reset scan count
         mTotal = 0;
         
+        // Reset abort flag
+        abortScan = false;
+        
         // Log
         final String log = SettingsService.getInstance().getLogDirectory() + "/mediascanner-" + new Timestamp(new Date().getTime()) + ".log";
         
@@ -263,6 +265,9 @@ public class ScannerService implements DisposableBean {
         if(playlists == null || playlists.isEmpty()) {
             return;
         }
+        
+        // Reset abort flag
+        abortScan = false;
         
         // Create media scanning threads
         scanningThreads = Executors.newFixedThreadPool(playlists.size());
@@ -331,13 +336,24 @@ public class ScannerService implements DisposableBean {
     public void stopDeepScan() {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "stopDeepScan()", null);
         
-        if(deepScanExecutor != null && !deepScanExecutor.isTerminated()) {
+        if(isDeepScanning()) {
             abortDeepScan = true;
             frameParser.stop();
             
             LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG);
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deep scan stopped.", null);
         }
+    }
+    
+    public void stopScanning() {
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "stopScanning()", null);
+        
+        if(isScanning()) {
+            abortScan = true;
+            scanningThreads.shutdownNow();
+        }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning stopped.", null);
     }
     
     private void scanPlaylist(Playlist playlist) {
@@ -347,19 +363,22 @@ public class ScannerService implements DisposableBean {
         }
         
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning playlist " + playlist.getPath(), null);
-        
-        // Remove existing playlist content
-        mediaDao.removePlaylistContent(playlist.getID());
 
         // Parse playlist
         List<MediaElement> mediaElements = playlistService.parsePlaylist(playlist.getPath());
+        
+        // Check for abort
+        if(abortScan) {
+            return;
+        }
 
         if(mediaElements == null || mediaElements.isEmpty()) {
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "No content found for playlist " + playlist.getPath(), null);
             return;
         }
 
-        // Update playlist content
+        // Remove and update playlist content
+        mediaDao.removePlaylistContent(playlist.getID());
         mediaDao.setPlaylistContent(playlist.getID(), mediaElements);
         
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished scanning playlist " + playlist.getPath() + " (Found " + mediaElements.size() + " items)", null);
@@ -373,6 +392,11 @@ public class ScannerService implements DisposableBean {
             // Start Scan directory
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Scanning media folder " + folder.getPath(), null);
             Files.walkFileTree(path, fileParser);
+            
+            // Check if we should abort
+            if(abortScan) {
+                return;
+            }
 
             // Add new media elements in database
             if(!fileParser.getNewMediaElements().isEmpty()) {
@@ -480,7 +504,12 @@ public class ScannerService implements DisposableBean {
         }
 
         @Override
-        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {            
+        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attr) {
+            // Check for abort
+            if(abortScan) {
+                return TERMINATE;
+            }
+            
             // Check if we need to scan this directory
             if(!MediaUtils.containsMedia(dir.toFile(), true) && !PlaylistUtils.containsPlaylists(dir.toFile())) {
                 LogUtils.writeToLog(log, "Skipping directory " + dir.toString(), Level.DEBUG);
@@ -530,6 +559,11 @@ public class ScannerService implements DisposableBean {
 
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attr) {
+            // Check for abort
+            if(abortScan) {
+                return TERMINATE;
+            }
+            
             // Determine type of file and how to process it
             if(MediaUtils.isMediaFile(file)) {
                 LogUtils.writeToLog(log, "Parsing file " + file.toString(), Level.DEBUG);
@@ -557,16 +591,12 @@ public class ScannerService implements DisposableBean {
                     mediaElement.setSize(attr.size());
                     
                     // Remove existing media streams and parse Metadata
-                    if(!mediaDao.removeStreamsByMediaElementId(mediaElement.getID())) {
-                        LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to remove streams from database for media element with ID " + mediaElement.getID(), null);
-                    }
-                    
+                    mediaDao.removeStreamsByMediaElementId(mediaElement.getID());
                     metadataParser.parse(mediaElement, log);
                     
                     // If we don't support this media file move on...
                     if(mediaElement.getType() == MediaElementType.NONE) {
                         LogUtils.writeToLog(log, "No media streams found for file " + file.toString(), Level.DEBUG);
-                        mediaDao.removeMediaElement(mediaElement.getID());
                         return CONTINUE;
                     }
                     
@@ -630,6 +660,11 @@ public class ScannerService implements DisposableBean {
 
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+            // Check for abort
+            if(abortScan) {
+                return TERMINATE;
+            }
+            
             // Update statistics
             mTotal++;
             folders++;
