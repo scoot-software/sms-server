@@ -24,12 +24,15 @@
 package com.scooter1556.sms.server.controller;
 import com.scooter1556.sms.server.domain.ClientProfile;
 import com.scooter1556.sms.server.domain.Job;
-import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.NetworkService;
 import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.utilities.NetworkUtils;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.net.InetAddress;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
@@ -37,6 +40,7 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -59,20 +63,19 @@ public class SessionController {
     @Autowired
     private NetworkService networkService;
     
-    @RequestMapping(method=RequestMethod.GET)
-    public ResponseEntity<Session[]> getSessions() {
-        if (sessionService.getNumSessions() == 0) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        
-        return new ResponseEntity<>(sessionService.getSessions(), HttpStatus.OK);
-    }
-    
+    @ApiOperation(value = "Add a new session")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Session added successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to add session"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Client profile is invalid")
+    })
     @CrossOrigin
     @RequestMapping(value="/add", method=RequestMethod.GET)
-    public ResponseEntity<String> addSession(@RequestParam(value = "id", required = false) UUID id,
-                                             @RequestBody(required = false) ClientProfile profile,
-                                             HttpServletRequest request) {
+    public ResponseEntity<String> addSession(
+            @ApiParam(value = "Session ID", required = false) @RequestParam(value = "id", required = false) UUID id,
+            @ApiParam(value = "Client profile for session", required = false) @RequestBody(required = false) ClientProfile profile,
+            HttpServletRequest request)
+    {
         // Check the client profile
         if(profile != null) {
             if(profile.getClient() == null || profile.getFormat() == null || profile.getCodecs() == null || profile.getFormats() == null) {
@@ -94,11 +97,19 @@ public class SessionController {
         return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Add client profile for a given session")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Client profile updated successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Client profile is invalid"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Session does not exist")
+    })
     @CrossOrigin
     @RequestMapping(value="/update/{sid}", method=RequestMethod.POST, headers = {"Content-type=application/json"})
-    public ResponseEntity<String> updateClientProfile(@PathVariable("sid") UUID sid,
-                                                      @RequestBody ClientProfile profile,
-                                                      HttpServletRequest request) {
+    public ResponseEntity<String> updateClientProfile(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
+            @ApiParam(value = "Updated client profile", required = true) @RequestBody ClientProfile profile,
+            HttpServletRequest request)
+    {
         // Check the client profile
         if(profile == null || profile.getClient() == null || profile.getCodecs() == null || profile.getFormats() == null || profile.getFormat() == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to update client profile for session " + sid + ", profile is invalid.", null);
@@ -125,9 +136,16 @@ public class SessionController {
         return new ResponseEntity<>("Client profile updated successfully.", HttpStatus.OK);
     }
     
+    @ApiOperation(value = "End session")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Session ended successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Session does not exist")
+    })
     @CrossOrigin
     @RequestMapping(value="/end/{sid}", method=RequestMethod.GET)
-    public ResponseEntity<String> endSession(@PathVariable("sid") UUID sid) {        
+    public ResponseEntity<String> endSession(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid)
+    {        
         // Check session is valid
         if (!sessionService.isSessionAvailable(sid)) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
@@ -141,10 +159,17 @@ public class SessionController {
         return new ResponseEntity<>("Ended session with ID: " + sid, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "End job")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Job(s) ended successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Session or job does not exist")
+    })
     @CrossOrigin
     @RequestMapping(value="/end/{sid}/{meid}", method=RequestMethod.GET)
-    public ResponseEntity<String> endJob(@PathVariable("sid") UUID sid,
-                                         @PathVariable("meid") String meid) {        
+    public ResponseEntity<String> endJob(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
+            @ApiParam(value = "Media element ID (or 'all' to end all jobs for session)", required = true) @PathVariable("meid") String meid)
+    {        
         Session session = sessionService.getSessionById(sid);
         
         // Check session is valid

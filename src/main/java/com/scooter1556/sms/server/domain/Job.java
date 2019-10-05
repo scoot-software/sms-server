@@ -38,7 +38,6 @@ public class Job implements Serializable {
     private long bytesTransferred = 0;
     private TranscodeProfile profile;
 
-
     public Job(UUID sid) {
         // Set IDs
         id = UUID.randomUUID();

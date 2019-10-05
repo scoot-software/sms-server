@@ -25,6 +25,10 @@ package com.scooter1556.sms.server.controller;
 
 import com.scooter1556.sms.server.Project;
 import com.scooter1556.sms.server.domain.Version;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +41,10 @@ public class SettingsController {
     
     private static final String CLASS_NAME = "SettingsController";
 
+    @ApiOperation(value = "Get SMS server version")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Server version returned successfully")
+    })
     @RequestMapping(value="/version", method=RequestMethod.GET)
     public ResponseEntity<String> getVersion() {
         Version version = Version.parse(Project.getVersion());

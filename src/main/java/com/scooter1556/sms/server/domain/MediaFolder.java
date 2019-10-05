@@ -24,19 +24,38 @@
 package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import io.swagger.annotations.ApiModelProperty.AccessMode;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+@ApiModel(description = "Media folder which represents a filesystem directory")
 public class MediaFolder implements Serializable {
     
+    @ApiModelProperty(value = "ID of the media folder", readOnly = true, accessMode = AccessMode.READ_ONLY, example = "8fedcef6-ecd2-4ca0-91af-0da4d6dc452d")
     private UUID id;
+    
+    @ApiModelProperty(value = "Name of the media folder", required = true, example = "Music")
     private String name;
+    
+    @ApiModelProperty(value = "Content type associated with media folder", allowableValues = "0, 1, 2, 3", readOnly = true, accessMode = AccessMode.READ_ONLY, example = "1")
     private Byte type;
-    private String path; 
+    
+    @ApiModelProperty(value = "Path to directory on filesystem", required = true, example = "/path/to/my/music/library")
+    private String path;
+    
+    @ApiModelProperty(value = "Number of child directories", required = false, readOnly = true, accessMode = AccessMode.READ_ONLY, example = "46")
     private Long folders;
+    
+    @ApiModelProperty(value = "Number of child files", required = false, readOnly = true, accessMode = AccessMode.READ_ONLY, example = "1556")
     private Long files;
+    
+    @ApiModelProperty(hidden = true)
     private Timestamp lastScanned;
+     
+    @ApiModelProperty(value = "Whether the media folder should be enabled", example = "true")
     private Boolean enabled;
 
 
@@ -58,7 +77,7 @@ public class MediaFolder implements Serializable {
     public String toString() {
         return String.format(
                 "MediaFolder[ID=%s, Name=%s, Type=%s, Path=%s, Folders=%s, Files=%s, Enabled=%s]",
-                id == null ? "?" : id.toString(), name == null ? "N/A" : name, type == null ? "N/A" : type.toString(), path == null ? "N/A" : path, folders == null ? "N/A" : folders.toString(), files == null ? "N/A" : files.toString(), enabled == null ? "?" : enabled.toString());
+                id == null ? "?" : id.toString(), name == null ? "N/A" : name, type == null ? "N/A" : ContentType.toString(type), path == null ? "N/A" : path, folders == null ? "N/A" : folders.toString(), files == null ? "N/A" : files.toString(), enabled == null ? "?" : enabled.toString());
     }
 
     public UUID getID()  {
@@ -131,5 +150,24 @@ public class MediaFolder implements Serializable {
         public static final byte AUDIO = 1;
         public static final byte VIDEO = 2;
         public static final byte PLAYLIST = 3;
+                
+        public static String toString(byte value) {
+            switch(value) {
+                case UNKNOWN:
+                    return "Unknown";
+                    
+                case AUDIO:
+                    return "Audio";
+                    
+                case VIDEO:
+                    return "Video";
+                    
+                case PLAYLIST:
+                    return "Playlist";
+                    
+                default:
+                    return "Invalid";
+            }
+        }
     }
 }

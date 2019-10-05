@@ -35,10 +35,16 @@ import com.scooter1556.sms.server.domain.UserRole;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.ScannerService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -73,9 +79,17 @@ public class AdminController {
     //
     // User
     //
+    @ApiOperation(value = "Create a new user")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Successfully created new user"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Reqired parameter is missing"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Username already exists"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to add new user to database")
+    })
     @RequestMapping(value="/user", method=RequestMethod.POST, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> createUser(@RequestBody User user)
+    public ResponseEntity<String> createUser(
+            @ApiParam(value = "User to create", required = true) @RequestBody User user)
     {
         // Check mandatory fields.
         if(user.getUsername() == null || user.getPassword() == null)
@@ -103,9 +117,17 @@ public class AdminController {
         return new ResponseEntity<>("User created successfully.", HttpStatus.CREATED);
     }
     
+    @ApiOperation(value = "Update user roles")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Successfully updated user roles"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Required parameter is missing"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Username doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update user roles")
+    })
     @RequestMapping(value="/user/role", method=RequestMethod.POST, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> createUserRole(@RequestBody UserRole userRole)
+    public ResponseEntity<String> createUserRole(
+            @ApiParam(value = "Role to add to user", required = true) @RequestBody UserRole userRole)
     {
         // Check mandatory fields.
         if(userRole.getUsername() == null || userRole.getRole() == null)
@@ -130,23 +152,35 @@ public class AdminController {
         return new ResponseEntity<>("User role added successfully.", HttpStatus.CREATED);
     }
     
+    @ApiOperation(value = "Delete user")
     @RequestMapping(value="/user/{username}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUser(@PathVariable("username") String username) {
+    public void deleteUser(
+            @ApiParam(value = "Username of user to be deleted", required = true) @PathVariable("username") String username) {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed user '" + username + "'.", null);
         userDao.removeUser(username);
     }
 
+    @ApiOperation(value = "Remove role from user")
     @RequestMapping(value="/user/{username}/role/{role}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteUserRole(@PathVariable("username") String username, @PathVariable("role") String role) {
+    public void deleteUserRole(
+            @ApiParam(value = "Username of user for which role is to be removed", required = true) @PathVariable("username") String username,
+            @ApiParam(value = "Role to remove from user", required = true) @PathVariable("role") String role) {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed role '" + role + "' from user '" + username + "'.", null);
         userDao.removeUserRole(username, role);
     }
     
+    @ApiOperation(value = "Update the default 'admin' user")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Successfully updated default user"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Default user does not exist"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update default user")
+    })
     @RequestMapping(value="/user", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> updateDefaultUser(@RequestBody User update)
+    public ResponseEntity<String> updateDefaultUser(
+            @ApiParam(value = "Updated user details", required = true) @RequestBody User update)
     {
         User user = userDao.getUserByUsername("admin");
         
@@ -171,14 +205,21 @@ public class AdminController {
         return new ResponseEntity<>("User details updated successfully.", HttpStatus.ACCEPTED);
     }
     
+    @ApiOperation(value = "Get all users")
     @RequestMapping(value="/user", method=RequestMethod.GET)
     @ResponseBody
     public List<User> getAllUsers() {
         return userDao.getUsers();
     }
 
+    @ApiOperation(value = "Get user")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully returned user"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "User does not exist")
+    })
     @RequestMapping(value="/user/{username}", method=RequestMethod.GET)
-    public ResponseEntity<User> getUser(@PathVariable("username") String username)
+    public ResponseEntity<User> getUser(
+            @ApiParam(value = "Username of the user to retrieve", required = true) @PathVariable("username") String username)
     {
         User user = userDao.getUserByUsername(username);
         
@@ -189,6 +230,11 @@ public class AdminController {
         return new ResponseEntity<>(user, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get roles associated with all users")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully returned user roles"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No user roles found")
+    })
     @RequestMapping(value="/user/role", method=RequestMethod.GET)
     public ResponseEntity<List<UserRole>> getUserRoles()
     {
@@ -201,6 +247,11 @@ public class AdminController {
         return new ResponseEntity<>(userRoles, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get statistics for all users")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully returned user statistics"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No user statistics available")
+    })
     @RequestMapping(value="/user/stats", method=RequestMethod.GET)
     public ResponseEntity<List<UserStats>> getUserStats()
     {
@@ -217,9 +268,18 @@ public class AdminController {
     // Media
     //
     
+    @ApiOperation(value = "Add a new media folder")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Successfully added media folder"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Required parameter is missing"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "A media folder with the same path already exists"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "The path given does not exist or is not readable"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to add media folder")
+    })
     @RequestMapping(value="/media/folder", method=RequestMethod.POST, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> createMediaFolder(@RequestBody MediaFolder mediaFolder)
+    public ResponseEntity<String> createMediaFolder(
+            @ApiParam(value = "Media folder to add", required = true) @RequestBody MediaFolder mediaFolder)
     {
         // Check mandatory fields.
         if(mediaFolder.getName() == null || mediaFolder.getPath() == null)
@@ -239,7 +299,7 @@ public class AdminController {
         // Check path is readable
         if(!file.isDirectory())
         {
-            return new ResponseEntity<>("Media folder path does not exist or is not readable.", HttpStatus.FAILED_DEPENDENCY);
+            return new ResponseEntity<>("Media folder path does not exist or is not readable.", HttpStatus.EXPECTATION_FAILED);
         }
         
         // Ensure path is formatted correctly
@@ -259,16 +319,27 @@ public class AdminController {
         return new ResponseEntity<>("Media Folder added successfully.", HttpStatus.CREATED);
     }
 
+    @ApiOperation(value = "Remove media folder")
     @RequestMapping(value="/media/folder/{id}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMediaFolder(@PathVariable("id") UUID id) {
+    public void deleteMediaFolder(
+            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id) {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed media folder with ID '" + id.toString() + "'.", null);
         settingsDao.removeMediaFolder(id);
     }
     
+    @ApiOperation(value = "Update a media folder")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_ACCEPTED, message = "Successfully updated media folder"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Media folder doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "A media folder with the same path already exists"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "The path given does not exist or is not readable"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update media folder")
+    })
     @RequestMapping(value="/media/folder", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> updateMediaFolder(@RequestBody MediaFolder update)
+    public ResponseEntity<String> updateMediaFolder(
+            @ApiParam(value = "Updated media folder details", required = true) @RequestBody MediaFolder update)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(update.getID());
         
@@ -323,21 +394,32 @@ public class AdminController {
         return new ResponseEntity<>("Media folder updated successfully.", HttpStatus.ACCEPTED);
     }
     
+    @ApiOperation(value = "Remove media element")
     @RequestMapping(value="/media/{id}", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMediaElement(@PathVariable("id") UUID id) {
+    public void deleteMediaElement(
+            @ApiParam(value = "ID of the media element", required = true) @PathVariable("id") UUID id) {
         mediaDao.removeMediaElement(id);
     }
 
+    @ApiOperation(value = "Remove all media elements")
     @RequestMapping(value="/media/all", method=RequestMethod.DELETE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteAllMediaElements() {
         mediaDao.removeAllMediaElements();
     }
     
+    @ApiOperation(value = "Start a media scan")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media scan started"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Specified media folder doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "A scanning process is already running"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media folders found")
+    })
     @RequestMapping(value="/media/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> scanMedia(@RequestParam(value = "id", required = false) UUID id,
-                                            @RequestParam(value = "forcerescan", required = false) Boolean forceRescan) {        
+    public ResponseEntity<String> scanMedia(
+            @ApiParam(value = "Specify ID of media folder to scan", required = false) @RequestParam(value = "id", required = false) UUID id,
+            @ApiParam(value = "Rescan all media regardless of whether it has changed on the filesystem", required = false) @RequestParam(value = "forcerescan", required = false) Boolean forceRescan) {        
         // Check a media scanning process is not already active
         if (scannerService.isScanning()) {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
@@ -378,14 +460,26 @@ public class AdminController {
         return new ResponseEntity<>("Media scanning started.", HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get current media scan count")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Scan count returned successfully")
+    })
     @RequestMapping(value="/media/scan/count", method=RequestMethod.GET)
     public ResponseEntity<Long> getMediaScanCount()
     {   
         return new ResponseEntity<>(scannerService.getScanCount(), HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Start a playlist scan")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist scan started"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Specified playlist doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "A scanning process is already running"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No playlists found")
+    })
     @RequestMapping(value="/playlist/scan", method=RequestMethod.GET)
-    public ResponseEntity<String> scanPlaylist(@RequestParam(value = "id", required = false) UUID id) {        
+    public ResponseEntity<String> scanPlaylist(
+            @ApiParam(value = "Specify ID of playlist to scan", required = false) @RequestParam(value = "id", required = false) UUID id) {        
         // Check a scanning process is not already active
         if (scannerService.isScanning()) {
             return new ResponseEntity<>("A scanning process is already running.", HttpStatus.NOT_ACCEPTABLE);
@@ -417,6 +511,13 @@ public class AdminController {
         return new ResponseEntity<>("Playlist scanning started.", HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Start a deep scan of media streams")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Deep scan started"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to retrieve media streams to scan"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "A deep scan cannot run at this time"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media streams require scanning")
+    })
     @RequestMapping(value="/deep/scan", method=RequestMethod.GET)
     public ResponseEntity<String> deepScan() {
         // Start scanning playlists
@@ -438,12 +539,17 @@ public class AdminController {
         }
     }
     
+    @ApiOperation(value = "Stop deep scanning process")
     @RequestMapping(value="/deep/scan/stop", method=RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
     public void deepScanStop() {   
         scannerService.stopDeepScan();
     }
     
+    @ApiOperation(value = "Get current deep scan count")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Scan count returned successfully")
+    })
     @RequestMapping(value="/deep/scan/count", method=RequestMethod.GET)
     public ResponseEntity<Long> getDeepScanCount()
     {   
@@ -454,6 +560,11 @@ public class AdminController {
     // Log
     //
     
+    @ApiOperation(value = "Get most recent log entries")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Log entries returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to fetch most recent log entries")
+    })
     @RequestMapping(value="/log",method=RequestMethod.GET)
     public ResponseEntity<List<LogService.LogEntry>> getLogEntries()
     { 
@@ -464,9 +575,11 @@ public class AdminController {
         return new ResponseEntity<>(LogService.getInstance().getLatestLogEntries(), HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Set log level")
     @RequestMapping(value="/log/level/{value}", method=RequestMethod.GET)
     @ResponseStatus(HttpStatus.OK)
-    public void setLogLevel(@PathVariable("value") byte level) {
+    public void setLogLevel(
+            @ApiParam(value = "Log level to set", required = true, allowableValues = "0,1,2,3,4") @PathVariable("value") byte level) {
         LogService.getInstance().setLogLevel(level);
     }
 }

@@ -13,12 +13,17 @@ import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SessionService;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,9 +47,18 @@ public class PlaylistController {
     
     private static final String CLASS_NAME = "PlaylistController";
     
+    @ApiOperation(value = "Create a new playlist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Playlist created successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Required parameters missing"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Error creating playlist")
+    })
     @RequestMapping(method=RequestMethod.POST, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> createPlaylist(@RequestBody Playlist playlist, HttpServletRequest request) {
+    public ResponseEntity<String> createPlaylist(
+            @ApiParam(value = "Playlist", required = true) @RequestBody Playlist playlist,
+            HttpServletRequest request)
+    {
         // Check ID
         if(playlist.getID() == null) {
             playlist.setID(UUID.randomUUID());
@@ -68,9 +82,20 @@ public class PlaylistController {
         return new ResponseEntity<>("Playlist created successfully.", HttpStatus.CREATED);
     }
     
+    @ApiOperation(value = "Update a playlist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_ACCEPTED, message = "Playlist updated successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Playlist doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to update playlist"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Error updating playlist")
+    })
     @RequestMapping(value="/{id}", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> updatePlaylist(@RequestBody Playlist update, @PathVariable("id") UUID id, HttpServletRequest request) {
+    public ResponseEntity<String> updatePlaylist(
+            @ApiParam(value = "Playlist", required = true) @RequestBody Playlist update,
+            @ApiParam(value = "ID of the playlist to update", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request)
+    {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
         if(playlist == null) {
@@ -101,9 +126,19 @@ public class PlaylistController {
         return new ResponseEntity<>("Playlist updated successfully.", HttpStatus.ACCEPTED);
     }
     
+    @ApiOperation(value = "Update playlist contents")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Playlist content updated successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Playlist content is missing required data"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to update playlist content"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist does not exist"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Error updating playlist content")
+    })
     @RequestMapping(value="/contents", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> updatePlaylistContent(@RequestBody PlaylistContent content, HttpServletRequest request) {
+    public ResponseEntity<String> updatePlaylistContent(
+            @ApiParam(value = "Playlist content", required = true) @RequestBody PlaylistContent content,
+            HttpServletRequest request) {
         // Check mandatory fields
         if(content.getID() == null || content.getMedia() == null) {
             return new ResponseEntity<>("Content is missing required fields.", HttpStatus.BAD_REQUEST);
@@ -113,7 +148,7 @@ public class PlaylistController {
         Playlist playlist = mediaDao.getPlaylistByID(content.getID());
         
         if(playlist == null) {
-            return new ResponseEntity<>("Playlist does not exist.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("Playlist does not exist.", HttpStatus.NOT_FOUND);
         }
         
         // Check user owns the playlist
@@ -156,8 +191,16 @@ public class PlaylistController {
         return new ResponseEntity<>("Playlist content updated successfully", HttpStatus.CREATED);
     }
     
+    @ApiOperation(value = "Delete a playlist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist deleted successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to delete playlist"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist does not exist")
+    })
     @RequestMapping(value="/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<String> deletePlaylist(@PathVariable("id") UUID id, HttpServletRequest request) {
+    public ResponseEntity<String> deletePlaylist(
+            @ApiParam(value = "ID of the playlist to delete", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request) {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
         if(playlist == null) {
@@ -176,6 +219,11 @@ public class PlaylistController {
         return new ResponseEntity<>("Playlist deleted.", HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get all playlists")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlists returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No playlists found")
+    })
     @RequestMapping(method=RequestMethod.GET)
     public ResponseEntity<List<Playlist>> getPlaylists(HttpServletRequest request) {
         List<Playlist> playlists = mediaDao.getPlaylistsByUsername(request.getUserPrincipal().getName());
@@ -187,8 +235,15 @@ public class PlaylistController {
         return new ResponseEntity<>(playlists, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get playlist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist does not exist")
+    })
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
-    public ResponseEntity<Playlist> getPlaylist(@PathVariable("id") UUID id) {
+    public ResponseEntity<Playlist> getPlaylist(
+            @ApiParam(value = "ID of the playlist", required = true) @PathVariable("id") UUID id)
+    {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
         if (playlist == null) {
@@ -198,11 +253,18 @@ public class PlaylistController {
         return new ResponseEntity<>(playlist, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get playlist contents")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist content returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist not found or is empty"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to retrieve playlist content")
+    })
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getPlaylistContents(@PathVariable("id") UUID id,
-                                                                  @RequestParam(value="sid", required = false) UUID sid,
-                                                                  @RequestParam(value="random", required = false) Boolean random,
-                                                                  HttpServletRequest request) {
+    public ResponseEntity<List<MediaElement>> getPlaylistContents(
+            @ApiParam(value = "ID of the playlist", required = true) @PathVariable("id") UUID id,
+            @ApiParam(value = "Return playlist content in a randomised order", defaultValue = "false", required = false) @RequestParam(value="random", required = false) Boolean random,
+            HttpServletRequest request)
+    {
         Playlist playlist = mediaDao.getPlaylistByID(id);
         
         if(playlist == null) {
@@ -212,7 +274,7 @@ public class PlaylistController {
         // Check user has permission to get playlist content
         if(playlist.getUsername() != null) {
             if(!playlist.getUsername().equals(request.getUserPrincipal().getName())) {
-                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
         }
         
@@ -221,27 +283,6 @@ public class PlaylistController {
         
         if(mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            // Check session is valid
-            Session session = sessionService.getSessionById(sid);
-            
-            if(session != null && session.getClientProfile() != null) {
-                // Populate streams for media elements
-                mediaElements.forEach((mediaElement) -> {
-                    if(mediaElement.getType() == MediaElement.MediaElementType.AUDIO) {
-                        mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
-                    } else if(mediaElement.getType() == MediaElement.MediaElementType.VIDEO) {
-                        mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID()));
-                        mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
-                        mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(mediaElement.getID()));
-                    }
-                });
-                
-                TranscodeUtils.processMediaElementsForClient(mediaElements, session.getClientProfile());
-            }
         }
         
         // Check if we need to send a randomised playlist

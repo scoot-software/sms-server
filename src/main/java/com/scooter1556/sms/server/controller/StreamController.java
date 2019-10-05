@@ -48,6 +48,10 @@ import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.TranscodeService;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -94,6 +98,7 @@ public class StreamController {
     @Autowired
     private ScannerService scannerService;
     
+    @ApiOperation(value = "Get adaptive streaming playlist", hidden = true)
     @ResponseBody
     @RequestMapping(value="/playlist/{sid}/{meid}/{type}/{extra}/{extension}", method=RequestMethod.GET)
     public void getPlaylist(@PathVariable("sid") UUID sid,
@@ -192,6 +197,7 @@ public class StreamController {
         }
     }
     
+    @ApiOperation(value = "Get adaptive streaming segment", hidden = true)
     @ResponseBody
     @RequestMapping(value="/segment/{sid}/{meid}/{type}/{extra}/{file}/{extension}", method=RequestMethod.GET)
     public void getSegment(@PathVariable("sid") UUID sid,
@@ -348,12 +354,21 @@ public class StreamController {
         }
     }
     
+    @ApiOperation(value = "Begin streaming media to a client")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Session invalid or missing client profile"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element or associated file not found"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Transcode request invalid"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to initialise stream")
+    })
     @RequestMapping(value="/{sid}/{meid}", method={RequestMethod.GET, RequestMethod.HEAD})
     @ResponseBody
-    public void getStream(@PathVariable("sid") UUID sid,
-                          @PathVariable("meid") UUID meid,
-                          HttpServletRequest request,
-                          HttpServletResponse response) {
+    public void getStream(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
+            @ApiParam(value = "Media Element ID", required = true) @PathVariable("meid") UUID meid,
+            HttpServletRequest request,
+            HttpServletResponse response)
+    {
         // Variables
         Job job;
         SMSProcess process = null;
@@ -384,13 +399,16 @@ public class StreamController {
 
             if(session == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session invalid with ID: " + sid, null);
-                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Session invalid with ID: " + sid + ".");
+                response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED, "Session invalid with ID: " + sid + ".");
                 return;
             }
             
-            if(session.getClientProfile() == null) {
+            // Check client profile is valid
+            clientProfile = session.getClientProfile();
+            
+            if(clientProfile == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
-                response.sendError(HttpServletResponse.SC_BAD_GATEWAY, "Client profile is not available for session with ID: " + sid + ".");
+                response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED, "Client profile is not available for session with ID: " + sid + ".");
                 return;
             }
             
@@ -399,15 +417,6 @@ public class StreamController {
 
             // Check if a job for this media element is already associated with the session
             if(job == null) {
-                // Get client profile
-                clientProfile = session.getClientProfile();
-
-                if(clientProfile == null) {
-                    LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile not found for session.", null);
-                    response.sendError(HttpServletResponse.SC_EXPECTATION_FAILED, "Client profile not found for session.");
-                    return;
-                }
-
                 // Check media element
                 mediaElement = mediaDao.getMediaElementByID(meid);
 
@@ -420,7 +429,7 @@ public class StreamController {
                 // Check physical file is available
                 if(!new File(mediaElement.getPath()).exists()) {
                     LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "File not found for media element with ID " + meid + ".", null);
-                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "File not found for media element with ID " + meid + ".");
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND, "File not found for media element with ID " + meid + ".");
                     return;
                 }
 
@@ -490,7 +499,6 @@ public class StreamController {
                 }
             } else {
                 // Populate variables
-                clientProfile = session.getClientProfile();
                 transcodeProfile = job.getTranscodeProfile();
                 mediaElement = job.getMediaElement();
             }
@@ -537,11 +545,21 @@ public class StreamController {
         }
     }
     
+    @ApiOperation(value = "Get stream profile")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Stream profile returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Session invalid or missing client profile"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element or associated file not found"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Transcode request invalid"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to return stream profile")
+    })
     @CrossOrigin
     @RequestMapping(value="/profile/{sid}/{meid}", method={RequestMethod.GET})
-    public ResponseEntity<StreamProfile> getStreamProfile(@PathVariable("sid") UUID sid,
-                                                          @PathVariable("meid") UUID meid,
-                                                          HttpServletRequest request) {
+    public ResponseEntity<StreamProfile> getStreamProfile(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
+            @ApiParam(value = "Media Element ID", required = true) @PathVariable("meid") UUID meid,
+            HttpServletRequest request)
+    {
         // Variables
         Job job;
         MediaElement mediaElement;
@@ -555,12 +573,15 @@ public class StreamController {
 
         if(session == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session invalid with ID: " + sid, null);
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(HttpStatus.EXPECTATION_FAILED);
         }
+        
+        // Check client profile
+        clientProfile = session.getClientProfile();
 
-        if(session.getClientProfile() == null) {
-            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile is not available for session with ID: " + sid, null);
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        if(clientProfile == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile not found for session.", null);
+            return new ResponseEntity<>(HttpStatus.EXPECTATION_FAILED);
         }
         
         // Retrieve job
@@ -568,14 +589,6 @@ public class StreamController {
 
         // Check if a job for this media element is already associated with the session
         if(job == null) {
-            // Get client profile
-            clientProfile = session.getClientProfile();
-
-            if(clientProfile == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Client profile not found for session.", null);
-                return new ResponseEntity<>(HttpStatus.EXPECTATION_FAILED);
-            }
-
             // Check media element
             mediaElement = mediaDao.getMediaElementByID(meid);
 
@@ -587,7 +600,7 @@ public class StreamController {
             // Check physical file is available
             if(!new File(mediaElement.getPath()).exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "File not found for media element with ID " + meid + ".", null);
-                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
             }
 
             // Create and populate a new job
@@ -627,7 +640,7 @@ public class StreamController {
         
         if(streamProfile == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to get stream profile for transcode profile: " + job.getTranscodeProfile(), null);
-            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
         
         return new ResponseEntity<>(streamProfile, HttpStatus.OK);

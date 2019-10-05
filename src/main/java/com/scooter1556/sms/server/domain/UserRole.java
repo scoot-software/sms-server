@@ -23,11 +23,17 @@
  */
 package com.scooter1556.sms.server.domain;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 
+@ApiModel(description = "User role")
 public class UserRole implements Serializable {
     
-    private String username;    
+    @ApiModelProperty(value = "Username associated with role", required = true, example = "smsuser")
+    private String username;
+    
+    @ApiModelProperty(value = "Role", allowableValues = "ADMIN, USER", required = true, example = "USER")
     private String role;
 
 

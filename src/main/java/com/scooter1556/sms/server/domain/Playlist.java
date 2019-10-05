@@ -24,18 +24,34 @@
 package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+@ApiModel(description = "Playlist")
 public class Playlist implements Serializable {
     
+    @ApiModelProperty(value = "ID of the playlist", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "8fedcef6-ecd2-4ca0-91af-0da4d6dc452d")
     private UUID id;
+    
+    @ApiModelProperty(value = "Name of the playlist", required = true, example = "Best Of SMS")
     private String name;
+    
+    @ApiModelProperty(value = "Playlist description", required = false, example = "A collection of the best songs around...")
     private String description;
+    
+    @ApiModelProperty(value = "Playlist owner", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "smsuser")
     private String username;
+    
+    @ApiModelProperty(hidden = true)
     private String path;
+    
+    @ApiModelProperty(hidden = true)
     private String parentPath;
+    
+    @ApiModelProperty(hidden = true)
     private Timestamp lastScanned;
     
     public Playlist() {};

@@ -8,9 +8,10 @@ import java.util.UUID;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class Session implements Comparable {
-    private final UUID id;
-    private final String username;
-    private ClientProfile profile;
+    
+    private final UUID id;    
+    private final String username;    
+    private ClientProfile profile;    
     private final List<Job> jobs = new ArrayList<>();
 
     public Session(UUID id, String username, ClientProfile profile) {

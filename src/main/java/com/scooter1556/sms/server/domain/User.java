@@ -23,15 +23,22 @@
  */
 package com.scooter1556.sms.server.domain;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 
+@ApiModel(description = "User")
 public class User implements Serializable {
     
+    @ApiModelProperty(value = "The user's username", required = true, example = "smsuser")
     private String username;
+    
+    @ApiModelProperty(value = "The user's password", required = true, example = "P@ssw0rd")
     private String password;
+    
+    @ApiModelProperty(value = "Whether the user should be enabled or not", allowableValues = "true, false", example = "true")
     private Boolean enabled;
-
-
+    
     public User() {};
     
     public User(String username, String password, boolean enabled)

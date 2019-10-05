@@ -26,46 +26,112 @@ package com.scooter1556.sms.server.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.scooter1556.sms.server.SMS;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.awt.Dimension;
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
+@ApiModel(description = "Media element which represents a media file or directory")
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class MediaElement implements Serializable {
+    
+    @ApiModelProperty(value = "ID of the media element", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "8fedcef6-ecd2-4ca0-91af-0da4d6dc452d")
     private UUID id;
+    
+    @ApiModelProperty(value = "Media type", allowableValues = "0, 1, 2, 3, 4", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "1")
     private Byte type;
+    
+    @ApiModelProperty(value = "Directory type (if applicable)", allowableValues = "0, 1, 2, 3", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "1")
     private Byte directoryType = DirectoryMediaType.NONE;
+
+    @ApiModelProperty(hidden = true)
     private String path;
+    
+    @ApiModelProperty(hidden = true)
     private String parentPath;
+    
+    @ApiModelProperty(hidden = true)
     private Timestamp created;
+    
+    @ApiModelProperty(hidden = true)
     private Timestamp lastPlayed;
+    
+    @ApiModelProperty(hidden = true)
     private Timestamp lastScanned;
+    
+    @ApiModelProperty(hidden = true)
     private Boolean excluded = false;
+    
+    @ApiModelProperty(value = "Format", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "0")
     private Integer format = SMS.Format.NONE;
+    
+    @ApiModelProperty(hidden = true)
     private Long size = 0L;
+    
+    @ApiModelProperty(value = "Duration (seconds)", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "234")
     private Double duration = 0d;
+    
+    @ApiModelProperty(hidden = true)
     private Integer bitrate = 0;
+    
+    @ApiModelProperty(value = "Title", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Frequency")
     private String title;
+    
+    @ApiModelProperty(value = "Artist", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Feeder")
     private String artist;
+    
+    @ApiModelProperty(value = "Album Artist", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Feeder")
     private String albumArtist;
+    
+    @ApiModelProperty(value = "Album", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Pushing The Senses")
     private String album;
+    
+    @ApiModelProperty(value = "Year", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "2005")
     private Short year = 0;
+    
+    @ApiModelProperty(value = "Disc Number", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "1")
     private Short discNumber = 0;
+    
+    @ApiModelProperty(value = "Disc Subtitle", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Side One")
     private String discSubtitle;
+    
+    @ApiModelProperty(value = "Track Number", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "6")
     private Short trackNumber = 0;
+    
+    @ApiModelProperty(value = "Genre", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Rock")
     private String genre;
+    
+    @ApiModelProperty(value = "Rating", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "8.8")
     private Float rating = 0f;
+    
+    @ApiModelProperty(value = "Tagline", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "My contents tagline")
     private String tagline;
+    
+    @ApiModelProperty(value = "Description / Synopsis", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "My content description")
     private String description;
+    
+    @ApiModelProperty(value = "Certification", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "UK:PG")
     private String certificate;
+    
+    @ApiModelProperty(value = "Collection", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "Back To The Future Collection")
     private String collection;
+    
+    @ApiModelProperty(hidden = true)
     private Float replaygainTrack = 0f;
+    
+    @ApiModelProperty(hidden = true)
     private Float replaygainAlbum = 0f;
     
+    @ApiModelProperty(hidden = true)
     List<VideoStream> videoStreams;
+    
+    @ApiModelProperty(hidden = true)
     List<AudioStream> audioStreams;
+    
+    @ApiModelProperty(hidden = true)
     List<SubtitleStream> subtitleStreams;
 
     public MediaElement() {};
@@ -221,7 +287,7 @@ public class MediaElement implements Serializable {
     @JsonIgnore
     public String getPath() {
         return path;
-    }
+    }@ApiModelProperty(hidden = true)
     
     public void setPath(String path) {
         this.path = path;

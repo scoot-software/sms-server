@@ -29,6 +29,10 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.ImageService;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.io.File;
 import java.util.List;
 import java.util.UUID;
@@ -60,12 +64,19 @@ public class ImageController {
     @Autowired
     private ImageService imageService;
     
+    @ApiOperation(value = "Get cover art")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Cover art not found"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Unable to process image")
+    })
     @RequestMapping(value="/{id}/cover", method=RequestMethod.GET)
     @ResponseBody
-    public void getCoverArt(@PathVariable("id") UUID id, 
-                            @RequestParam(value = "scale", required = false) Integer scale,
-                            @RequestParam(value = "folder", required = false) Boolean isFolder,
-                            HttpServletResponse response) {
+    public void getCoverArt(
+            @ApiParam(value = "ID of media element or media folder", required = true) @PathVariable("id") UUID id, 
+            @ApiParam(value = "Scaling factor in pixels", required = false) @RequestParam(value = "scale", required = false) Integer scale,
+            @ApiParam(value = "Whether this request is for a media folder", required = false) @RequestParam(value = "folder", required = false) Boolean isFolder,
+            HttpServletResponse response) {
         MediaFolder folder = null;
         MediaElement mediaElement = null;
         File image = null;
@@ -113,12 +124,19 @@ public class ImageController {
         }
     }
     
+    @ApiOperation(value = "Get random cover art for media folder or directory")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Cover art not found"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Unable to process image")
+    })
     @RequestMapping(value="/{id}/random", method=RequestMethod.GET)
     @ResponseBody
-    public void getRandomCoverArt(@PathVariable("id") UUID id,
-                                  @RequestParam(value = "scale", required = false) Integer scale,
-                                  @RequestParam(value = "folder", required = false) Boolean isFolder,
-                                  HttpServletResponse response) {
+    public void getRandomCoverArt(
+            @ApiParam(value = "ID of media element or media folder", required = true) @PathVariable("id") UUID id, 
+            @ApiParam(value = "Scaling factor in pixels", required = false) @RequestParam(value = "scale", required = false) Integer scale,
+            @ApiParam(value = "Whether this request is for a media folder", required = false) @RequestParam(value = "folder", required = false) Boolean isFolder,
+            HttpServletResponse response) {
         MediaFolder folder = null;
         MediaElement element = null;
         String path = null;
@@ -185,12 +203,19 @@ public class ImageController {
         }
     }
     
+    @ApiOperation(value = "Get fanart")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Fanart not found"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Unable to process image")
+    })
     @RequestMapping(value="/{id}/fanart", method=RequestMethod.GET)
     @ResponseBody
-    public void getFanArt(@PathVariable("id") UUID id,
-                          @RequestParam(value = "scale", required = false) Integer scale,
-                          @RequestParam(value = "folder", required = false) Boolean isFolder,
-                          HttpServletResponse response) {
+    public void getFanArt(
+            @ApiParam(value = "ID of media element or media folder", required = true) @PathVariable("id") UUID id, 
+            @ApiParam(value = "Scaling factor in pixels", required = false) @RequestParam(value = "scale", required = false) Integer scale,
+            @ApiParam(value = "Whether this request is for a media folder", required = false) @RequestParam(value = "folder", required = false) Boolean isFolder,
+            HttpServletResponse response) {
         MediaElement mediaElement = null;
         MediaFolder folder = null;
         File image = null;
@@ -239,11 +264,19 @@ public class ImageController {
         }
     }
     
+    @ApiOperation(value = "Get video thumbnail")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Media has no video stream"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Offet is out of range"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Unable to process image")
+    })
     @RequestMapping(value="/{id}/thumbnail", method=RequestMethod.GET)
     @ResponseBody
-    public void getThumbnail(@PathVariable("id") UUID id,
-                             @RequestParam(value = "scale", required = false) Integer scale,
-                             @RequestParam(value = "offset", required = false) Integer offset,
+    public void getThumbnail(
+            @ApiParam(value = "ID of media element", required = true) @PathVariable("id") UUID id,
+            @ApiParam(value = "Scaling factor in pixels", required = false) @RequestParam(value = "scale", required = false) Integer scale,
+            @ApiParam(value = "Offset in seconds to capture thumbnail from video", required = false) @RequestParam(value = "offset", required = false) Integer offset,
                              HttpServletResponse response) {
         MediaElement mediaElement;
         File file;
@@ -271,7 +304,7 @@ public class ImageController {
             // Check offset
             if(offset != null) {
                 if(offset > mediaElement.getDuration()) {
-                    response.sendError(HttpServletResponse.SC_NO_CONTENT, "Offset " + offset + " is out of range for the given media element.");
+                    response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Offset " + offset + " is out of range for the given media element.");
                     return;
                 }
             } else {

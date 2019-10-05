@@ -28,7 +28,12 @@ import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
 import com.scooter1556.sms.server.service.LogService;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.util.List;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -49,9 +54,19 @@ public class UserController {
     
     private static final String CLASS_NAME = "UserController";
 
+    @ApiOperation(value = "Update user")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_ACCEPTED, message = "User updated successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "User not found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to update user"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Username already exists"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update user")
+    })
     @RequestMapping(value="/{username}", method=RequestMethod.PUT, headers = {"Content-type=application/json"})
     @ResponseBody
-    public ResponseEntity<String> updateUser(@RequestBody User update, @PathVariable("username") String username)
+    public ResponseEntity<String> updateUser(
+            @ApiParam(value = "Updated user details", required = true) @RequestBody User update,
+            @ApiParam(value = "Username of user to update", required = true) @PathVariable("username") String username)
     {
         User user = userDao.getUserByUsername(username);
         
@@ -62,7 +77,7 @@ public class UserController {
         
         if(username.equals("admin"))
         {
-            return new ResponseEntity<>("You are not authenticated to perform this operation.", HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>("You are not authorised to perform this operation.", HttpStatus.FORBIDDEN);
         }
         
         // Update user details
@@ -100,8 +115,14 @@ public class UserController {
         return new ResponseEntity<>("User details updated successfully.", HttpStatus.ACCEPTED);
     }
 
+    @ApiOperation(value = "Get user roles")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "User roles returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "User roles not found")
+    })
     @RequestMapping(value="/{username}/role", method=RequestMethod.GET)
-    public ResponseEntity<List<UserRole>> getUserRoles(@PathVariable("username") String username)
+    public ResponseEntity<List<UserRole>> getUserRoles(
+            @ApiParam(value = "Username", required = true) @PathVariable("username") String username)
     {
         List<UserRole> userRoles = userDao.getUserRolesByUsername(username);
         
@@ -112,8 +133,14 @@ public class UserController {
         return new ResponseEntity<>(userRoles, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get user statistics")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "User statistics returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "User statistics not found")
+    })
     @RequestMapping(value="/{username}/stats", method=RequestMethod.GET)
-    public ResponseEntity<UserStats> getUserStats(@PathVariable("username") String username)
+    public ResponseEntity<UserStats> getUserStats(
+            @ApiParam(value = "Username", required = true) @PathVariable("username") String username)
     {
         UserStats userStats = userDao.getUserStatsByUsername(username);
         

@@ -24,6 +24,8 @@
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.Project;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -179,12 +181,20 @@ public final class LogService {
     /**
      * Log entry
      */
+    @ApiModel(description = "Log Entry")
     public static class LogEntry {
         private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         
+        @ApiModelProperty(value = "Date of the log entry", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "1990-05-22T20:00:00.000Z")
         private final Date date;
+        
+        @ApiModelProperty(value = "Log level of the log entry", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "2")
         private final byte level;
-        private final String category;        
+        
+        @ApiModelProperty(value = "Category of the log entry", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "LogService")
+        private final String category;
+        
+        @ApiModelProperty(value = "Log message", readOnly = true, accessMode = ApiModelProperty.AccessMode.READ_ONLY, example = "This is a log message")
         private final String message;
 
         public LogEntry(byte level, String category, String message) {

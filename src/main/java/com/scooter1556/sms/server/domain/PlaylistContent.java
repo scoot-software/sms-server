@@ -23,13 +23,19 @@
  */
 package com.scooter1556.sms.server.domain;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 import java.util.List;
 import java.util.UUID;
 
+@ApiModel(description = "Playlist Content")
 public class PlaylistContent implements Serializable {
     
+    @ApiModelProperty(value = "ID of the playlist", required = true, example = "8fedcef6-ecd2-4ca0-91af-0da4d6dc452d")
     private UUID id;
+    
+    @ApiModelProperty(value = "Playlist content", required = true, example = "[ \"813b4c8b-e43e-4bf6-8623-1587f894fd88\", \"820d0924-b9fe-4ff5-926e-e2c186875664\" ]")
     private List<UUID> media;
     
     public PlaylistContent() {};

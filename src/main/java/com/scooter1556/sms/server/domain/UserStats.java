@@ -23,12 +23,20 @@
  */
 package com.scooter1556.sms.server.domain;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 
+@ApiModel(description = "User statistics")
 public class UserStats implements Serializable {
     
+    @ApiModelProperty(value = "Username associated with statistics", example = "smsuser")
     private String username;
-    private Long streamed;    
+    
+    @ApiModelProperty(value = "Streaming usage in bytes", example = "2134563")
+    private Long streamed;
+    
+    @ApiModelProperty(value = "Download usage in bytes", example = "4763579")
     private Long downloaded;
 
 

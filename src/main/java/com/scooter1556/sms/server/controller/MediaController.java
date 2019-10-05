@@ -29,16 +29,18 @@ import com.scooter1556.sms.server.domain.Directory;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
-import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
-import com.scooter1556.sms.server.service.SessionService;
-import com.scooter1556.sms.server.utilities.TranscodeUtils;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -59,13 +61,16 @@ public class MediaController {
     @Autowired
     private MediaDao mediaDao;
     
-    @Autowired
-    private SessionService sessionService;
-    
     private static final String CLASS_NAME = "MediaController";
 
+    @ApiOperation(value = "Get a list of media folders")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media folders returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media folders found")
+    })
     @RequestMapping(value="/folder", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaFolder>> getMediaFolders(@RequestParam(value = "type", required = false) Byte type)
+    public ResponseEntity<List<MediaFolder>> getMediaFolders(
+            @ApiParam(value = "Content type", required = false, allowableValues = "0, 1, 2, 3") @RequestParam(value = "type", required = false) Byte type)
     {
         List<MediaFolder> mediaFolders = settingsDao.getMediaFolders(type);
         
@@ -76,8 +81,14 @@ public class MediaController {
         return new ResponseEntity<>(mediaFolders, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media folder")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media folder returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found")
+    })
     @RequestMapping(value="/folder/{id}", method=RequestMethod.GET)
-    public ResponseEntity<MediaFolder> getMediaFolder(@PathVariable("id") UUID id)
+    public ResponseEntity<MediaFolder> getMediaFolder(
+            @ApiParam(value = "Media folder ID", required = true) @PathVariable("id") UUID id)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
@@ -88,9 +99,14 @@ public class MediaController {
         return new ResponseEntity<>(mediaFolder, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media element")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media element returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element not found")
+    })
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
-    public ResponseEntity<MediaElement> getMediaElement(@PathVariable("id") UUID id,
-                                                        @RequestParam(value = "sid", required = false) UUID sid)
+    public ResponseEntity<MediaElement> getMediaElement(
+            @ApiParam(value = "Media element ID", required = true) @PathVariable("id") UUID id)
     {
         MediaElement mediaElement = mediaDao.getMediaElementByID(id);
         
@@ -100,35 +116,38 @@ public class MediaController {
         
         List<MediaElement> mediaElements = Arrays.asList(mediaElement);
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements.get(0), HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get random media elements")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/random/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getRandomElements(@PathVariable("limit") Integer limit,
-                                                                @RequestParam(value="sid", required = false) UUID sid,
-                                                                @RequestParam(value = "type", required = false) Byte type) {
+    public ResponseEntity<List<MediaElement>> getRandomElements(
+            @ApiParam(value = "Number of media elements to return", required = true) @PathVariable("limit") Integer limit,
+            @ApiParam(value = "Media type", required = false) @RequestParam(value = "type", required = false) Byte type)
+    {
         List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(limit, type);
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media folder contents")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "No media elements found")
+    })
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(@PathVariable("id") UUID id,
-                                                                              @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(
+            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id)
+    {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
         if(mediaFolder == null) {
@@ -141,17 +160,20 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get directory element contents")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Directory element not found"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Directory element cannot be processed")
+    })
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByID(@PathVariable("id") UUID id,
-                                                                   @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByID(
+            @ApiParam(value = "ID of the directory element", required = true) @PathVariable("id") UUID id)
+    {
         MediaElement element = mediaDao.getMediaElementByID(id);
         
         if(element == null) {
@@ -181,16 +203,17 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get random directory elements")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+    })
     @RequestMapping(value="/all/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getDirectoryMediaElements(@PathVariable("limit") Integer limit)
+    public ResponseEntity<List<MediaElement>> getDirectoryMediaElements(
+            @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit)
     {
         List<MediaElement> mediaElements = mediaDao.getDirectoryElements(limit);
         
@@ -201,9 +224,15 @@ public class MediaController {
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get recently added directory elements")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+    })
     @RequestMapping(value="/recentlyadded/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(@PathVariable("limit") Integer limit,
-                                                                                     @RequestParam(value = "type", required = false) Byte type)
+    public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(
+            @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit,
+            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type)
     {   
         List<MediaElement> mediaElements = null;
         
@@ -224,9 +253,15 @@ public class MediaController {
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get recently played directory elements")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+    })
     @RequestMapping(value="/recentlyplayed/{limit}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(@PathVariable("limit") Integer limit,
-                                                                                      @RequestParam(value = "type", required = false) Byte type)
+    public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(
+            @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit,
+            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type)
     {   
         List<MediaElement> mediaElements = null;
         
@@ -247,6 +282,11 @@ public class MediaController {
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get list of artists")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Artist list returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No artists found")
+    })
     @RequestMapping(value="/artist", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getArtists()
     {
@@ -259,6 +299,11 @@ public class MediaController {
         return new ResponseEntity<>(artists, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get list of album artists")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album artist list returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No album artists found")
+    })
     @RequestMapping(value="/albumartist", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getAlbumArtists()
     {
@@ -271,6 +316,11 @@ public class MediaController {
         return new ResponseEntity<>(albumArtists, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get list of albums")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+    })
     @RequestMapping(value="/album", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getAlbums()
     {
@@ -283,8 +333,14 @@ public class MediaController {
         return new ResponseEntity<>(albums, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get list of albums for artist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+    })
     @RequestMapping(value="/artist/{artist}/album", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getAlbumsByArtist(@PathVariable("artist") String artist)
+    public ResponseEntity<List<String>> getAlbumsByArtist(
+            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist)
     {
         List<String> albums = mediaDao.getAlbumsByArtist(artist);
         
@@ -295,8 +351,14 @@ public class MediaController {
         return new ResponseEntity<>(albums, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get list of albums for album artist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+    })
     @RequestMapping(value="/albumartist/{albumartist}/album", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getAlbumsByAlbumArtist(@PathVariable("albumartist") String albumArtist)
+    public ResponseEntity<List<String>> getAlbumsByAlbumArtist(
+            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist)
     {
         List<String> albums = mediaDao.getAlbumsByAlbumArtist(albumArtist);
         
@@ -307,10 +369,16 @@ public class MediaController {
         return new ResponseEntity<>(albums, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media elements by artist and album")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/artist/{artist}/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(@PathVariable("artist") String artist,
-                                                                               @PathVariable("album") String album,
-                                                                               @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(
+            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist,
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+    {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "' and album '" + album + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtistAndAlbum(artist, album);
@@ -319,18 +387,19 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media elements by album artist and album")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/albumartist/{albumartist}/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(@PathVariable("albumartist") String albumArtist,
-                                                                                    @PathVariable("album") String album,
-                                                                                    @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(
+            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist,
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+    {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "' and album '" + album + "'", null);
 
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtistAndAlbum(albumArtist, album);
@@ -338,18 +407,19 @@ public class MediaController {
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-       
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
         
        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media elements by artist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/artist/{artist}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(@PathVariable("artist") String artist,
-                                                                       @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(
+            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist)
+    {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByArtist(artist);
@@ -358,17 +428,18 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media elements by album artist")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/albumartist/{albumartist}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(@PathVariable("albumartist") String albumArtist,
-                                                                            @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(
+            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist)
+    {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbumArtist(albumArtist);
@@ -377,17 +448,18 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get media elements by album")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/album/{album}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(@PathVariable("album") String album,
-                                                                      @RequestParam(value="sid", required = false) UUID sid) {
+    public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+    {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album '" + album + "'", null);
         
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByAlbum(album);
@@ -396,14 +468,14 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        // Check if we need to process media elements prior to sending
-        if(sid != null) {
-            processMediaElements(sid, mediaElements);
-        }
-        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get list of collections")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "List of collections returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No collections found")
+    })
     @RequestMapping(value="/collection", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getCollections()
     {
@@ -416,8 +488,14 @@ public class MediaController {
         return new ResponseEntity<>(collections, HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Get media elements by collection")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+    })
     @RequestMapping(value="/collection/{collection}", method=RequestMethod.GET)
-    public ResponseEntity<List<MediaElement>> getMediaElementsByCollection(@PathVariable("collection") String collection)
+    public ResponseEntity<List<MediaElement>> getMediaElementsByCollection(
+            @ApiParam(value = "Collection", required = true) @PathVariable("collection") String collection)
     {
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByCollection(collection);
         
@@ -428,8 +506,15 @@ public class MediaController {
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
+    @ApiOperation(value = "Get list of directories from filesystem")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "List of directories returned successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directories found"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Path is not a directory")
+    })
     @RequestMapping(value="/files", method=RequestMethod.GET)
-    public ResponseEntity<List<Directory>> getDirectoryList(@RequestParam(value = "path", required = false) String path) {
+    public ResponseEntity<List<Directory>> getDirectoryList(
+            @ApiParam(value = "Directory path", required = false) @RequestParam(value = "path", required = false) String path) {
         List<Directory> directories = new ArrayList<>();
         File[] files = null;
         
@@ -473,29 +558,4 @@ public class MediaController {
         
         return new ResponseEntity<>(directories, HttpStatus.OK);
     }
-    
-    /**
-     * Helper Functions
-     */
-    
-    private void processMediaElements(UUID sid, List<MediaElement> mediaElements) {
-        // Check session is valid
-        Session session = sessionService.getSessionById(sid);
-
-        if(session != null && session.getClientProfile() != null) {
-            // Populate streams for media elements
-            mediaElements.forEach((mediaElement) -> {
-                if(mediaElement.getType() == MediaElementType.AUDIO) {
-                    mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
-                } else if(mediaElement.getType() == MediaElementType.VIDEO) {
-                    mediaElement.setVideoStreams(mediaDao.getVideoStreamsByMediaElementId(mediaElement.getID()));
-                    mediaElement.setAudioStreams(mediaDao.getAudioStreamsByMediaElementId(mediaElement.getID()));
-                    mediaElement.setSubtitleStreams(mediaDao.getSubtitleStreamsByMediaElementId(mediaElement.getID()));
-                }
-            });
-        
-            TranscodeUtils.processMediaElementsForClient(mediaElements, session.getClientProfile());
-        }
-    }
-    
 }
