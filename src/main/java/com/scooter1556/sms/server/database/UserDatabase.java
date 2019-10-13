@@ -25,6 +25,7 @@ package com.scooter1556.sms.server.database;
 
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserRole;
+import com.scooter1556.sms.server.domain.UserRule;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.exception.DatabaseException;
 import com.scooter1556.sms.server.service.LogService;
@@ -42,7 +43,7 @@ public final class UserDatabase extends Database {
     private static final String CLASS_NAME = "UserDatabase";
     
     public static final String DB_NAME = "User";
-    public static final int DB_VERSION = 2;
+    public static final int DB_VERSION = 3;
     
     public UserDatabase() {
         super(DB_NAME, DB_VERSION);   
@@ -60,33 +61,11 @@ public final class UserDatabase extends Database {
     public void create() {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Creating database.", null);
         
-        try {
-            // Users
-            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS User ("
-                    + "Username VARCHAR(50) NOT NULL,"
-                    + "Password VARCHAR(100) NOT NULL,"
-                    + "Enabled BOOLEAN DEFAULT 1 NOT NULL,"
-                    + "PRIMARY KEY (Username))");
-
-            // User Role
-            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS UserRole ("
-                    + "Username VARCHAR(50) NOT NULL,"
-                    + "Role VARCHAR(20) NOT NULL,"
-                    + "PRIMARY KEY (Username,Role),"
-                    + "FOREIGN KEY (Username) REFERENCES User (Username) ON DELETE CASCADE)");
-            
-            // User Statistics
-            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS UserStats ("
-                    + "Username VARCHAR(50) NOT NULL,"
-                    + "Streamed BIGINT DEFAULT 0 NOT NULL,"
-                    + "Downloaded BIGINT DEFAULT 0 NOT NULL,"
-                    + "PRIMARY KEY (Username),"
-                    + "FOREIGN KEY (Username) REFERENCES User (Username) ON DELETE CASCADE)");
-            
-            
-        } catch (DataAccessException x) {
-            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating database.", x);
-        }
+        // Create user database
+        createUserTable();
+        createUserRoleTable();
+        createUserStatsTable();
+        createUserRulesTable();
           
         try {
             // Add Default User
@@ -96,6 +75,56 @@ public final class UserDatabase extends Database {
             getJdbcTemplate().update("INSERT INTO UserStats (Username) VALUES ('admin')");
         } catch (DataAccessException x) {
             LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Unable to create default user, it may already exist.", null);
+        }
+    }
+    
+    private void createUserTable() {
+        try {
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS User ("
+                        + "Username VARCHAR(50) NOT NULL,"
+                        + "Password VARCHAR(100) NOT NULL,"
+                        + "Enabled BOOLEAN DEFAULT 1 NOT NULL,"
+                        + "PRIMARY KEY (Username))");
+        } catch (DataAccessException x) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating user table.", x);
+        }
+    }
+    
+    private void createUserRoleTable() {
+        try {
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS UserRole ("
+                    + "Username VARCHAR(50) NOT NULL,"
+                    + "Role VARCHAR(20) NOT NULL,"
+                    + "PRIMARY KEY (Username,Role),"
+                    + "FOREIGN KEY (Username) REFERENCES User (Username) ON DELETE CASCADE)");
+        } catch (DataAccessException x) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating user role table.", x);
+        }
+    }
+    
+    private void createUserStatsTable() {
+        try {
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS UserStats ("
+                    + "Username VARCHAR(50) NOT NULL,"
+                    + "Streamed BIGINT DEFAULT 0 NOT NULL,"
+                    + "Downloaded BIGINT DEFAULT 0 NOT NULL,"
+                    + "PRIMARY KEY (Username),"
+                    + "FOREIGN KEY (Username) REFERENCES User (Username) ON DELETE CASCADE)");
+        } catch (DataAccessException x) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating user statistics table.", x);
+        }
+    }
+    
+    private void createUserRulesTable() {
+        try {
+            getJdbcTemplate().execute("CREATE TABLE IF NOT EXISTS UserRules ("
+                    + "Username VARCHAR(50) NOT NULL,"
+                    + "Path VARCHAR NOT NULL,"
+                    + "Rule TINYINT NOT NULL,"
+                    + "PRIMARY KEY (Username,Path),"
+                    + "FOREIGN KEY (Username) REFERENCES User (Username) ON DELETE CASCADE)");
+        } catch (DataAccessException x) {
+            LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error creating user rule table.", x);
         }
     }
     
@@ -131,6 +160,17 @@ public final class UserDatabase extends Database {
         }
     }
     
+    public static final class UserRuleMapper implements RowMapper {
+        @Override
+        public UserRule mapRow(ResultSet rs, int rowNum) throws SQLException {
+            UserRule userRule = new UserRule();
+            userRule.setUsername(rs.getString("Username"));
+            userRule.setPath(rs.getString("Path"));
+            userRule.setRule(rs.getByte("Rule"));
+            return userRule;
+        }
+    }
+    
     @Override
     public void upgrade(int oldVersion, int newVersion) {
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Upgrading database from version " + oldVersion + " to " + newVersion, null);
@@ -145,6 +185,10 @@ public final class UserDatabase extends Database {
                         new Object[] {new BCryptPasswordEncoder().encode(user.getPassword()), user.getUsername()});
             });
         }
+        
+        if(newVersion == 3) {
+            createUserRulesTable();
+        }
     }
     
     @Override
@@ -155,6 +199,7 @@ public final class UserDatabase extends Database {
         getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME);
         getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Role");
         getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Stats");
+        getJdbcTemplate().execute("DROP TABLE IF EXISTS " + DB_NAME + "Rules");
         create();
     }
 }

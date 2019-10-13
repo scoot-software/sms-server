@@ -27,11 +27,14 @@ import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
+import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
+import com.scooter1556.sms.server.domain.UserRule;
+import com.scooter1556.sms.server.domain.UserRuleRequest;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.ScannerService;
@@ -262,6 +265,145 @@ public class AdminController {
         }
         
         return new ResponseEntity<>(userStats, HttpStatus.OK);
+    }
+    
+    @ApiOperation(value = "Get rules associated with user(s)")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully returned user rules"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No user rules found")
+    })
+    @RequestMapping(value="/user/rule", method=RequestMethod.GET)
+    public ResponseEntity<List<UserRule>> getUserRules(
+            @ApiParam(value = "Username", required = false) @RequestParam(value = "username", required = false) String username)
+    {
+        List<UserRule> userRules = null;
+        
+        if(username == null) {
+            userRules = userDao.getUserRules();
+        } else {
+            userRules = userDao.getUserRulesByUsername(username);
+        }
+        
+        if (userRules == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        return new ResponseEntity<>(userRules, HttpStatus.OK);
+    }
+    
+    @ApiOperation(value = "Update user rules")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully updated user rules"),
+        @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Required data is missing or invalid"),
+        @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Username provided is invalid"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Unable to add rules for administrators"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder or element doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update user rules")
+    })
+    @RequestMapping(value="/user/rule", method=RequestMethod.POST, headers = {"Content-type=application/json"})
+    @ResponseBody
+    public ResponseEntity<String> createUserRule(
+            @ApiParam(value = "User rule", required = true) @RequestBody UserRuleRequest userRule)
+    {
+        // Check required parameters
+        if(userRule.getUsername() == null || userRule.getID() == null || userRule.getRule() == null || !SMS.Rule.isValid(userRule.getRule())) {
+            return new ResponseEntity<>("Required data is missing or invalid.", HttpStatus.EXPECTATION_FAILED);
+        }
+        
+        // Check user
+        User user = userDao.getUserByUsername(userRule.getUsername());
+        if(user == null) {
+            return new ResponseEntity<>("Username doesn't exist.", HttpStatus.BAD_REQUEST);
+        }
+        
+        // Check user roles
+        List<UserRole> roles = userDao.getUserRolesByUsername(userRule.getUsername());
+        
+        // Check for ADMIN role
+        for(UserRole role : roles) {
+            if(role.getRole().equals("ADMIN")) {
+                return new ResponseEntity<>("Cannot add rules for administrators.", HttpStatus.FORBIDDEN);
+            }
+        }
+        
+        // Fetch media folder or element
+        String path = null;
+        
+        if(userRule.getFolder() == null) {
+            userRule.setFolder(false);
+        }
+
+        if(userRule.getFolder()) {
+            MediaFolder folder = settingsDao.getMediaFolderByID(userRule.getID());
+            
+            if(folder == null) {
+                return new ResponseEntity<>("Media folder not found.", HttpStatus.NOT_FOUND);
+            }
+            
+            path = folder.getPath();
+        } else {
+            MediaElement mediaElement = mediaDao.getMediaElementByID(userRule.getID());
+            
+            if(mediaElement == null) {
+                return new ResponseEntity<>("Media element not found.", HttpStatus.NOT_FOUND);
+            }
+            
+            path = mediaElement.getPath();
+        }
+        
+        // Remove existing matching rules
+        userDao.removeUserRule(userRule.getUsername(), path);
+        
+        if(!userDao.createUserRule(new UserRule(userRule.getUsername(), path, userRule.getRule()))) {
+            return new ResponseEntity<>("Failed to add user rule to database.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        
+        LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Added rule for user '" + userRule.getUsername() + "': Path=" + path + " Rule="+ SMS.Rule.toString(userRule.getRule()), null);
+        return new ResponseEntity<>("User rule added successfully.", HttpStatus.OK);
+    }
+    
+    @ApiOperation(value = "Remove user rule(s)")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully removed user rule(s)"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element or folder not found")
+    })
+    @RequestMapping(value="/user/{username}/rule/{id}", method=RequestMethod.DELETE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ResponseEntity<String> deleteUserRule(
+            @ApiParam(value = "Username", required = true) @PathVariable("username") String username,
+            @ApiParam(value = "ID of media element or folder (or 'all')", required = true) @PathVariable("id") String id,
+            @ApiParam(value = "Whether provided ID is a media folder", required = false) @RequestParam(value = "folder", required = false) Boolean isFolder)
+    {
+        // Remove all user rules
+        if(id.equals("all")) {
+            userDao.removeUserRuleByUsername(username);
+            return new ResponseEntity<>("Successfully removed all rules for user.", HttpStatus.OK);
+        }
+        
+        // Get media element or folder
+        if(isFolder == null) {
+            isFolder = false;
+        }
+
+        if(isFolder) {
+            MediaFolder folder = settingsDao.getMediaFolderByID(UUID.fromString(id));
+            
+            if(folder == null) {
+                return new ResponseEntity<>("Media folder not found.", HttpStatus.NOT_FOUND);
+            }
+            
+            userDao.removeUserRule(username, folder.getPath());
+        } else {
+            MediaElement mediaElement = mediaDao.getMediaElementByID(UUID.fromString(id));
+            
+            if(mediaElement == null) {
+                return new ResponseEntity<>("Media element not found.", HttpStatus.NOT_FOUND);
+            }
+            
+            userDao.removeUserRule(username, mediaElement.getPath());
+        }
+        
+        return new ResponseEntity<>("Successfully removed user rule(s).", HttpStatus.OK);
     }
     
     //

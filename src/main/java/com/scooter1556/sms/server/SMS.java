@@ -103,4 +103,26 @@ public class SMS {
         public static final int SUBTITLES = 5;
         public static final int MISSING_DATA = 6;
     }
+    
+    public static class Rule {
+        public static final byte ALLOWED = 0;
+        public static final byte DENIED = 1;
+                
+        public static String toString(byte value) {
+            switch(value) {
+                case ALLOWED:
+                    return "Allowed";
+                    
+                case DENIED:
+                    return "Denied";
+                    
+                default:
+                    return "Invalid";
+            }
+        }
+        
+        public static boolean isValid(byte val) {
+            return val >= 0 && val <= 1;
+        }
+    }
 }

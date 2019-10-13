@@ -9,10 +9,9 @@ import com.scooter1556.sms.server.dao.MediaDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.Playlist;
 import com.scooter1556.sms.server.domain.PlaylistContent;
-import com.scooter1556.sms.server.domain.Session;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SessionService;
-import com.scooter1556.sms.server.utilities.TranscodeUtils;
+import com.scooter1556.sms.server.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -43,7 +42,7 @@ public class PlaylistController {
     private MediaDao mediaDao;
     
     @Autowired
-    private SessionService sessionService;
+    private UserService userService;
     
     private static final String CLASS_NAME = "PlaylistController";
     
@@ -283,6 +282,13 @@ public class PlaylistController {
         
         if(mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process conents for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         
         // Check if we need to send a randomised playlist

@@ -30,6 +30,7 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.MediaElementType;
 import com.scooter1556.sms.server.domain.MediaFolder;
 import com.scooter1556.sms.server.service.LogService;
+import com.scooter1556.sms.server.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -40,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,21 +63,33 @@ public class MediaController {
     @Autowired
     private MediaDao mediaDao;
     
+    @Autowired
+    private UserService userService;
+    
     private static final String CLASS_NAME = "MediaController";
 
     @ApiOperation(value = "Get a list of media folders")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media folders returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media folders found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media folders found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/folder", method=RequestMethod.GET)
     public ResponseEntity<List<MediaFolder>> getMediaFolders(
-            @ApiParam(value = "Content type", required = false, allowableValues = "0, 1, 2, 3") @RequestParam(value = "type", required = false) Byte type)
+            @ApiParam(value = "Content type", required = false, allowableValues = "0, 1, 2, 3") @RequestParam(value = "type", required = false) Byte type,
+            HttpServletRequest request)
     {
         List<MediaFolder> mediaFolders = settingsDao.getMediaFolders(type);
         
         if (mediaFolders == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaFolders = userService.processMediaFoldersForUser(request.getUserPrincipal().getName(), mediaFolders);
+        
+        if (mediaFolders == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         
         return new ResponseEntity<>(mediaFolders, HttpStatus.OK);
@@ -84,16 +98,23 @@ public class MediaController {
     @ApiOperation(value = "Get media folder")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media folder returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/folder/{id}", method=RequestMethod.GET)
     public ResponseEntity<MediaFolder> getMediaFolder(
-            @ApiParam(value = "Media folder ID", required = true) @PathVariable("id") UUID id)
+            @ApiParam(value = "Media folder ID", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
         if (mediaFolder == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        if(!userService.processMediaFolderForUser(request.getUserPrincipal().getName(), mediaFolder)) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         
         return new ResponseEntity<>(mediaFolder, HttpStatus.OK);
@@ -102,11 +123,13 @@ public class MediaController {
     @ApiOperation(value = "Get media element")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media element returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element not found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element not found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
     public ResponseEntity<MediaElement> getMediaElement(
-            @ApiParam(value = "Media element ID", required = true) @PathVariable("id") UUID id)
+            @ApiParam(value = "Media element ID", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request)
     {
         MediaElement mediaElement = mediaDao.getMediaElementByID(id);
         
@@ -114,25 +137,42 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        List<MediaElement> mediaElements = Arrays.asList(mediaElement);
-        
-        return new ResponseEntity<>(mediaElements.get(0), HttpStatus.OK);
+        // Process for user
+        if(!userService.processMediaElementForUser(request.getUserPrincipal().getName(), mediaElement)) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+                
+        return new ResponseEntity<>(mediaElement, HttpStatus.OK);
     }
     
     @ApiOperation(value = "Get random media elements")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/random/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRandomElements(
             @ApiParam(value = "Number of media elements to return", required = true) @PathVariable("limit") Integer limit,
-            @ApiParam(value = "Media type", required = false) @RequestParam(value = "type", required = false) Byte type)
+            @ApiParam(value = "Media type", required = false) @RequestParam(value = "type", required = false) Byte type,
+            HttpServletRequest request)
     {
-        List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(limit, type);
+        List<MediaElement> mediaElements = mediaDao.getRandomMediaElements(type);
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Trim list to specified limit
+        if(mediaElements.size() > limit) {
+            mediaElements = mediaElements.subList(0, limit);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -142,11 +182,13 @@ public class MediaController {
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
         @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found"),
-        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/folder/{id}/contents", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByMediaFolderID(
-            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id)
+            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request)
     {
         MediaFolder mediaFolder = settingsDao.getMediaFolderByID(id);
         
@@ -160,6 +202,13 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
@@ -168,11 +217,13 @@ public class MediaController {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
         @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Directory element not found"),
         @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "No media elements found"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Directory element cannot be processed")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_ACCEPTABLE, message = "Directory element cannot be processed"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/{id}/contents", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByID(
-            @ApiParam(value = "ID of the directory element", required = true) @PathVariable("id") UUID id)
+            @ApiParam(value = "ID of the directory element", required = true) @PathVariable("id") UUID id,
+            HttpServletRequest request)
     {
         MediaElement element = mediaDao.getMediaElementByID(id);
         
@@ -203,22 +254,43 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get random directory elements")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/all/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getDirectoryMediaElements(
-            @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit)
+            @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit,
+            HttpServletRequest request)
     {
-        List<MediaElement> mediaElements = mediaDao.getDirectoryElements(limit);
+        List<MediaElement> mediaElements = mediaDao.getDirectoryElements();
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Trim list to specified limit
+        if(mediaElements.size() > limit) {
+            mediaElements = mediaElements.subList(0, limit);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -227,27 +299,41 @@ public class MediaController {
     @ApiOperation(value = "Get recently added directory elements")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/recentlyadded/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyAddedDirectoryMediaElements(
             @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit,
-            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type)
+            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type,
+            HttpServletRequest request)
     {   
         List<MediaElement> mediaElements = null;
         
         if(type == null) {
-            mediaElements = mediaDao.getRecentlyAddedDirectoryElements(limit);
+            mediaElements = mediaDao.getRecentlyAddedDirectoryElements();
         } else {
             if(type == MediaElement.DirectoryMediaType.AUDIO) {
-                mediaElements = mediaDao.getRecentlyAddedAudioDirectoryElements(limit);
+                mediaElements = mediaDao.getRecentlyAddedAudioDirectoryElements();
             } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
-                mediaElements = mediaDao.getRecentlyAddedVideoDirectoryElements(limit);
+                mediaElements = mediaDao.getRecentlyAddedVideoDirectoryElements();
             }
         }
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Trim list to specified limit
+        if(mediaElements.size() > limit) {
+            mediaElements = mediaElements.subList(0, limit);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -256,27 +342,41 @@ public class MediaController {
     @ApiOperation(value = "Get recently played directory elements")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Directory elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No directory elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/recentlyplayed/{limit}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getRecentlyPlayedDirectoryMediaElements(
             @ApiParam(value = "Number of directory elements to return", required = true) @PathVariable("limit") Integer limit,
-            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type)
+            @ApiParam(value = "Directory media type", required = false) @RequestParam(value = "type", required = false) Byte type,
+            HttpServletRequest request)
     {   
         List<MediaElement> mediaElements = null;
         
         if(type == null) {
-            mediaElements = mediaDao.getRecentlyPlayedDirectoryElements(limit);
+            mediaElements = mediaDao.getRecentlyPlayedDirectoryElements();
         } else {
             if(type == MediaElement.DirectoryMediaType.AUDIO) {
-                mediaElements = mediaDao.getRecentlyPlayedAudioDirectoryElements(limit);
+                mediaElements = mediaDao.getRecentlyPlayedAudioDirectoryElements();
             } else if(type == MediaElement.DirectoryMediaType.VIDEO) {
-                mediaElements = mediaDao.getRecentlyPlayedVideoDirectoryElements(limit);
+                mediaElements = mediaDao.getRecentlyPlayedVideoDirectoryElements();
             }
         }
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Trim list to specified limit
+        if(mediaElements.size() > limit) {
+            mediaElements = mediaElements.subList(0, limit);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -372,12 +472,14 @@ public class MediaController {
     @ApiOperation(value = "Get media elements by artist and album")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/artist/{artist}/album/{album}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByArtistAndAlbum(
             @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist,
-            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album,
+            HttpServletRequest request)
     {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "' and album '" + album + "'", null);
         
@@ -387,18 +489,27 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get media elements by album artist and album")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/albumartist/{albumartist}/album/{album}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtistAndAlbum(
             @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist,
-            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album,
+            HttpServletRequest request)
     {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "' and album '" + album + "'", null);
 
@@ -408,17 +519,26 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
        return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get media elements by artist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/artist/{artist}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByArtist(
-            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist)
+            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist,
+            HttpServletRequest request)
     {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for artist '" + artist + "'", null);
         
@@ -428,17 +548,26 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get media elements by album artist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/albumartist/{albumartist}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByAlbumArtist(
-            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist)
+            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist,
+            HttpServletRequest request)
     {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album artist '" + albumArtist + "'", null);
         
@@ -448,17 +577,26 @@ public class MediaController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
     
     @ApiOperation(value = "Get media elements by album")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/album/{album}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByAlbum(
-            @ApiParam(value = "Album", required = true) @PathVariable("album") String album)
+            @ApiParam(value = "Album", required = true) @PathVariable("album") String album,
+            HttpServletRequest request)
     {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Fetching media elements for album '" + album + "'", null);
         
@@ -466,6 +604,13 @@ public class MediaController {
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
@@ -491,16 +636,25 @@ public class MediaController {
     @ApiOperation(value = "Get media elements by collection")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Media elements returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No media elements found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/collection/{collection}", method=RequestMethod.GET)
     public ResponseEntity<List<MediaElement>> getMediaElementsByCollection(
-            @ApiParam(value = "Collection", required = true) @PathVariable("collection") String collection)
+            @ApiParam(value = "Collection", required = true) @PathVariable("collection") String collection,
+            HttpServletRequest request)
     {
         List<MediaElement> mediaElements = mediaDao.getMediaElementsByCollection(collection);
         
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);

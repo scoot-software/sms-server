@@ -26,10 +26,12 @@ package com.scooter1556.sms.server.dao;
 import com.scooter1556.sms.server.database.UserDatabase;
 import com.scooter1556.sms.server.database.UserDatabase.UserMapper;
 import com.scooter1556.sms.server.database.UserDatabase.UserRoleMapper;
+import com.scooter1556.sms.server.database.UserDatabase.UserRuleMapper;
 import com.scooter1556.sms.server.database.UserDatabase.UserStatsMapper;
 import com.scooter1556.sms.server.domain.User;
 import com.scooter1556.sms.server.domain.UserStats;
 import com.scooter1556.sms.server.domain.UserRole;
+import com.scooter1556.sms.server.domain.UserRule;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -277,5 +279,76 @@ public class UserDao {
         }
         
         return userStats;
+    }
+    
+    //
+    // User Rules
+    //
+    
+    public boolean createUserRule(UserRule userRule) {
+        try {
+            userDatabase.getJdbcTemplate().update("INSERT INTO UserRules (Username,Path,Rule) " +
+                                "VALUES (?,?,?)", new Object[] {userRule.getUsername(), userRule.getPath(), userRule.getRule()});
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removeUserRule(String username, String path) {
+        try {
+            userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Username=? AND Path=?", username, path);
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removeUserRuleByUsername(String username) {
+        try {
+            userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Username=?", username);
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public boolean removeUserRuleByPath(String path) {
+        try {
+            userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Path=?", path);
+        } catch (InvalidResultSetAccessException e) {
+            return false;
+        } catch (DataAccessException e) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    public List<UserRule> getUserRules() {
+        try {
+            List<UserRule> userRules = userDatabase.getJdbcTemplate().query("SELECT * FROM UserRules", new UserRuleMapper());
+            return userRules;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public List<UserRule> getUserRulesByUsername(String username) {
+        try {
+            List<UserRule> userRules = userDatabase.getJdbcTemplate().query("SELECT * FROM UserRules WHERE Username=?", new UserRuleMapper(), new Object[] {username});
+            return userRules;
+        } catch (DataAccessException e) {
+            return null;
+        }
     }
 }

@@ -335,14 +335,14 @@ public class MediaDao {
         }
     }
     
-    public List<MediaElement> getRandomMediaElements(int limit, Byte type) {
+    public List<MediaElement> getRandomMediaElements(Byte type) {
         List<MediaElement> mediaElements;
 
         try {
             if(type == null) {
-                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE NOT Excluded ORDER BY RAND() DESC LIMIT ?", new MediaElementMapper(), new Object[] {limit});
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE NOT Excluded ORDER BY RAND() DESC", new MediaElementMapper());
             } else {
-                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY RAND() DESC LIMIT ?", new MediaElementMapper(), new Object[] {type, limit});
+                mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY RAND() DESC", new MediaElementMapper(), new Object[] {type});
             }
         } catch (DataAccessException e) {
             return null;
@@ -360,63 +360,63 @@ public class MediaDao {
         }
     }
     
-    public List<MediaElement> getDirectoryElements(int limit) {
+    public List<MediaElement> getDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY Title LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY Title DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyPlayedDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyPlayedDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyAddedDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyAddedDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY Created DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND NOT Excluded ORDER BY Created DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyPlayedVideoDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyPlayedVideoDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyAddedVideoDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyAddedVideoDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.VIDEO});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyPlayedAudioDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyPlayedAudioDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND LastPlayed IS NOT NULL AND NOT Excluded ORDER BY LastPlayed DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<MediaElement> getRecentlyAddedAudioDirectoryElements(int limit) {
+    public List<MediaElement> getRecentlyAddedAudioDirectoryElements() {
         try {
-            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC LIMIT ?", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO, limit});
+            List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Type=? AND DirectoryType=? AND NOT Excluded ORDER BY Created DESC", new MediaElementMapper(), new Object[] {MediaElement.MediaElementType.DIRECTORY, MediaElement.DirectoryMediaType.AUDIO});
             return mediaElements;
         } catch (DataAccessException e) {
             return null;
