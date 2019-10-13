@@ -28,14 +28,11 @@ import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaElement.AudioStream;
 import com.scooter1556.sms.server.domain.MediaElement.SubtitleStream;
 import com.scooter1556.sms.server.domain.MediaElement.VideoStream;
-import com.scooter1556.sms.server.domain.MediaFolder;
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import org.apache.commons.io.FilenameUtils;
-import org.springframework.lang.NonNull;
 
 public class MediaUtils {
     

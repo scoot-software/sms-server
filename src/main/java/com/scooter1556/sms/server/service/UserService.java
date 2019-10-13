@@ -179,7 +179,7 @@ public class UserService {
             result = false;
 
             for(UserRule rule : allowed) {
-                if(path.contains(rule.getPath())) {
+                if(rule.getPath().contains(path) || path.contains(rule.getPath())) {
                     result = true;
                     break;
                 }
