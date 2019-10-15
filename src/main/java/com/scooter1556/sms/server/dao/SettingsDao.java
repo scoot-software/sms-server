@@ -121,23 +121,19 @@ public class SettingsDao {
     }
 
     public MediaFolder getMediaFolderByPath(String path) {
-        MediaFolder mediaFolder = null;
-
         try {
-            if (!path.equals("")) {
+            if (!path.isEmpty()) {
 
                 List<MediaFolder> mediaFolders = settingsDatabase.getJdbcTemplate().query("SELECT * FROM MediaFolder WHERE Path=?", new MediaFolderMapper(), new Object[]{path});
 
-                if (mediaFolders != null) {
-                    if (mediaFolders.size() > 0) {
-                        mediaFolder = mediaFolders.get(0);
-                    }
+                if (mediaFolders != null && !mediaFolders.isEmpty()) {
+                    return mediaFolders.get(0);
                 }
             }
         } catch (DataAccessException e) {
             return null;
         }
-
-        return mediaFolder;
+        
+        return null;
     }
 }

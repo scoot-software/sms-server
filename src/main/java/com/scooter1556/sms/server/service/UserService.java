@@ -24,6 +24,8 @@
 package com.scooter1556.sms.server.service;
 
 import com.scooter1556.sms.server.SMS;
+import com.scooter1556.sms.server.dao.MediaDao;
+import com.scooter1556.sms.server.dao.SettingsDao;
 import com.scooter1556.sms.server.dao.UserDao;
 import com.scooter1556.sms.server.domain.MediaElement;
 import com.scooter1556.sms.server.domain.MediaFolder;
@@ -39,7 +41,13 @@ public class UserService {
     private static final String CLASS_NAME = "UserService";
     
     @Autowired
+    private MediaDao mediaDao;
+    
+    @Autowired
     private UserDao userDao;
+    
+    @Autowired
+    private SettingsDao settingsDao;
     
     public boolean processMediaFolderForUser(@NonNull String user, @NonNull MediaFolder mediaFolder) {
         // Check parameters
@@ -201,5 +209,39 @@ public class UserService {
         }
         
         return result;
+    }
+    
+    public void pruneUserRules() {
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Pruning user rules...", null);
+        List<String> paths = userDao.getUserRulePaths();
+        
+        if(paths == null || paths.isEmpty()) {
+            return;
+        }
+        
+        int count = 0;
+        
+        // Check paths to make sure they are valid
+        for(String path : paths) {
+            // Media Folder
+            MediaFolder folder = settingsDao.getMediaFolderByPath(path);
+            
+            if (folder != null) {
+                continue;
+            }
+            
+            // Media Element
+            MediaElement mediaElement = mediaDao.getMediaElementByPath(path);
+            
+            if (mediaElement != null) {
+                continue;
+            }
+            
+            // Remove rule
+            userDao.removeUserRuleByPath(path, true);
+            count ++;
+        }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Finished pruning user rules (" + count + " rules removed)", null);
     }
 }

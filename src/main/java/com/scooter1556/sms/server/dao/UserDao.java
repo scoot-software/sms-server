@@ -322,9 +322,13 @@ public class UserDao {
         return true;
     }
     
-    public boolean removeUserRuleByPath(String path) {
+    public boolean removeUserRuleByPath(String path, boolean matchExact) {
         try {
-            userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Path=?", path);
+            if(matchExact) {
+                userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Path=?", path);
+            } else {
+                userDatabase.getJdbcTemplate().update("DELETE FROM UserRules WHERE Path LIKE ?", path + "%");
+            }
         } catch (InvalidResultSetAccessException e) {
             return false;
         } catch (DataAccessException e) {
@@ -347,6 +351,14 @@ public class UserDao {
         try {
             List<UserRule> userRules = userDatabase.getJdbcTemplate().query("SELECT * FROM UserRules WHERE Username=?", new UserRuleMapper(), new Object[] {username});
             return userRules;
+        } catch (DataAccessException e) {
+            return null;
+        }
+    }
+    
+    public List<String> getUserRulePaths() {
+        try {
+            return userDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Path FROM UserRules", String.class);
         } catch (DataAccessException e) {
             return null;
         }

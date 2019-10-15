@@ -38,7 +38,7 @@ import com.scooter1556.sms.server.domain.UserRuleRequest;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.LogService.Level;
 import com.scooter1556.sms.server.service.ScannerService;
-import io.swagger.annotations.Api;
+import com.scooter1556.sms.server.service.UserService;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import io.swagger.annotations.ApiResponse;
@@ -75,6 +75,9 @@ public class AdminController {
     
     @Autowired
     private MediaDao mediaDao;
+    
+    @Autowired
+    private UserService userService;
     
     @Autowired
     private ScannerService scannerService;
@@ -368,7 +371,6 @@ public class AdminController {
         @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media element or folder not found")
     })
     @RequestMapping(value="/user/{username}/rule/{id}", method=RequestMethod.DELETE)
-    @ResponseStatus(HttpStatus.NO_CONTENT)
     public ResponseEntity<String> deleteUserRule(
             @ApiParam(value = "Username", required = true) @PathVariable("username") String username,
             @ApiParam(value = "ID of media element or folder (or 'all')", required = true) @PathVariable("id") String id,
@@ -404,6 +406,14 @@ public class AdminController {
         }
         
         return new ResponseEntity<>("Successfully removed user rule(s).", HttpStatus.OK);
+    }
+    
+    @ApiOperation(value = "Cleanup user rules")
+    @RequestMapping(value="/user/rule/clean", method=RequestMethod.GET)
+    @ResponseStatus(HttpStatus.OK)
+    public void cleanupUserRules() {
+        // Begin pruning user rules
+        userService.pruneUserRules();
     }
     
     //
@@ -462,12 +472,27 @@ public class AdminController {
     }
 
     @ApiOperation(value = "Remove media folder")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Successfully removed media folder"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder not found")
+    })
     @RequestMapping(value="/media/folder/{id}", method=RequestMethod.DELETE)
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteMediaFolder(
-            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id) {
+    public ResponseEntity<String> deleteMediaFolder(
+            @ApiParam(value = "ID of the media folder", required = true) @PathVariable("id") UUID id)
+    {
         LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Removed media folder with ID '" + id.toString() + "'.", null);
+        
+        // Fetch media folder
+        MediaFolder folder = settingsDao.getMediaFolderByID(id);
+        
+        if(folder == null) {
+            return new ResponseEntity<>("Media Folder not found.", HttpStatus.NOT_FOUND);
+        }
+        
+        // Remove media folder from database
         settingsDao.removeMediaFolder(id);
+                
+        return new ResponseEntity<>("Media Folder removed successfully.", HttpStatus.OK);
     }
     
     @ApiOperation(value = "Update a media folder")

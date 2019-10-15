@@ -138,6 +138,10 @@ public class MediaDao {
         mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ParentPath LIKE ? AND LastScanned != ?", new Object[] {path + "%",lastScanned});
     }
     
+    public void removeMediaElementsByPath(String path) {            
+        mediaDatabase.getJdbcTemplate().update("DELETE FROM MediaElement WHERE ParentPath LIKE ?", path + "%");
+    }
+    
     public boolean updateMediaElementsByID(final List<MediaElement> mediaElements) {
         String sql = "UPDATE MediaElement SET DirectoryType=?,LastScanned=?,Excluded=?,Size=?,Duration=?,Bitrate=?,Title=?,Artist=?,AlbumArtist=?,Album=?,Year=?,DiscNumber=?,DiscSubtitle=?,TrackNumber=?,Genre=?,Rating=?,Tagline=?,Description=?,Certificate=?,Collection=?,ReplaygainTrack=?,ReplaygainAlbum=? WHERE ID=?";
         
@@ -282,21 +286,17 @@ public class MediaDao {
     }
     
     public MediaElement getMediaElementByPath(String path) {
-        MediaElement mediaElement = null;
-        
         try {
             List<MediaElement> mediaElements = mediaDatabase.getJdbcTemplate().query("SELECT * FROM MediaElement WHERE Path=?", new MediaElementMapper(), new Object[] {path});
 
-            if(mediaElements != null) {
-                if(mediaElements.size() > 0) {
-                    mediaElement = mediaElements.get(0);
-                }
+            if(mediaElements != null && !mediaElements.isEmpty()) {
+                return mediaElements.get(0);
             }
         } catch (DataAccessException e) {
             return null;
         }
         
-        return mediaElement;
+        return null;
     }
     
     public List<MediaElement> getMediaElementsByParentPath(String path, Byte type) {
