@@ -423,45 +423,45 @@ public class MediaDao {
         }
     }
     
-    public List<String> getArtists() {
+    public List<MediaElement> getArtists() {
         try {
-            List<String> artists = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Artist FROM MediaElement WHERE Artist IS NOT NULL ORDER BY Artist", String.class);
+            List<MediaElement> artists = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(Artist,ParentPath) * FROM MediaElement WHERE Artist IS NOT NULL ORDER BY Artist", new MediaElementMapper());
             return artists;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<String> getAlbumArtists() {
+    public List<MediaElement> getAlbumArtists() {
         try {
-            List<String> albumArtists = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT AlbumArtist FROM MediaElement WHERE AlbumArtist IS NOT NULL ORDER BY AlbumArtist", String.class);
+            List<MediaElement> albumArtists = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(AlbumArtist,ParentPath) * FROM MediaElement WHERE AlbumArtist IS NOT NULL ORDER BY AlbumArtist", new MediaElementMapper());
             return albumArtists;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<String> getAlbums() {
+    public List<MediaElement> getAlbums() {
         try {
-            List<String> albums = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Album FROM MediaElement WHERE Album IS NOT NULL ORDER BY Album", String.class);
+            List<MediaElement> albums = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(Album) * FROM MediaElement WHERE Album IS NOT NULL ORDER BY Album", new MediaElementMapper());
             return albums;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<String> getAlbumsByArtist(String artist) {
+    public List<MediaElement> getAlbumsByArtist(String artist) {
         try {
-            List<String> albums = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Album FROM MediaElement WHERE Artist=? AND Album IS NOT NULL ORDER BY Album", new Object[] {artist}, String.class);
+            List<MediaElement> albums = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(Album) * FROM MediaElement WHERE Artist=? AND Album IS NOT NULL ORDER BY Album", new Object[] {artist}, new MediaElementMapper());
             return albums;
         } catch (DataAccessException e) {
             return null;
         }
     }
     
-    public List<String> getAlbumsByAlbumArtist(String albumArtist) {
+    public List<MediaElement> getAlbumsByAlbumArtist(String albumArtist) {
         try {
-            List<String> albums = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Album FROM MediaElement WHERE AlbumArtist=? AND Album IS NOT NULL ORDER BY Album", new Object[] {albumArtist}, String.class);
+            List<MediaElement> albums = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(Album) * FROM MediaElement WHERE AlbumArtist=? AND Album IS NOT NULL ORDER BY Album", new Object[] {albumArtist}, new MediaElementMapper());
             return albums;
         } catch (DataAccessException e) {
             return null;
@@ -513,9 +513,9 @@ public class MediaDao {
         }
     }
     
-    public List<String> getCollections() {
+    public List<MediaElement> getCollections() {
         try {
-            List<String> collections = mediaDatabase.getJdbcTemplate().queryForList("SELECT DISTINCT Collection FROM MediaElement WHERE Collection IS NOT NULL ORDER BY Collection", String.class);
+            List<MediaElement> collections = mediaDatabase.getJdbcTemplate().query("SELECT DISTINCT ON(Collection) * FROM MediaElement WHERE Collection IS NOT NULL ORDER BY Collection", new MediaElementMapper());
             return collections;
         } catch (DataAccessException e) {
             return null;

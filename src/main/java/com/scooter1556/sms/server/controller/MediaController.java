@@ -384,14 +384,36 @@ public class MediaController {
     @ApiOperation(value = "Get list of artists")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Artist list returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No artists found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No artists found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/artist", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getArtists()
-    {
-        List<String> artists = mediaDao.getArtists();
+    public ResponseEntity<List<String>> getArtists(HttpServletRequest request) {
+        List<MediaElement> mediaElements = mediaDao.getArtists();
         
-        if (artists == null) {
+        if(mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process artist list
+        List<String> artists = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getArtist() != null && !mediaElement.getArtist().isEmpty()) {
+                if(!artists.contains(mediaElement.getArtist())) {
+                    artists.add(mediaElement.getArtist());
+                }
+            }
+        }
+        
+        if(artists.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
@@ -401,31 +423,75 @@ public class MediaController {
     @ApiOperation(value = "Get list of album artists")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album artist list returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No album artists found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No album artists found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/albumartist", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getAlbumArtists()
-    {
-        List<String> albumArtists = mediaDao.getAlbumArtists();
+    public ResponseEntity<List<String>> getAlbumArtists(HttpServletRequest request) {
+        List<MediaElement> mediaElements = mediaDao.getAlbumArtists();
         
-        if (albumArtists == null) {
+        if(mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
-        return new ResponseEntity<>(albumArtists, HttpStatus.OK);
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process artist list
+        List<String> artists = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getAlbumArtist() != null && !mediaElement.getAlbumArtist().isEmpty()) {
+                if(!artists.contains(mediaElement.getAlbumArtist())) {
+                    artists.add(mediaElement.getAlbumArtist());
+                }
+            }
+        }
+        
+        if(artists.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        return new ResponseEntity<>(artists, HttpStatus.OK);
     }
 
     @ApiOperation(value = "Get list of albums")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/album", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getAlbums()
-    {
-        List<String> albums = mediaDao.getAlbums();
+    public ResponseEntity<List<String>> getAlbums(HttpServletRequest request) {
+        List<MediaElement> mediaElements = mediaDao.getAlbums();
         
-        if (albums == null) {
+        if(mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process album list
+        List<String> albums = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getAlbum() != null && !mediaElement.getAlbum().isEmpty()) {
+                if(!albums.contains(mediaElement.getAlbum())) {
+                    albums.add(mediaElement.getAlbum());
+                }
+            }
+        }
+        
+        if(albums.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
@@ -435,15 +501,39 @@ public class MediaController {
     @ApiOperation(value = "Get list of albums for artist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/artist/{artist}/album", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getAlbumsByArtist(
-            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist)
+            @ApiParam(value = "Artist", required = true) @PathVariable("artist") String artist,
+            HttpServletRequest request)
     {
-        List<String> albums = mediaDao.getAlbumsByArtist(artist);
+        List<MediaElement> mediaElements = mediaDao.getAlbumsByArtist(artist);
         
-        if (albums == null) {
+        if(mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process album list
+        List<String> albums = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getAlbum() != null && !mediaElement.getAlbum().isEmpty()) {
+                if(!albums.contains(mediaElement.getAlbum())) {
+                    albums.add(mediaElement.getAlbum());
+                }
+            }
+        }
+        
+        if(albums.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
@@ -453,15 +543,39 @@ public class MediaController {
     @ApiOperation(value = "Get list of albums for album artist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Album list returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No albums found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/albumartist/{albumartist}/album", method=RequestMethod.GET)
     public ResponseEntity<List<String>> getAlbumsByAlbumArtist(
-            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist)
+            @ApiParam(value = "Album Artist", required = true) @PathVariable("albumartist") String albumArtist,
+            HttpServletRequest request)
     {
-        List<String> albums = mediaDao.getAlbumsByAlbumArtist(albumArtist);
+        List<MediaElement> mediaElements = mediaDao.getAlbumsByAlbumArtist(albumArtist);
         
-        if (albums == null) {
+        if(mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process album list
+        List<String> albums = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getAlbum() != null && !mediaElement.getAlbum().isEmpty()) {
+                if(!albums.contains(mediaElement.getAlbum())) {
+                    albums.add(mediaElement.getAlbum());
+                }
+            }
+        }
+        
+        if(albums.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
@@ -618,14 +732,36 @@ public class MediaController {
     @ApiOperation(value = "Get list of collections")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "List of collections returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No collections found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No collections found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(value="/collection", method=RequestMethod.GET)
-    public ResponseEntity<List<String>> getCollections()
-    {
-        List<String> collections = mediaDao.getCollections();
+    public ResponseEntity<List<String>> getCollections(HttpServletRequest request) {
+        List<MediaElement> mediaElements = mediaDao.getCollections();
         
-        if (collections == null) {
+        if(mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        
+        // Process for user
+        mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
+        
+        if (mediaElements == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+        
+        // Process collection list
+        List<String> collections = new ArrayList<>();
+        
+        for(MediaElement mediaElement : mediaElements) {
+            if(mediaElement.getCollection() != null && !mediaElement.getCollection().isEmpty()) {
+                if(!collections.contains(mediaElement.getCollection())) {
+                    collections.add(mediaElement.getCollection());
+                }
+            }
+        }
+        
+        if(collections.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         
