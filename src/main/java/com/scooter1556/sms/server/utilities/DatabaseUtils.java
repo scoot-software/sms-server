@@ -66,7 +66,7 @@ public class DatabaseUtils {
         }
         
         File dir = new File(SettingsService.getInstance().getDataDirectory() + "/db/");
-        FileFilter fileFilter = new WildcardFileFilter(db.toLowerCase() + ".*.h2.db");
+        FileFilter fileFilter = new WildcardFileFilter(db.toLowerCase() + ".*.*.db");
         
         return dir.listFiles(fileFilter);
     }
@@ -74,12 +74,8 @@ public class DatabaseUtils {
     public static int getDatabaseVersion(String db) {
         File[] files = getDatabaseFiles(db);
         
-        if(files == null) {
-            return -1;
-        }
-        
         // Check we found the database file
-        if(files.length == 0) {
+        if(files == null || files.length == 0) {
             return -1;
         }
         
@@ -97,14 +93,26 @@ public class DatabaseUtils {
         return version;
     }
     
-    public static boolean createNewDatabaseFile(String db, int oldVersion, int newVersion) {
+    public static String getDatabaseType(String db) {
+        File[] files = getDatabaseFiles(db);
+        
+        // Check we found the database file
+        if(files == null || files.length == 0) {
+            return null;
+        }
+        
+        // Extract database type
+        return files[0].getName().split("\\.")[2]; 
+    }
+    
+    public static boolean createNewDatabaseFile(String db, String type, int oldVersion, int newVersion) {
         if(SettingsService.getInstance().getDataDirectory() == null) {
             return false;
         }
             
         try {
-            Path oldDb = Paths.get(SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + oldVersion + ".h2.db");
-            Path newDb = Paths.get(SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + newVersion + ".h2.db");
+            Path oldDb = Paths.get(SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + oldVersion + "." + type + ".db");
+            Path newDb = Paths.get(SettingsService.getInstance().getDataDirectory() + "/db/" + db.toLowerCase() + "." + newVersion + "." + type + ".db");
             
             // Copy old database file to a new file and remove the old one
             Files.copy(oldDb, newDb);

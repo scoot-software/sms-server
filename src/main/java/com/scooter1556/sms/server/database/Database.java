@@ -49,18 +49,26 @@ public class Database {
         if(currentVersion == -1) {
             dataSource = DatabaseUtils.getDataSource(db, version);
             create();
+            return;
+        }
+        
+        // Get database type
+        String type = DatabaseUtils.getDatabaseType(db);
+        
+        if(type == null) {
+            throw new DatabaseException("Unable to process database type.");
         }
 
         // If an older version of the database exists copy it to a new file and upgrade
-        else if(currentVersion < version) {
-            DatabaseUtils.createNewDatabaseFile(db, currentVersion, version);
+        if(currentVersion < version) {
+            DatabaseUtils.createNewDatabaseFile(db, type, currentVersion, version);
             dataSource = DatabaseUtils.getDataSource(db, version);
             upgrade(currentVersion, version);
         }
 
         // If a newer version of the database exists copy it to a new file and downgrade
         else if(currentVersion > version) {
-            DatabaseUtils.createNewDatabaseFile(db, currentVersion, version);
+            DatabaseUtils.createNewDatabaseFile(db, type, currentVersion, version);
             dataSource = DatabaseUtils.getDataSource(db, version);
             downgrade(currentVersion, version);
         }
