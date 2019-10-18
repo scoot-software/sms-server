@@ -17,7 +17,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 @EnableSwagger2
 public class SwaggerConfig {
     
-    private static final String API_VERSION = "1.0.0";
+    private static final String API_VERSION = "1.1.0";
     
     @Bean
     public Docket api() { 
