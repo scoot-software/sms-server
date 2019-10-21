@@ -46,6 +46,9 @@ public class TranscoderParser {
     private static final String PGS =  "S..... pgssub ";
     private static final String DVB = "S..... dvbsub ";
     private static final String DVD = "S..... dvdsub ";
+    
+    // Filters
+    private static final String ZSCALE = "zscale";
 
     
     public static Transcoder parse(Transcoder transcoder) {
@@ -55,6 +58,9 @@ public class TranscoderParser {
             
             // Parse codecs
             transcoder.setCodecs(parseCodecs(transcoder));
+            
+            // Parse filters
+            parseFilters(transcoder);
             
             // Parse hardware acceleration methods
             transcoder.setHardwareAccelerators(parseHardwareAccelerators(transcoder));
@@ -197,6 +203,18 @@ public class TranscoderParser {
         }
         
         return codecs.toArray(new Integer[0]);
+    }
+    
+    private static void parseFilters(Transcoder transcoder) throws IOException {
+        String[] command = {transcoder.getPath().toString(), "-v", "quiet", "-filters"};
+        String[] result = ParserUtils.getProcessOutput(command, false);
+        
+        for(String line : result) {
+            if(line.contains(ZSCALE)) {
+                transcoder.setZscale(true);
+                break;
+            }
+        }
     }
     
     private static HardwareAccelerator[] parseHardwareAccelerators(Transcoder transcoder) throws IOException {
