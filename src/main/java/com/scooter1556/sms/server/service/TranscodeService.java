@@ -362,11 +362,7 @@ public class TranscodeService {
 
                 case "cuvid":
                     if(resolution != null) {
-                        if(transcoder.hasZscale()) {
-                            filters.add("zscale=s=" + resolution.width + "x" + resolution.height);
-                        } else {
-                            filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
-                        }
+                        filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
                     }
                     
                     break;
@@ -439,11 +435,7 @@ public class TranscodeService {
         List<String> filters = new ArrayList<>();
         
         if(resolution != null) {
-            if(transcoder.hasZscale()) {
-                filters.add("zscale=s=" + resolution.width + "x" + resolution.height);
-            } else {
-                filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
-            }
+            filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
         }
         
         return filters;
