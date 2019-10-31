@@ -39,7 +39,6 @@ public class TranscodeUtils {
     private static final String CLASS_NAME = "TranscodeUtils";
     
     private static final String TRANSCODER = "ffmpeg";
-    private static final String[] TRANSCODE_CONFIGS = {"libmp3lame","libvorbis","libx264"};
     
     public static final String[] TRANSCODER_PATH_LINUX = {
         "/usr/local/bin/ffmpeg",
@@ -57,6 +56,7 @@ public class TranscodeUtils {
     public static final String ISO_AVC_BASELINE = "avc1.42E01E";
     public static final String ISO_AVC_MAIN = "avc1.4D401F";
     public static final String ISO_AVC_HIGH = "avc1.640029";
+    public static final String ISO_HEVC_MAIN = "hvc1.1.4.L126.B0";
     public static final String ISO_MP3 = "mp4a.69";
     public static final String ISO_AAC = "mp4a.40.2";
     public static final String ISO_AC3 = "mp4a.a5";
@@ -90,8 +90,8 @@ public class TranscodeUtils {
     
     public static final int[] AUDIO_QUALITY_MAX_BITRATE = {96,196,320,320};
     
-    public static final int[] VIDEO_QUALITY_BITRATE = {400,800,1200,1800,2500,5000};
-    public static final int[] VIDEO_QUALITY_MAX_BITRATE = {1000,1500,2000,3000,4000,8000};
+    public static final int[] AVC_VIDEO_QUALITY_BITRATE = {1000,1500,2000,3000,4000,8000};
+    public static final int[] HEVC_VIDEO_QUALITY_BITRATE = {500,700,1000,1500,2000,4000};
     
     public static final int[] VIDEO_QUALITY_AUDIO_BITRATE = {64,
                                                              64,
@@ -184,34 +184,6 @@ public class TranscodeUtils {
         return false;
     }
     
-    public static boolean checkTranscoder(Transcoder transcoder) {
-        // Check file exists and is executable
-        if(transcoder == null) {
-            return false;
-        }
-        
-        // Check configure options
-        String[] command = new String[]{transcoder.getPath().toString()};
-        
-        try {
-            String[] result = ParserUtils.getProcessOutput(command, true);
-            short check =  0;
-            
-            for (String line : result) {
-                for(String config : TRANSCODE_CONFIGS) {
-                    if(line.contains(config)) {
-                        check ++;
-                    }
-                }
-            }
-            
-            // Check all config options were found
-            return check == TRANSCODE_CONFIGS.length;
-        } catch (IOException ex) {
-            return false;
-        }
-    }
-    
     public static boolean isSupported(String[] list, String test) {
         for (String item : list) {
             if(test.contains(item)) {
@@ -287,19 +259,58 @@ public class TranscodeUtils {
     /*
      * Returns the highest possible transcode quality based on bitrate
      */
-    public static int getVideoQualityFromMaxBitrate(int maxBitrate) {
+    public static int getVideoQualityFromMaxBitrate(int codec, int maxBitrate) {
         // Loop through possible qualities until we find the highest
         for(int i = VideoTranscode.VideoQuality.getMax(); i >= 0; i--) {
-            // Determine max bitrate based on quality.
-            int requested = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[i];
+            // Determine max bitrate based on quality
+            int requested;
             
-            if(maxBitrate >= requested) {
+            switch(codec) {
+                case SMS.Codec.AVC_BASELINE:
+                case SMS.Codec.AVC_MAIN:
+                case SMS.Codec.AVC_HIGH:
+                    requested = TranscodeUtils.AVC_VIDEO_QUALITY_BITRATE[i];
+                    break;
+                    
+                case SMS.Codec.HEVC_MAIN:
+                    requested = TranscodeUtils.HEVC_VIDEO_QUALITY_BITRATE[i];
+                    break;
+                    
+                default:
+                    return 0;
+            }
+                        
+            if(requested > 0 && maxBitrate >= requested) {
                 return i;
             }
         }
         
         // Return the lowest quality by default
         return 0;
+    }
+    
+    /*
+     * Returns the max bitrate for a given codec
+     */
+    public static int getMaxBitrateForCodec(int codec, int quality) {
+        // Check quality
+        if(!VideoTranscode.VideoQuality.isValid(quality)) {
+            return 0;
+        }
+        
+        // Determine max bitrate based on quality
+        switch(codec) {
+            case SMS.Codec.AVC_BASELINE:
+            case SMS.Codec.AVC_MAIN:
+            case SMS.Codec.AVC_HIGH:
+                return TranscodeUtils.AVC_VIDEO_QUALITY_BITRATE[quality];
+
+            case SMS.Codec.HEVC_MAIN:
+                return TranscodeUtils.HEVC_VIDEO_QUALITY_BITRATE[quality];
+
+            default:
+                return 0;
+        }
     }
     
     public static Integer getForcedSubtitleId(List<SubtitleStream> streams) {
@@ -441,6 +452,9 @@ public class TranscodeUtils {
                 
             case SMS.Codec.AVC_HIGH:
                 return ISO_AVC_HIGH;
+                
+            case SMS.Codec.HEVC_MAIN:
+                return ISO_HEVC_MAIN;
                 
             case SMS.Codec.AAC:
                 return ISO_AAC;

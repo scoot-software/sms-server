@@ -229,7 +229,7 @@ public class AdaptiveStreamingService {
                 int bitrate = -1;
                 
                 if(transcode.getQuality() != null) {
-                    bitrate = TranscodeUtils.VIDEO_QUALITY_BITRATE[transcode.getQuality()];
+                    bitrate = TranscodeUtils.getMaxBitrateForCodec(transcode.getCodec(), transcode.getQuality());
                 }
                 
                 if(bitrate < 0) {

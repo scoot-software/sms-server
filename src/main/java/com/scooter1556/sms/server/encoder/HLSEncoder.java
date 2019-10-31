@@ -17,6 +17,7 @@ public class HLSEncoder implements Encoder {
         codecs.add(SMS.Codec.AVC_BASELINE);
         codecs.add(SMS.Codec.AVC_MAIN);
         codecs.add(SMS.Codec.AVC_HIGH);
+        codecs.add(SMS.Codec.HEVC_MAIN);
         codecs.add(SMS.Codec.AAC);
         codecs.add(SMS.Codec.AC3);
         codecs.add(SMS.Codec.EAC3);
@@ -30,6 +31,10 @@ public class HLSEncoder implements Encoder {
 
     @Override
     public int getVideoCodec(Integer[] codecs) {
+        if(ArrayUtils.contains(codecs, SMS.Codec.HEVC_MAIN)) {
+            return SMS.Codec.HEVC_MAIN;
+        }
+        
         if(ArrayUtils.contains(codecs, SMS.Codec.AVC_HIGH)) {
             return SMS.Codec.AVC_HIGH;
         }

@@ -67,11 +67,6 @@ public class TranscodeService {
         } else {
             LogService.getInstance().addLogEntry(Level.INFO, CLASS_NAME, "Transcoder " + this.transcoder, null);
         }
-        
-        // Check all required codecs are supported
-        if(!TranscodeUtils.checkTranscoder(transcoder)) {
-            LogService.getInstance().addLogEntry(Level.WARN, CLASS_NAME, "Transcoder is missing required codec support!", null);
-        }
     }
     
     public Transcoder getTranscoder() {
@@ -417,6 +412,24 @@ public class TranscodeService {
 
                 break;
                 
+            case SMS.Codec.HEVC_MAIN:
+                commands.add("libx265");
+                commands.add("-crf");
+                commands.add("25");
+                commands.add("-preset");
+                commands.add("ultrafast");
+                commands.add("-pix_fmt");
+                commands.add("yuv420p");
+
+                if(maxrate != null) {
+                    commands.add("-maxrate");
+                    commands.add(maxrate.toString() + "k");
+                    commands.add("-bufsize");
+                    commands.add("2M");
+                }
+
+                break;
+                
             case SMS.Codec.COPY:
                 commands.add("copy");
                 break;
@@ -679,7 +692,7 @@ public class TranscodeService {
                     
                     // For remote streams set our default max bitrate
                     if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE) {
-                        maxBitrate = TranscodeUtils.VIDEO_QUALITY_MAX_BITRATE[quality];
+                        maxBitrate = TranscodeUtils.getMaxBitrateForCodec(codec, quality);
                     }
                 } else {
                     codec = SMS.Codec.COPY;
