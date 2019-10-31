@@ -12,7 +12,8 @@ public class Transcoder implements Serializable {
     private final Path path;
     private Version version;
     private HardwareAccelerator[] hwaccels;
-    private Integer[] codecs;
+    private Integer[] decoders;
+    private Integer[] encoders;
     private boolean zscale = false;
     
     public Transcoder(Path path) {
@@ -22,11 +23,12 @@ public class Transcoder implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "{Path=%s, Version=%s, Hardware Accelerators=%s, Codecs=%s, zscale=%s}",
+                "{Path=%s, Version=%s, Hardware Accelerators=%s, Decoders=%s, Encoders=%s, zscale=%s}",
                 path,
                 version == null ? "N/A" : version.toString(),
                 hwaccels == null ? "N/A" : Arrays.toString(hwaccels),
-                codecs == null ? "N/A" : Arrays.toString(codecs),
+                decoders == null ? "N/A" : Arrays.toString(decoders),
+                encoders == null ? "N/A" : Arrays.toString(encoders),
                 String.valueOf(zscale));
     }
     
@@ -81,21 +83,43 @@ public class Transcoder implements Serializable {
         return result;
     }
     
-    public Integer[] getCodecs() {
-        return codecs;
+    public Integer[] getDecoders() {
+        return decoders;
     }
     
-    public void setCodecs(Integer[] codecs) {
-        this.codecs = codecs;
+    public void setDecoders(Integer[] decoders) {
+        this.decoders = decoders;
     }
     
-    public boolean isCodecSupported(int codec) {
-        if(codecs == null || codecs.length == 0) {
+    public boolean isDecoderSupported(int decoder) {
+        if(decoders == null || decoders.length == 0) {
             return false;
         }
         
-        for(int test : codecs) {
-            if(codec == test) {
+        for(int test : decoders) {
+            if(decoder == test) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public Integer[] getEncoders() {
+        return encoders;
+    }
+    
+    public void setEncoders(Integer[] encoders) {
+        this.encoders = encoders;
+    }
+    
+    public boolean isEncoderSupported(int encoder) {
+        if(encoders == null || encoders.length == 0) {
+            return false;
+        }
+        
+        for(int test : encoders) {
+            if(encoder == test) {
                 return true;
             }
         }

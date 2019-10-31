@@ -47,6 +47,14 @@ public class TranscoderParser {
     private static final String DVB = "S..... dvbsub ";
     private static final String DVD = "S..... dvdsub ";
     
+    // Encoders
+    private static final String X264 = "V..... libx264";
+    private static final String X265 = "V..... libx265";
+    private static final String LAME = "A..... libmp3lame";
+    private static final String E_AAC = "A..... aac";
+    private static final String E_AC3 = "A..... ac3";
+    private static final String E_EAC3 = "A..... eac3";
+    
     // Filters
     private static final String ZSCALE = "zscale";
 
@@ -56,8 +64,11 @@ public class TranscoderParser {
             // Parse version
             transcoder.setVersion(parseVersion(transcoder));
             
-            // Parse codecs
-            transcoder.setCodecs(parseCodecs(transcoder));
+            // Parse decoders
+            transcoder.setDecoders(parseDecoders(transcoder));
+            
+            // Parse encoders
+            transcoder.setEncoders(parseEncoders(transcoder));
             
             // Parse filters
             parseFilters(transcoder);
@@ -90,119 +101,173 @@ public class TranscoderParser {
         return null;
     }
     
-    private static Integer[] parseCodecs(Transcoder transcoder) throws IOException {
+    private static Integer[] parseDecoders(Transcoder transcoder) throws IOException {
         String[] command = {transcoder.getPath().toString(), "-v", "quiet", "-decoders"};
         String[] result = ParserUtils.getProcessOutput(command, false);
-        List<Integer> codecs = new ArrayList<>();
+        List<Integer> decoders = new ArrayList<>();
         
         for(String line : result) {
             if(line.contains(AVC)) {
-                codecs.add(SMS.Codec.AVC_BASELINE);
-                codecs.add(SMS.Codec.AVC_MAIN);
-                codecs.add(SMS.Codec.AVC_HIGH);
-                codecs.add(SMS.Codec.AVC_HIGH10);
+                decoders.add(SMS.Codec.AVC_BASELINE);
+                decoders.add(SMS.Codec.AVC_MAIN);
+                decoders.add(SMS.Codec.AVC_HIGH);
+                decoders.add(SMS.Codec.AVC_HIGH10);
                 continue;
             }
             
             if(line.contains(MPEG2)) {
-                codecs.add(SMS.Codec.MPEG2);
+                decoders.add(SMS.Codec.MPEG2);
                 continue;
             }
             
             if(line.contains(HEVC)) {
-                codecs.add(SMS.Codec.HEVC_MAIN);
-                codecs.add(SMS.Codec.HEVC_MAIN10);
-                codecs.add(SMS.Codec.HEVC_HDR10);
+                decoders.add(SMS.Codec.HEVC_MAIN);
+                decoders.add(SMS.Codec.HEVC_MAIN10);
+                decoders.add(SMS.Codec.HEVC_HDR10);
                 continue;
             }
             
             if(line.contains(VC1)) {
-                codecs.add(SMS.Codec.VC1);
+                decoders.add(SMS.Codec.VC1);
                 continue;
             }
             
             if(line.contains(AAC)) {
-                codecs.add(SMS.Codec.AAC);
+                decoders.add(SMS.Codec.AAC);
                 continue;
             }
             
             if(line.contains(AC3)) {
-                codecs.add(SMS.Codec.AC3);
+                decoders.add(SMS.Codec.AC3);
                 continue;
             }
             
             if(line.contains(EAC3)) {
-                codecs.add(SMS.Codec.EAC3);
+                decoders.add(SMS.Codec.EAC3);
                 continue;
             }
             
             if(line.contains(DTS)) {
-                codecs.add(SMS.Codec.DTS);
-                codecs.add(SMS.Codec.DTSHD);
+                decoders.add(SMS.Codec.DTS);
+                decoders.add(SMS.Codec.DTSHD);
                 continue;
             }
             
             if(line.contains(PCM)) {
-                codecs.add(SMS.Codec.PCM);
+                decoders.add(SMS.Codec.PCM);
                 continue;
             }
             
             if(line.contains(TRUEHD)) {
-                codecs.add(SMS.Codec.TRUEHD);
+                decoders.add(SMS.Codec.TRUEHD);
                 continue;
             }
             
             if(line.contains(MP3)) {
-                codecs.add(SMS.Codec.MP3);
+                decoders.add(SMS.Codec.MP3);
                 continue;
             }
             
             if(line.contains(DSD)) {
-                codecs.add(SMS.Codec.DSD);
+                decoders.add(SMS.Codec.DSD);
                 continue;
             }
             
             if(line.contains(FLAC)) {
-                codecs.add(SMS.Codec.FLAC);
+                decoders.add(SMS.Codec.FLAC);
                 continue;
             }
             
             if(line.contains(ALAC)) {
-                codecs.add(SMS.Codec.ALAC);
+                decoders.add(SMS.Codec.ALAC);
                 continue;
             }
             
             if(line.contains(VORBIS)) {
-                codecs.add(SMS.Codec.VORBIS);
+                decoders.add(SMS.Codec.VORBIS);
                 continue;
             }
             
             if(line.contains(SUBRIP)) {
-                codecs.add(SMS.Codec.SUBRIP);
+                decoders.add(SMS.Codec.SUBRIP);
                 continue;
             }
             
             if(line.contains(WEBVTT)) {
-                codecs.add(SMS.Codec.WEBVTT);
+                decoders.add(SMS.Codec.WEBVTT);
                 continue;
             }
             
             if(line.contains(PGS)) {
-                codecs.add(SMS.Codec.PGS);
+                decoders.add(SMS.Codec.PGS);
                 continue;
             }
             
             if(line.contains(DVB)) {
-                codecs.add(SMS.Codec.DVB);
+                decoders.add(SMS.Codec.DVB);
                 continue;
             }
             
             if(line.contains(DVD)) {
-                codecs.add(SMS.Codec.DVD);
+                decoders.add(SMS.Codec.DVD);
             }
         }
         
-        return codecs.toArray(new Integer[0]);
+        return decoders.toArray(new Integer[0]);
+    }
+    
+    private static Integer[] parseEncoders(Transcoder transcoder) throws IOException {
+        String[] command = {transcoder.getPath().toString(), "-v", "quiet", "-encoders"};
+        String[] result = ParserUtils.getProcessOutput(command, false);
+        List<Integer> encoders = new ArrayList<>();
+        
+        for(String line : result) {
+            if(line.contains(X264)) {
+                encoders.add(SMS.Codec.AVC_BASELINE);
+                encoders.add(SMS.Codec.AVC_MAIN);
+                encoders.add(SMS.Codec.AVC_HIGH);
+                encoders.add(SMS.Codec.AVC_HIGH10);
+                continue;
+            }
+            
+            if(line.contains(X265)) {
+                encoders.add(SMS.Codec.HEVC_MAIN);
+                encoders.add(SMS.Codec.HEVC_MAIN10);
+                encoders.add(SMS.Codec.HEVC_HDR10);
+                continue;
+            }
+            
+            if(line.contains(E_AAC)) {
+                encoders.add(SMS.Codec.AAC);
+                continue;
+            }
+            
+            if(line.contains(E_AC3)) {
+                encoders.add(SMS.Codec.AC3);
+                continue;
+            }
+            
+            if(line.contains(E_EAC3)) {
+                encoders.add(SMS.Codec.EAC3);
+                continue;
+            }
+            
+            if(line.contains(LAME)) {
+                encoders.add(SMS.Codec.MP3);
+                continue;
+            }
+            
+            if(line.contains(SUBRIP)) {
+                encoders.add(SMS.Codec.SUBRIP);
+                continue;
+            }
+            
+            if(line.contains(WEBVTT)) {
+                encoders.add(SMS.Codec.WEBVTT);
+            }
+        }
+        
+        return encoders.toArray(new Integer[0]);
     }
     
     private static void parseFilters(Transcoder transcoder) throws IOException {
