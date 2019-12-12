@@ -33,6 +33,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 @Service
@@ -69,10 +72,22 @@ public class NFOParser {
                 }
             }
 
-            if (document.getElementsByTagName("rating").getLength() > 0) {
-                if (!document.getElementsByTagName("rating").item(0).getTextContent().equals("")) {
-                    Float rating = Float.valueOf(document.getElementsByTagName("rating").item(0).getTextContent());
-                    data.setRating(rating);
+            NodeList ratingList = document.getElementsByTagName("rating");
+            if (ratingList.getLength() > 0) {
+                Node rating = ratingList.item(0);
+                
+                if (ratingList.item(0).getNodeType() == Node.TEXT_NODE) {
+                    Float fRating = Float.valueOf(rating.getTextContent());
+                    data.setRating(fRating);
+                } else if (ratingList.item(0).getNodeType() == Node.ELEMENT_NODE) {
+                    Element ratingElement = (Element) rating;
+                    
+                    if (ratingElement.getElementsByTagName("value").getLength() > 0) {
+                        if (!ratingElement.getElementsByTagName("value").item(0).getTextContent().equals("")) {
+                            Float fRating = Float.valueOf(ratingElement.getElementsByTagName("value").item(0).getTextContent());
+                            data.setRating(fRating);
+                        }
+                    }
                 }
             }
 
@@ -113,9 +128,20 @@ public class NFOParser {
                 }
             }
 
-            if (document.getElementsByTagName("set").getLength() > 0) {
-                if (!document.getElementsByTagName("set").item(0).getTextContent().equals("")) {
-                    data.setCollection(document.getElementsByTagName("set").item(0).getTextContent());
+            NodeList setList = document.getElementsByTagName("set");
+            if (setList.getLength() > 0) {
+                Node set = setList.item(0);
+                
+                if (setList.item(0).getNodeType() == Node.TEXT_NODE) {
+                    data.setCollection(set.getTextContent());
+                } else if (setList.item(0).getNodeType() == Node.ELEMENT_NODE) {
+                    Element setElement = (Element) set;
+                    
+                    if (setElement.getElementsByTagName("name").getLength() > 0) {
+                        if (!setElement.getElementsByTagName("name").item(0).getTextContent().equals("")) {
+                            data.setCollection(setElement.getElementsByTagName("name").item(0).getTextContent());
+                        }
+                    }
                 }
             }
             
