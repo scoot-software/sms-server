@@ -1,4 +1,4 @@
-package com.scooter1556.sms.server.encoder;
+package com.scooter1556.sms.server.transcode.format;
 
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
@@ -6,13 +6,13 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 
-public class HLSEncoder implements Encoder {    
+public class HLSFormat implements Format {    
     List<Integer> codecs = new ArrayList<>();
     
     // Client ID
     int client = SMS.Client.NONE;
     
-    public HLSEncoder(){
+    public HLSFormat(){
         // Populate default codecs
         codecs.add(SMS.Codec.AVC_BASELINE);
         codecs.add(SMS.Codec.AVC_MAIN);
@@ -23,6 +23,11 @@ public class HLSEncoder implements Encoder {
         codecs.add(SMS.Codec.EAC3);
         codecs.add(SMS.Codec.WEBVTT);
     };
+    
+    @Override
+    public int getFormat() {
+        return SMS.Format.HLS;
+    }
 
     @Override
     public boolean isSupported(int codec) {

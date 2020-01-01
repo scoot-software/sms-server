@@ -2,14 +2,14 @@ package com.scooter1556.sms.server.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.scooter1556.sms.server.encoder.Encoder;
 import java.util.Arrays;
+import com.scooter1556.sms.server.transcode.format.Format;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class TranscodeProfile {
     private byte type;
     private String mimeType;
-    private Encoder encoder;
+    private Format encoder;
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
@@ -55,11 +55,11 @@ public class TranscodeProfile {
     }
     
     @JsonIgnore
-    public Encoder getEncoder() {
+    public Format getEncoder() {
         return encoder;
     }
     
-    public void setEncoder(Encoder encoder) {
+    public void setEncoder(Format encoder) {
         this.encoder = encoder;
     }
 

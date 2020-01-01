@@ -1,6 +1,7 @@
-package com.scooter1556.sms.server.encoder;
+package com.scooter1556.sms.server.transcode.format;
 
-public interface Encoder {
+public interface Format {
+    public int getFormat();
     public boolean isSupported(int codec);
     public int getVideoCodec(Integer[] codecs);
     public int getAudioCodec(Integer[] codecs, int channels, int quality);

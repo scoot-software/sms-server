@@ -152,8 +152,8 @@ public class TranscodeService {
                 }
                 
                 // Hardware decoding
-                if(hardwareAccelerator != null) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator));
+                if(hardwareAccelerator != null && hardwareAccelerator.isDecodeCodecSupported(profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec())) {
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec()));
                 }
                 
                 // Input media file
@@ -189,10 +189,10 @@ public class TranscodeService {
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodingSupported()) {
+                        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodeCodecSupported(transcode.getCodec())) {
                             commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(transcode.getCodec(), transcode.getMaxBitrate()));
                         } else {
-                            commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator));
+                            commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getMaxBitrate()));
                         }
 
                         commands.get(i).getCommands().add("-force_key_frames");
@@ -278,7 +278,7 @@ public class TranscodeService {
         return commands;
     }
     
-    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator) {
+    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, int codec) {
         Collection<String> commands = new LinkedList<>();
 
         switch(hardwareAccelerator.getName()) {
@@ -299,9 +299,21 @@ public class TranscodeService {
                 break;
 
             case "cuvid":
-                if(hardwareAccelerator.isDecodingSupported()) {
+                if(hardwareAccelerator.isDecodeCodecSupported(codec)) {
                     commands.add("-hwaccel");
                     commands.add(hardwareAccelerator.getName());
+                    
+                    commands.add("-c:v");
+                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
+                        commands.add("h264_cuvid");
+                    } else if(codec == SMS.Codec.HEVC_MAIN || codec == SMS.Codec.HEVC_MAIN10 || codec == SMS.Codec.HEVC_HDR10) {
+                        commands.add("hevc_cuvid");
+                    } else if(codec == SMS.Codec.MPEG2) {
+                        commands.add("mpeg2_cuvid");
+                    } else if(codec == SMS.Codec.VC1) {
+                        commands.add("vc1_cuvid");
+                    }
                 }
                 
                 break;
@@ -313,7 +325,7 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given hardware accelerator.
      */
-    private Collection<String> getHardwareVideoEncodingCommands(HardwareAccelerator hardwareAccelerator) {
+    private Collection<String> getHardwareVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer maxrate) {
         Collection<String> commands = new LinkedList<>();
         
         if(hardwareAccelerator != null) {
@@ -327,9 +339,49 @@ public class TranscodeService {
 
                 case "cuvid":
                     commands.add("-c:v");
-                    commands.add("h264_nvenc");
-                    commands.add("-bf:v");
-                    commands.add("4");
+                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
+                        commands.add("h264_nvenc");
+                        
+                        //  Profile
+                        commands.add("-profile:v");
+
+                        switch (codec) {
+                            case SMS.Codec.AVC_BASELINE:
+                                commands.add("baseline");
+                                break;
+                            case SMS.Codec.AVC_MAIN:
+                                commands.add("main");
+                                break;
+                            case SMS.Codec.AVC_HIGH:
+                                commands.add("high");
+                                break;
+                            default:
+                                commands.add("high");
+                                break;
+                        }
+                    
+                        commands.add("rc:v");
+                        commands.add("vbr_hq");
+                        commands.add("cq:v");
+                        commands.add("23");
+                    } else if(codec == SMS.Codec.HEVC_MAIN) {
+                        commands.add("hevc_nvenc");
+                        commands.add("rc:v");
+                        commands.add("vbr_hq");
+                        commands.add("cq:v");
+                        commands.add("25");
+                    }
+                    
+                    if(maxrate != null) {
+                        commands.add("-maxrate:v");
+                        commands.add(maxrate.toString() + "k");
+                    }
+                    
+                    commands.add("-preset");
+                    commands.add("fast");
+                    
+                    
                     break;
             }
         }
@@ -357,7 +409,7 @@ public class TranscodeService {
 
                 case "cuvid":
                     if(resolution != null) {
-                        filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+                        filters.add("scale_npp=" + resolution.width + ":" + resolution.height);
                     }
                     
                     break;
@@ -404,7 +456,7 @@ public class TranscodeService {
                 }
 
                 if(maxrate != null) {
-                    commands.add("-maxrate");
+                    commands.add("-maxrate:v");
                     commands.add(maxrate.toString() + "k");
                     commands.add("-bufsize");
                     commands.add("2M");
@@ -422,7 +474,7 @@ public class TranscodeService {
                 commands.add("yuv420p");
 
                 if(maxrate != null) {
-                    commands.add("-maxrate");
+                    commands.add("-maxrate:v");
                     commands.add(maxrate.toString() + "k");
                     commands.add("-bufsize");
                     commands.add("2M");

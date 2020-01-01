@@ -36,7 +36,6 @@ import com.scooter1556.sms.server.domain.StreamProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.TranscodeProfile.StreamType;
 import com.scooter1556.sms.server.domain.VideoTranscode.VideoQuality;
-import com.scooter1556.sms.server.encoder.Encoder;
 import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.io.FileDownloadProcess;
 import com.scooter1556.sms.server.io.SMSProcess;
@@ -76,6 +75,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import com.scooter1556.sms.server.transcode.format.Format;
 
 @Controller
 @RequestMapping(value="/stream")
@@ -674,7 +674,7 @@ public class StreamController {
         // If necessary process all streams ready for streaming and/or transcoding
         if(transcodeRequired) {
             // Get a suitable encoder
-            Encoder encoder = TranscodeUtils.getEncoderForFormat(clientProfile.getFormat());
+            Format encoder = TranscodeUtils.getEncoderForFormat(clientProfile.getFormat());
 
             if(encoder == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);

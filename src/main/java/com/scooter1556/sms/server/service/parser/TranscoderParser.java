@@ -5,6 +5,7 @@ import com.scooter1556.sms.server.domain.GraphicsCard;
 import com.scooter1556.sms.server.domain.HardwareAccelerator;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.Version;
+import com.scooter1556.sms.server.helper.NvidiaHelper;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.commons.lang3.ArrayUtils;
 
 public class TranscoderParser {
     
@@ -299,19 +301,19 @@ public class TranscoderParser {
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, graphicsCard.toString(), null);
         }
         
-        for(String line : result) {
-            switch(line) {
+        for(String hwaccel : result) {
+            switch(hwaccel) {
                 case "vaapi":
                     // Determine if we have a GPU which supports VAAPI
                     for(GraphicsCard graphicsCard : graphicsCards) {
                         if(graphicsCard.getVendor().toLowerCase().contains("intel") && graphicsCard.getDriver().equals("i915")) {
-                            HardwareAccelerator hwaccel = new HardwareAccelerator(line);
+                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(hwaccel);
                             
                             // Set DRM render device
                             File test = new File("/dev/dri/by-path/pci-" + graphicsCard.getId() + "-render");
                             
                             if(test.exists()) {
-                                hwaccel.setDevice(test.toPath());
+                                hwAccelerator.setDevice(test.toPath());
                             } else {
                                 Path[] renderDevices = TranscodeUtils.getRenderDevices();
                                 
@@ -319,22 +321,34 @@ public class TranscoderParser {
                                     continue;
                                 }
                                 
-                                hwaccel.setDevice(renderDevices[0]);
+                                hwAccelerator.setDevice(renderDevices[0]);
                             }
                             
-                            hwaccel.setStreamingSupported(false);
-                            hwaccels.add(hwaccel);
+                            hwAccelerator.setStreamingSupported(false);
+                            hwaccels.add(hwAccelerator);
                         }
                     }
 
                     break;
 
                 case "cuvid":
-                    // Determine if we have a GPU which supports CUVID
+                    // Determine if we have a GPU which supports CUVID and/or NVENC
                     for(GraphicsCard graphicsCard : graphicsCards) {
-                        if(graphicsCard.getVendor().toLowerCase().contains("nvidia")) {
-                            HardwareAccelerator hwaccel = new HardwareAccelerator(line);
-                            hwaccels.add(0, hwaccel);
+                        if(graphicsCard.getVendor().trim().toLowerCase().contains("nvidia") && graphicsCard.getDriver().equals("nvidia")) {
+                            // Check decode capablities
+                            int[] dCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getDecodeCodecs(graphicsCard.getProduct()));
+                            int[] eCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getEncodeCodecs(graphicsCard.getProduct()));
+                            
+                            if(dCodecs == null && eCodecs == null) {
+                                continue;
+                            }
+                            
+                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(hwaccel);
+                            hwAccelerator.setStreamingSupported(true);
+                            hwAccelerator.setDecodeCodecs(dCodecs);
+                            hwAccelerator.setEncodeCodecs(eCodecs);
+                            
+                            hwaccels.add(0, hwAccelerator);
                         }
                     }
 
