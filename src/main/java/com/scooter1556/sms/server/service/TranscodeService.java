@@ -361,15 +361,15 @@ public class TranscodeService {
                                 break;
                         }
                     
-                        commands.add("rc:v");
+                        commands.add("-rc:v");
                         commands.add("vbr_hq");
-                        commands.add("cq:v");
+                        commands.add("-cq:v");
                         commands.add("23");
                     } else if(codec == SMS.Codec.HEVC_MAIN) {
                         commands.add("hevc_nvenc");
-                        commands.add("rc:v");
+                        commands.add("-rc:v");
                         commands.add("vbr_hq");
-                        commands.add("cq:v");
+                        commands.add("-cq:v");
                         commands.add("25");
                     }
                     
