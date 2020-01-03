@@ -3,19 +3,33 @@ package com.scooter1556.sms.server.domain;
 public class GraphicsCard {
     String id;
     String vendor;
-    String product;
-    String driver;
+    String bus;
+    String device;
+    String function;
     
     public GraphicsCard() {}
+    
+    public GraphicsCard(String id,
+                        String vendor,
+                        String bus,
+                        String device,
+                        String function) {
+        this.id = id;
+        this.vendor = vendor;
+        this.bus = bus;
+        this.device = device;
+        this.function = function;
+    }
     
     @Override
     public String toString() {
         return String.format(
-            "{ID=%s, Vendor=%s, Product=%s, Driver=%s}",
+            "{ID=%s, Vendor=%s, Bus=%s, Device=%s, Function=%s}",
             id == null ? "N/A" : id,
             vendor == null ? "N/A" : vendor,
-            product == null ? "N/A" : product,
-            driver == null ? "N/A" : driver
+            bus == null ? "N/A" : bus,
+            device == null ? "N/A" : device,
+            function == null ? "N/A" : function
         );
     }
     
@@ -35,19 +49,33 @@ public class GraphicsCard {
         this.vendor = vendor;
     }
     
-    public String getProduct() {
-        return product;
+    public String getBus() {
+        return bus;
     }
     
-    public void setProduct(String product) {
-        this.product = product;
+    public void setBus(String bus) {
+        this.bus = bus;
     }
     
-    public String getDriver() {
-        return driver;
+    public String getDevice() {
+        return device;
     }
     
-    public void setDriver(String driver) {
-        this.driver = driver;
+    public void setDevice(String device) {
+        this.device = device;
+    }
+    
+    public String getFunction() {
+        return function;
+    }
+    
+    public void setFunction(String function) {
+        this.function = function;
+    }
+    
+    // Helper Functions
+    
+    public String toBDF() {
+        return "0000" + ":" + bus + ":" + device + "." + function;
     }
 }

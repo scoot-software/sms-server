@@ -5,6 +5,7 @@ import com.scooter1556.sms.server.domain.GraphicsCard;
 import com.scooter1556.sms.server.domain.HardwareAccelerator;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.Version;
+import com.scooter1556.sms.server.helper.IntelHelper;
 import com.scooter1556.sms.server.helper.NvidiaHelper;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
@@ -298,7 +299,7 @@ public class TranscoderParser {
         
         // Log available GPUs
         for(GraphicsCard graphicsCard : graphicsCards) {
-            LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, graphicsCard.toString(), null);
+            LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, graphicsCard.toString(), null);
         }
         
         for(String hwaccel : result) {
@@ -306,25 +307,27 @@ public class TranscoderParser {
                 case "vaapi":
                     // Determine if we have a GPU which supports VAAPI
                     for(GraphicsCard graphicsCard : graphicsCards) {
-                        if(graphicsCard.getVendor().toLowerCase().contains("intel") && graphicsCard.getDriver().equals("i915")) {
-                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(hwaccel);
+                        if(graphicsCard.getVendor().equals("8086")) {
+                            // Check decode & encode capablities
+                            int[] dCodecs = ArrayUtils.toPrimitive(IntelHelper.getDecodeCodecs(graphicsCard.getId()));
+                            int[] eCodecs = ArrayUtils.toPrimitive(IntelHelper.getEncodeCodecs(graphicsCard.getId()));
                             
-                            // Set DRM render device
-                            File test = new File("/dev/dri/by-path/pci-" + graphicsCard.getId() + "-render");
-                            
-                            if(test.exists()) {
-                                hwAccelerator.setDevice(test.toPath());
-                            } else {
-                                Path[] renderDevices = TranscodeUtils.getRenderDevices();
-                                
-                                if(renderDevices == null) {
-                                    continue;
-                                }
-                                
-                                hwAccelerator.setDevice(renderDevices[0]);
+                            if(dCodecs == null && eCodecs == null) {
+                                continue;
                             }
                             
+                            // Check render device exists
+                            File test = new File("/dev/dri/by-path/pci-" + graphicsCard.toBDF() + "-render");
+                            
+                            if(!test.exists()) {
+                                continue;
+                            }
+                            
+                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.INTEL);
+                            hwAccelerator.setDevice(test.toString());
                             hwAccelerator.setStreamingSupported(false);
+                            hwAccelerator.setDecodeCodecs(dCodecs);
+                            hwAccelerator.setEncodeCodecs(eCodecs);
                             hwaccels.add(hwAccelerator);
                         }
                     }
@@ -332,23 +335,29 @@ public class TranscoderParser {
                     break;
 
                 case "cuvid":
+                    int count = 0;
+                    
                     // Determine if we have a GPU which supports CUVID and/or NVENC
                     for(GraphicsCard graphicsCard : graphicsCards) {
-                        if(graphicsCard.getVendor().trim().toLowerCase().contains("nvidia") && graphicsCard.getDriver().equals("nvidia")) {
-                            // Check decode capablities
-                            int[] dCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getDecodeCodecs(graphicsCard.getProduct()));
-                            int[] eCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getEncodeCodecs(graphicsCard.getProduct()));
+                        if(graphicsCard.getVendor().equals("10de")) {
+                            // Check decode & encode capablities
+                            int[] dCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getDecodeCodecs(graphicsCard.getId()));
+                            int[] eCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getEncodeCodecs(graphicsCard.getId()));
                             
                             if(dCodecs == null && eCodecs == null) {
                                 continue;
                             }
                             
-                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(hwaccel);
+                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.NVIDIA);
+                            hwAccelerator.setDevice(String.valueOf(count));
                             hwAccelerator.setStreamingSupported(true);
                             hwAccelerator.setDecodeCodecs(dCodecs);
                             hwAccelerator.setEncodeCodecs(eCodecs);
                             
-                            hwaccels.add(0, hwAccelerator);
+                            hwaccels.add(hwAccelerator);
+                            
+                            // Increment count
+                            count ++;
                         }
                     }
 

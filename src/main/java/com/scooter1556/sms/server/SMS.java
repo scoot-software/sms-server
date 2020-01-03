@@ -125,4 +125,26 @@ public class SMS {
             return val >= 0 && val <= 1;
         }
     }
+    
+    public static class Accelerator {
+        public static final byte INTEL = 0;
+        public static final byte NVIDIA = 1;
+                
+        public static String toString(byte value) {
+            switch(value) {
+                case INTEL:
+                    return "Intel";
+                    
+                case NVIDIA:
+                    return "Nvidia";
+                    
+                default:
+                    return "Invalid";
+            }
+        }
+        
+        public static boolean isValid(byte val) {
+            return val >= 0 && val <= 1;
+        }
+    }
 }

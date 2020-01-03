@@ -1,12 +1,12 @@
 package com.scooter1556.sms.server.domain;
 
-import java.nio.file.Path;
+import com.scooter1556.sms.server.SMS;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class HardwareAccelerator {
     
-    private String name;
-    private Path device;
+    private Byte type;
+    private String device;
     private boolean streaming = true;
     private int[] dCodecs, eCodecs;
     
@@ -15,40 +15,40 @@ public class HardwareAccelerator {
             return;
         }
         
-        this.name = accel.getName();
+        this.type = accel.getType();
         this.device = accel.getDevice();
         this.streaming = accel.isStreamingSupported();
         this.dCodecs = accel.getDecodeCodecs();
         this.eCodecs = accel.getEncodeCodecs();
     }
     
-    public HardwareAccelerator(String name) { this.name = name; };
+    public HardwareAccelerator(Byte type) { this.type = type; };
     
     @Override
     public String toString() {
         return String.format(
-                "{Name=%s, Device=%s, Streaming=%s, Decode=%s, Encode=%s}",
-                name == null ? "N/A" : name,
-                device == null ? "N/A" : device.toString(),
+                "{Type=%s, Device=%s, Streaming=%s, Decode=%s, Encode=%s}",
+                type == null ? "N/A" : SMS.Accelerator.toString(type),
+                device == null ? "N/A" : device,
                 String.valueOf(streaming),
                 String.valueOf(ArrayUtils.toString(dCodecs)),
                 String.valueOf(ArrayUtils.toString(eCodecs)));
                 
     }
     
-    public String getName() {
-        return name;
+    public Byte getType() {
+        return type;
     }
     
-    public void setName(String name) {
-        this.name = name;
+    public void setType(Byte type) {
+        this.type = type;
     }
     
-    public Path getDevice() {
+    public String getDevice() {
         return device;
     }
     
-    public void setDevice(Path device) {
+    public void setDevice(String device) {
         this.device = device;
     }
     

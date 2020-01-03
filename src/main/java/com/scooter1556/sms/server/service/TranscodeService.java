@@ -281,11 +281,11 @@ public class TranscodeService {
     private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, int codec) {
         Collection<String> commands = new LinkedList<>();
 
-        switch(hardwareAccelerator.getName()) {
-            case "vaapi":
+        switch(hardwareAccelerator.getType()) {
+            case SMS.Accelerator.INTEL:
                 if(hardwareAccelerator.isDecodingSupported()) {
                     commands.add("-hwaccel");
-                    commands.add(hardwareAccelerator.getName());
+                    commands.add("vaapi");
                  
                     commands.add("-hwaccel_output_format");
                     commands.add("vaapi");
@@ -293,15 +293,15 @@ public class TranscodeService {
                 
                 if(hardwareAccelerator.isDecodingSupported() || hardwareAccelerator.isEncodingSupported()) {
                     commands.add("-vaapi_device");
-                    commands.add(hardwareAccelerator.getDevice().toString());
+                    commands.add(hardwareAccelerator.getDevice());
                 }
                 
                 break;
 
-            case "cuvid":
+            case SMS.Accelerator.NVIDIA:
                 if(hardwareAccelerator.isDecodeCodecSupported(codec)) {
                     commands.add("-hwaccel");
-                    commands.add(hardwareAccelerator.getName());
+                    commands.add("cuvid");
                     
                     commands.add("-c:v");
                     
@@ -314,6 +314,9 @@ public class TranscodeService {
                     } else if(codec == SMS.Codec.VC1) {
                         commands.add("vc1_cuvid");
                     }
+                    
+                    commands.add("-gpu");
+                    commands.add(hardwareAccelerator.getDevice());
                 }
                 
                 break;
@@ -329,15 +332,15 @@ public class TranscodeService {
         Collection<String> commands = new LinkedList<>();
         
         if(hardwareAccelerator != null) {
-            switch(hardwareAccelerator.getName()) {
-                case "vaapi":
+            switch(hardwareAccelerator.getType()) {
+                case SMS.Accelerator.INTEL:
                     commands.add("-c:v");
                     commands.add("h264_vaapi");
                     commands.add("-qp");
                     commands.add("23");
                     break;
 
-                case "cuvid":
+                case SMS.Accelerator.NVIDIA:
                     commands.add("-c:v");
                     
                     if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
@@ -373,6 +376,9 @@ public class TranscodeService {
                         commands.add("25");
                     }
                     
+                    commands.add("-gpu");
+                    commands.add(hardwareAccelerator.getDevice());
+                    
                     if(maxrate != null) {
                         commands.add("-maxrate:v");
                         commands.add(maxrate.toString() + "k");
@@ -396,8 +402,8 @@ public class TranscodeService {
         List<String> filters = new ArrayList<>();
         
         if(hardwareAccelerator != null) {
-            switch(hardwareAccelerator.getName()) {
-                case "vaapi":
+            switch(hardwareAccelerator.getType()) {
+                case SMS.Accelerator.INTEL:
                     filters.add("format=nv12|vaapi");
                     filters.add("hwupload");
 
@@ -407,7 +413,7 @@ public class TranscodeService {
                     
                     break;
 
-                case "cuvid":
+                case SMS.Accelerator.NVIDIA:
                     if(resolution != null) {
                         filters.add("scale_npp=" + resolution.width + ":" + resolution.height);
                     }
