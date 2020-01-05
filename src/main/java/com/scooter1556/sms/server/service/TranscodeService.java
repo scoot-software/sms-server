@@ -283,17 +283,26 @@ public class TranscodeService {
 
         switch(hardwareAccelerator.getType()) {
             case SMS.Accelerator.INTEL:
-                if(hardwareAccelerator.isDecodingSupported()) {
+                if(hardwareAccelerator.isDecodeCodecSupported(codec)) {
+                    commands.add("-init_hw_device");
+                    commands.add("vaapi=va:" + hardwareAccelerator.getDevice());
+                    
                     commands.add("-hwaccel");
                     commands.add("vaapi");
+                    
+                    commands.add("-hwaccel_device");
+                    commands.add("va");
                  
                     commands.add("-hwaccel_output_format");
-                    commands.add("vaapi");
-                }
-                
-                if(hardwareAccelerator.isDecodingSupported() || hardwareAccelerator.isEncodingSupported()) {
-                    commands.add("-vaapi_device");
-                    commands.add(hardwareAccelerator.getDevice());
+                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH || codec == SMS.Codec.HEVC_MAIN) {
+                        commands.add("vaapi");
+                    } else if(codec == SMS.Codec.HEVC_MAIN10 || codec == SMS.Codec.HEVC_HDR10) {
+                        commands.add("p010");
+                    }
+                    
+                    commands.add("-filter_hw_device");
+                    commands.add("va");
                 }
                 
                 break;
@@ -335,10 +344,41 @@ public class TranscodeService {
             switch(hardwareAccelerator.getType()) {
                 case SMS.Accelerator.INTEL:
                     commands.add("-c:v");
-                    commands.add("h264_vaapi");
-                    commands.add("-qp");
-                    commands.add("23");
-                    break;
+                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
+                        
+                        commands.add("h264_vaapi");
+                        commands.add("-qp");
+                        commands.add("23");
+                        
+                        //  Profile
+                        commands.add("-profile:v");
+
+                        switch (codec) {
+                            case SMS.Codec.AVC_BASELINE:
+                                commands.add("constrained_baseline");
+                                break;
+                            case SMS.Codec.AVC_MAIN:
+                                commands.add("main");
+                                break;
+                            case SMS.Codec.AVC_HIGH:
+                                commands.add("high");
+                                break;
+                            default:
+                                commands.add("high");
+                                break;
+                        }
+                        
+                        break;
+                    }
+                    
+                    else if(codec == SMS.Codec.HEVC_MAIN) {
+                        commands.add("hevc_vaapi");
+                        commands.add("-qp");
+                        commands.add("25");
+                        
+                        break;
+                    }
 
                 case SMS.Accelerator.NVIDIA:
                     commands.add("-c:v");
@@ -368,7 +408,9 @@ public class TranscodeService {
                         commands.add("vbr_hq");
                         commands.add("-cq:v");
                         commands.add("23");
-                    } else if(codec == SMS.Codec.HEVC_MAIN) {
+                    }
+                    
+                    else if(codec == SMS.Codec.HEVC_MAIN) {
                         commands.add("hevc_nvenc");
                         commands.add("-rc:v");
                         commands.add("vbr_hq");
