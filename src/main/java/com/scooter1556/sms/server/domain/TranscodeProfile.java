@@ -9,22 +9,22 @@ import com.scooter1556.sms.server.transcode.format.Format;
 public class TranscodeProfile {
     private byte type;
     private String mimeType;
-    private Format encoder;
+    private Format format;
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
     private Integer videoStream, audioStream, subtitleStream;
     private Integer offset = 0;
     private Integer segmentDuration;
-    private boolean active = true, packedAudio = false;
+    private boolean active = true, packedAudio = false, tonemapping = false;
 
     public TranscodeProfile() {}
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[Type=%s, Encoder=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s",
+        return String.format("TranscodeProfile[Type=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s, Tonemapping=%s",
                 String.valueOf(type),
-                encoder == null ? "null" : encoder.toString(),
+                format == null ? "null" : format.toString(),
                 mimeType == null ? "null" : mimeType,
                 videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
                 audioTranscodes == null ? "null" : Arrays.toString(audioTranscodes),
@@ -34,7 +34,8 @@ public class TranscodeProfile {
                 subtitleStream == null ? "null" : subtitleStream.toString(),
                 offset == null ? "null" : offset.toString(),
                 segmentDuration == null ? "null" : segmentDuration,
-                Boolean.toString(packedAudio)
+                Boolean.toString(packedAudio),
+                Boolean.toString(tonemapping)
                 );
     }
 
@@ -55,12 +56,12 @@ public class TranscodeProfile {
     }
     
     @JsonIgnore
-    public Format getEncoder() {
-        return encoder;
+    public Format getFormat() {
+        return format;
     }
     
-    public void setEncoder(Format encoder) {
-        this.encoder = encoder;
+    public void setFormat(Format format) {
+        this.format = format;
     }
 
     public VideoTranscode[] getVideoTranscodes() {
@@ -141,6 +142,14 @@ public class TranscodeProfile {
 
     public void setPackedAudio(boolean packedAudio) {
         this.packedAudio = packedAudio;
+    }
+    
+    public boolean getTonemapping() {
+        return tonemapping;
+    }
+
+    public void setTonemapping(boolean tonemapping) {
+        this.tonemapping = tonemapping;
     }
     
     public static class StreamType {

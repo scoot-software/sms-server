@@ -676,7 +676,7 @@ public class TranscodeService {
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
             int codec;
             
-            if(transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
+            if(transcodeProfile.getFormat().isSupported(stream.getCodec())) {
                 codec = SMS.Codec.COPY;
             } else {
                 switch(stream.getCodec()) {
@@ -733,76 +733,81 @@ public class TranscodeService {
         // Process required number of video streams
         List<VideoTranscode> transcodes = new ArrayList<>();
         
-        for(VideoStream stream : mediaElement.getVideoStreams()) {
-            int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
-            int maxQuality = TranscodeUtils.getHighestVideoQuality(stream.getResolution());
-            
-            // Process quality
-            if(maxQuality < 0 || maxQuality > clientProfile.getVideoQuality()) {
-                maxQuality = clientProfile.getVideoQuality();
-            }
-            
-            // Determine number of streams to transcode
-            if(transcodeProfile.getType() < TranscodeProfile.StreamType.REMOTE || maxQuality == 0) {
-                streamCount = 1;
-            } else if(streamCount > clientProfile.getVideoQuality()) {
-                streamCount = maxQuality;
-            }
-            
-            // Test if transcoding is necessary
-            int transcodeReason = TranscodeUtils.isTranscodeRequired(clientProfile, mediaElement, stream);
-            
-            // Test for missing required stream data
-            if(transcodeReason == SMS.TranscodeReason.NONE) {
-                if(stream.getGOPSize() == null || stream.getGOPSize() == 0 || stream.getFPS() == null || stream.getFPS() == 0) {
-                    transcodeReason = SMS.TranscodeReason.MISSING_DATA;
-                }
-            }
-            
-            if(transcodeReason == SMS.TranscodeReason.NONE) {
-                if(!transcodeProfile.getEncoder().isSupported(stream.getCodec())) {
-                    transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
-                }
-            }
-            
-            for(int i = 0; i < streamCount; i++) {
-                Integer codec;
-                Dimension resolution = null;
-                Integer quality = maxQuality;
-                Integer maxBitrate = clientProfile.getMaxBitrate();
+        VideoStream stream = mediaElement.getVideoStreams().get(transcodeProfile.getVideoStream());
+        
+        int streamCount = AdaptiveStreamingService.DEFAULT_STREAM_COUNT;
+        int maxQuality = TranscodeUtils.getHighestVideoQuality(stream.getResolution());
 
-                if(transcodeReason > SMS.TranscodeReason.NONE) {
-                    // Determine quality for transcode
-                    if(i > 0) {
-                        quality = i - 1;
-                    }
+        // Process quality
+        if(maxQuality < 0 || maxQuality > clientProfile.getVideoQuality()) {
+            maxQuality = clientProfile.getVideoQuality();
+        }
 
-                    // Get suitable codec
-                    codec = transcodeProfile.getEncoder().getVideoCodec(clientProfile.getCodecs());
+        // Determine number of streams to transcode
+        if(transcodeProfile.getType() < TranscodeProfile.StreamType.REMOTE || maxQuality == 0) {
+            streamCount = 1;
+        } else if(streamCount > clientProfile.getVideoQuality()) {
+            streamCount = maxQuality;
+        }
 
-                    // Check we got a suitable codec
-                    if(codec == SMS.Codec.UNSUPPORTED) {
-                        return false;
-                    }
+        // Test if transcoding is necessary
+        int transcodeReason = TranscodeUtils.isTranscodeRequired(clientProfile, mediaElement, stream);
 
-                    // Get suitable resolution (use native resolution if direct play is enabled)
-                    if(!clientProfile.getDirectPlay()) {
-                        resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
-                    }
-                    
-                    // For remote streams set our default max bitrate
-                    if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE) {
-                        maxBitrate = TranscodeUtils.getMaxBitrateForCodec(codec, quality);
-                    }
-                } else {
-                    codec = SMS.Codec.COPY;
-                    quality = null;
-                    maxBitrate = null;
+        // Test for missing required stream data
+        if(transcodeReason == SMS.TranscodeReason.NONE) {
+            if(stream.getGOPSize() == null || stream.getGOPSize() == 0 || stream.getFPS() == null || stream.getFPS() == 0) {
+                transcodeReason = SMS.TranscodeReason.MISSING_DATA;
+            }
+        }
+
+        if(transcodeReason == SMS.TranscodeReason.NONE) {
+            if(!transcodeProfile.getFormat().isSupported(stream.getCodec())) {
+                transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
+            }
+        }
+        
+        // Check if tonemapping is required
+        if(stream.getCodec() == SMS.Codec.HEVC_HDR10) {
+            transcodeProfile.setTonemapping(true);
+        }
+
+        for(int i = 0; i < streamCount; i++) {
+            Integer codec;
+            Dimension resolution = null;
+            Integer quality = maxQuality;
+            Integer maxBitrate = clientProfile.getMaxBitrate();
+
+            if(transcodeReason > SMS.TranscodeReason.NONE) {
+                // Determine quality for transcode
+                if(i > 0) {
+                    quality = i - 1;
                 }
 
-                // Add video transcode to array
-                transcodes.add(new VideoTranscode(stream.getStreamId(), stream.getCodec(), codec, resolution, quality, maxBitrate, transcodeReason));
+                // Get suitable codec
+                codec = transcodeProfile.getFormat().getVideoCodec(clientProfile.getCodecs());
+
+                // Check we got a suitable codec
+                if(codec == SMS.Codec.UNSUPPORTED) {
+                    return false;
+                }
+
+                // Get suitable resolution (use native resolution if direct play is enabled)
+                if(!clientProfile.getDirectPlay()) {
+                    resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
+                }
+
+                // For remote streams set our default max bitrate
+                if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE) {
+                    maxBitrate = TranscodeUtils.getMaxBitrateForCodec(codec, quality);
+                }
+            } else {
+                codec = SMS.Codec.COPY;
+                quality = null;
+                maxBitrate = null;
             }
+
+            // Add video transcode to array
+            transcodes.add(new VideoTranscode(stream.getStreamId(), stream.getCodec(), codec, resolution, quality, maxBitrate, transcodeReason));
         }
         
         // Update profile with video transcode properties
@@ -861,7 +866,7 @@ public class TranscodeService {
             // Check the format supports this codec for video or that we can stream this codec for audio
             if(!transcodeRequired) {
                 if(clientProfile.getFormat() != null) {
-                    transcodeRequired = !transcodeProfile.getEncoder().isSupported(stream.getCodec());
+                    transcodeRequired = !transcodeProfile.getFormat().isSupported(stream.getCodec());
                 }
             }
             
@@ -875,7 +880,7 @@ public class TranscodeService {
                 
                 // Combine supported codecs
                 Integer[] codecs = ArrayUtils.addAll(clientProfile.getCodecs(), clientProfile.getMchCodecs());
-                codec = transcodeProfile.getEncoder().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
+                codec = transcodeProfile.getFormat().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {
