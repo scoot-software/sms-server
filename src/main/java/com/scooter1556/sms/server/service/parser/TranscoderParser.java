@@ -3,21 +3,23 @@ package com.scooter1556.sms.server.service.parser;
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.GraphicsCard;
 import com.scooter1556.sms.server.domain.HardwareAccelerator;
+import com.scooter1556.sms.server.domain.OpenCLDevice;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.Version;
 import com.scooter1556.sms.server.helper.IntelHelper;
 import com.scooter1556.sms.server.helper.NvidiaHelper;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.utilities.ParserUtils;
-import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.lang3.ArrayUtils;
+import static org.jocl.CL.CL_DEVICE_TYPE_GPU;
 
 public class TranscoderParser {
     
@@ -60,6 +62,7 @@ public class TranscoderParser {
     
     // Filters
     private static final String ZSCALE = "zscale";
+    private static final String NPP = "scale_npp";
 
     
     public static Transcoder parse(Transcoder transcoder) {
@@ -280,7 +283,11 @@ public class TranscoderParser {
         for(String line : result) {
             if(line.contains(ZSCALE)) {
                 transcoder.setZscale(true);
-                break;
+                continue;
+            }
+            
+            if(line.contains(NPP)) {
+                transcoder.setNPP(true);
             }
         }
     }
@@ -302,66 +309,113 @@ public class TranscoderParser {
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, graphicsCard.toString(), null);
         }
         
-        for(String hwaccel : result) {
-            switch(hwaccel) {
-                case "vaapi":
-                    // Determine if we have a GPU which supports VAAPI
-                    for(GraphicsCard graphicsCard : graphicsCards) {
-                        if(graphicsCard.getVendor().equals("8086")) {
-                            // Check decode & encode capablities
-                            int[] dCodecs = ArrayUtils.toPrimitive(IntelHelper.getDecodeCodecs(graphicsCard.getId()));
-                            int[] eCodecs = ArrayUtils.toPrimitive(IntelHelper.getEncodeCodecs(graphicsCard.getId()));
-                            
-                            if(dCodecs == null && eCodecs == null) {
-                                continue;
-                            }
-                            
-                            // Check render device exists
-                            File test = new File("/dev/dri/by-path/pci-" + graphicsCard.toBDF() + "-render");
-                            
-                            if(!test.exists()) {
-                                continue;
-                            }
-                            
-                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.INTEL);
-                            hwAccelerator.setDevice(test.toString());
-                            hwAccelerator.setStreamingSupported(false);
-                            hwAccelerator.setDecodeCodecs(dCodecs);
-                            hwAccelerator.setEncodeCodecs(eCodecs);
-                            hwaccels.add(hwAccelerator);
-                        }
-                    }
-
-                    break;
-
-                case "cuvid":
-                    int count = 0;
+        List<OpenCLDevice> oclDevices = new ArrayList<>();
+        
+        // Determine if we have OpenCL devices available
+        if(Arrays.asList(result).contains("opencl")) {
+            OpenCLDevice[] devices = HardwareParser.getOpenCLDevices();
+            
+            if(devices != null) {
+                oclDevices = new ArrayList(Arrays.asList(devices));
+                
+                // Log available OpenCL devices
+                for(OpenCLDevice device : oclDevices) {
+                    LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, device.toString(), null);
+                }
+            }
+        }
+        
+        // Determine if we have a supported Nvidia GPU
+        if(Arrays.asList(result).contains("cuvid")) {
+            int count = 0;
                     
-                    // Determine if we have a GPU which supports CUVID and/or NVENC
-                    for(GraphicsCard graphicsCard : graphicsCards) {
-                        if(graphicsCard.getVendor().equals("10de")) {
-                            // Check decode & encode capablities
-                            int[] dCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getDecodeCodecs(graphicsCard.getId()));
-                            int[] eCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getEncodeCodecs(graphicsCard.getId()));
+            for(GraphicsCard graphicsCard : graphicsCards) {
+                if(graphicsCard.getVendor().equals(HardwareAccelerator.VENDOR_NVIDIA)) {
+                    // Check decode & encode capablities
+                    int[] dCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getDecodeCodecs(graphicsCard.getId()));
+                    int[] eCodecs = ArrayUtils.toPrimitive(NvidiaHelper.getEncodeCodecs(graphicsCard.getId()));
+
+                    if(dCodecs == null && eCodecs == null) {
+                        continue;
+                    }
+
+                    HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.NVIDIA);
+                    hwAccelerator.setDevice(String.valueOf(count));
+                    hwAccelerator.setStreamingSupported(true);
+                    hwAccelerator.setDecodeCodecs(dCodecs);
+                    hwAccelerator.setEncodeCodecs(eCodecs);
+                    
+                    // Associate OpenCL device is applicable
+                    if(!oclDevices.isEmpty()) {
+                        Iterator<OpenCLDevice> oclIterator = oclDevices.iterator();
+                        
+                        while (oclIterator.hasNext()) {
+                            OpenCLDevice device = oclIterator.next();
                             
-                            if(dCodecs == null && eCodecs == null) {
-                                continue;
+                            if(device.getVendor().equals(HardwareAccelerator.VENDOR_NVIDIA)) {
+                                if((device.getType() & CL_DEVICE_TYPE_GPU) != 0) {
+                                    hwAccelerator.setOCLDevice(device.getDescriptor());
+                                    
+                                    // Remove from device array
+                                    oclIterator.remove();
+                                }
                             }
-                            
-                            HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.NVIDIA);
-                            hwAccelerator.setDevice(String.valueOf(count));
-                            hwAccelerator.setStreamingSupported(true);
-                            hwAccelerator.setDecodeCodecs(dCodecs);
-                            hwAccelerator.setEncodeCodecs(eCodecs);
-                            
-                            hwaccels.add(hwAccelerator);
-                            
-                            // Increment count
-                            count ++;
                         }
                     }
 
-                    break;
+                    hwaccels.add(hwAccelerator);
+
+                    // Increment count
+                    count ++;
+                }
+            }
+        }
+        
+        // Determine if we have a GPU which supports VAAPI
+        if(Arrays.asList(result).contains("vaapi")) {
+            for(GraphicsCard graphicsCard : graphicsCards) {
+                if(graphicsCard.getVendor().equals(HardwareAccelerator.VENDOR_INTEL)) {
+                    // Check decode & encode capablities
+                    int[] dCodecs = ArrayUtils.toPrimitive(IntelHelper.getDecodeCodecs(graphicsCard.getId()));
+                    int[] eCodecs = ArrayUtils.toPrimitive(IntelHelper.getEncodeCodecs(graphicsCard.getId()));
+
+                    if(dCodecs == null && eCodecs == null) {
+                        continue;
+                    }
+
+                    // Check render device exists
+                    File test = new File("/dev/dri/by-path/pci-" + graphicsCard.toBDF() + "-render");
+
+                    if(!test.exists()) {
+                        continue;
+                    }
+
+                    HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.INTEL);
+                    hwAccelerator.setDevice(test.toString());
+                    hwAccelerator.setStreamingSupported(false);
+                    hwAccelerator.setDecodeCodecs(dCodecs);
+                    hwAccelerator.setEncodeCodecs(eCodecs);
+                    
+                    // Associate OpenCL device is applicable
+                    if(!oclDevices.isEmpty()) {
+                        Iterator<OpenCLDevice> oclIterator = oclDevices.iterator();
+                        
+                        while (oclIterator.hasNext()) {
+                            OpenCLDevice device = oclIterator.next();
+                            
+                            if(device.getVendor().equals(HardwareAccelerator.VENDOR_INTEL)) {
+                                if((device.getType() & CL_DEVICE_TYPE_GPU) != 0) {
+                                    hwAccelerator.setOCLDevice(device.getDescriptor());
+                                    
+                                    // Remove from device array
+                                    oclIterator.remove();
+                                }
+                            }
+                        }
+                    }
+                    
+                    hwaccels.add(hwAccelerator);
+                }
             }
         }
         

@@ -5,8 +5,12 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public class HardwareAccelerator {
     
+    public static final String VENDOR_INTEL = "8086";
+    public static final String VENDOR_NVIDIA = "10de";
+    
     private Byte type;
     private String device;
+    private String oclDevice;
     private boolean streaming = true;
     private int[] dCodecs, eCodecs;
     
@@ -17,6 +21,7 @@ public class HardwareAccelerator {
         
         this.type = accel.getType();
         this.device = accel.getDevice();
+        this.oclDevice = accel.getOCLDevice();
         this.streaming = accel.isStreamingSupported();
         this.dCodecs = accel.getDecodeCodecs();
         this.eCodecs = accel.getEncodeCodecs();
@@ -27,9 +32,10 @@ public class HardwareAccelerator {
     @Override
     public String toString() {
         return String.format(
-                "{Type=%s, Device=%s, Streaming=%s, Decode=%s, Encode=%s}",
+                "{Type=%s, Device=%s, OpenCL Device=%s, Streaming=%s, Decode=%s, Encode=%s}",
                 type == null ? "N/A" : SMS.Accelerator.toString(type),
                 device == null ? "N/A" : device,
+                oclDevice == null ? "N/A" : oclDevice,
                 String.valueOf(streaming),
                 String.valueOf(ArrayUtils.toString(dCodecs)),
                 String.valueOf(ArrayUtils.toString(eCodecs)));
@@ -50,6 +56,14 @@ public class HardwareAccelerator {
     
     public void setDevice(String device) {
         this.device = device;
+    }
+    
+    public String getOCLDevice() {
+        return oclDevice;
+    }
+    
+    public void setOCLDevice(String oclDevice) {
+        this.oclDevice = oclDevice;
     }
     
     public boolean isStreamingSupported() {
