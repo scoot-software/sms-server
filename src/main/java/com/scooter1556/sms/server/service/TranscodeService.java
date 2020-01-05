@@ -457,7 +457,7 @@ public class TranscodeService {
 
                 case SMS.Accelerator.NVIDIA:
                     if(resolution != null) {
-                        filters.add("scale_npp=" + resolution.width + ":" + resolution.height);
+                        filters.add("scale_cuda=" + resolution.width + ":" + resolution.height);
                     }
                     
                     break;

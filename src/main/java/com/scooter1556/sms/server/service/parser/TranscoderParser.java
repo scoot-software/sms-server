@@ -62,7 +62,7 @@ public class TranscoderParser {
     
     // Filters
     private static final String ZSCALE = "zscale";
-    private static final String NPP = "scale_npp";
+    private static final String CUDA_SCALE = "scale_cuda";
 
     
     public static Transcoder parse(Transcoder transcoder) {
@@ -286,7 +286,7 @@ public class TranscoderParser {
                 continue;
             }
             
-            if(line.contains(NPP)) {
+            if(line.contains(CUDA_SCALE)) {
                 transcoder.setNPP(true);
             }
         }
