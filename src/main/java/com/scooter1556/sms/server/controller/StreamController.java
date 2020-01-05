@@ -674,18 +674,18 @@ public class StreamController {
         // If necessary process all streams ready for streaming and/or transcoding
         if(transcodeRequired) {
             // Get a suitable encoder
-            Format encoder = TranscodeUtils.getEncoderForFormat(clientProfile.getFormat());
+            Format format = TranscodeUtils.getTranscodeFormat(clientProfile.getFormat());
 
-            if(encoder == null) {
+            if(format == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);
                 return null;
             }
             
             // Set client in encoder
-            encoder.setClient(clientProfile.getClient());
+            format.setClient(clientProfile.getClient());
 
             // Set encoder in transcode profile
-            transcodeProfile.setEncoder(encoder);
+            transcodeProfile.setFormat(format);
             
             // Set default segment duration
             transcodeProfile.setSegmentDuration(TranscodeUtils.DEFAULT_SEGMENT_DURATION);

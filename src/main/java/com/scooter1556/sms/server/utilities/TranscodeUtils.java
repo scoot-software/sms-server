@@ -653,7 +653,7 @@ public class TranscodeUtils {
         return null;
     }
     
-    public static Format getEncoderForFormat(int format) {
+    public static Format getTranscodeFormat(int format) {
         switch(format) {
             case  SMS.Format.HLS:
                 return new HLSFormat();
