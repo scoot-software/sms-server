@@ -147,4 +147,34 @@ public class SMS {
             return val >= 0 && val <= 1;
         }
     }
+    
+    public static class Tonemap {
+        public static final byte NONE = 0;
+        public static final byte VAAPI = 1;
+        public static final byte OPENCL = 2;
+        public static final byte SOFTWARE = 3;
+                
+        public static String toString(byte value) {
+            switch(value) {
+                case NONE:
+                    return "Not Supported";
+                    
+                case VAAPI:
+                    return "VAAPI";
+                    
+                case OPENCL:
+                    return "OpenCL";
+                    
+                case SOFTWARE:
+                    return "Software";
+                    
+                default:
+                    return "Invalid";
+            }
+        }
+        
+        public static boolean isValid(byte val) {
+            return val >= 0 && val <= 2;
+        }
+    }
 }

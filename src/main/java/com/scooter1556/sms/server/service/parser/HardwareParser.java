@@ -74,7 +74,8 @@ public class HardwareParser {
                                                                      vendor,
                                                                      bus,
                                                                      dev,
-                                                                     function
+                                                                     function,
+                                                                     false
                         );
                                                 
                         // Add to array

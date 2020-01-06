@@ -15,7 +15,7 @@ public class Transcoder implements Serializable {
     private Integer[] decoders;
     private Integer[] encoders;
     private boolean zscale = false;
-    private boolean npp = false;
+    private boolean cuda = false;
     
     public Transcoder(Path path) {
         this.path = path;
@@ -24,14 +24,14 @@ public class Transcoder implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "{Path=%s, Version=%s, Hardware Accelerators=%s, Decoders=%s, Encoders=%s, zscale=%s, NPP=%s}",
+                "{Path=%s, Version=%s, Hardware Accelerators=%s, Decoders=%s, Encoders=%s, zscale=%s, CUDA=%s}",
                 path,
                 version == null ? "N/A" : version.toString(),
                 hwaccels == null ? "N/A" : Arrays.toString(hwaccels),
                 decoders == null ? "N/A" : Arrays.toString(decoders),
                 encoders == null ? "N/A" : Arrays.toString(encoders),
                 String.valueOf(zscale),
-                String.valueOf(npp)
+                String.valueOf(cuda)
         );
     }
     
@@ -131,11 +131,11 @@ public class Transcoder implements Serializable {
         this.zscale = zscale;
     }
     
-    public boolean hasNPP() {
-        return npp;
+    public boolean hasCuda() {
+        return cuda;
     }
     
-    public void setNPP(boolean npp) {
-        this.npp = npp;
+    public void setCuda(boolean cuda) {
+        this.cuda = cuda;
     }
 }

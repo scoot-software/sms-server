@@ -6,6 +6,7 @@ public class GraphicsCard {
     String bus;
     String device;
     String function;
+    boolean tonemapping = false;
     
     public GraphicsCard() {}
     
@@ -13,23 +14,26 @@ public class GraphicsCard {
                         String vendor,
                         String bus,
                         String device,
-                        String function) {
+                        String function,
+                        boolean tonemapping) {
         this.id = id;
         this.vendor = vendor;
         this.bus = bus;
         this.device = device;
         this.function = function;
+        this.tonemapping = tonemapping;
     }
     
     @Override
     public String toString() {
         return String.format(
-            "{ID=%s, Vendor=%s, Bus=%s, Device=%s, Function=%s}",
+            "{ID=%s, Vendor=%s, Bus=%s, Device=%s, Function=%s, Tonemapping=%s}",
             id == null ? "N/A" : id,
             vendor == null ? "N/A" : vendor,
             bus == null ? "N/A" : bus,
             device == null ? "N/A" : device,
-            function == null ? "N/A" : function
+            function == null ? "N/A" : function,
+            String.valueOf(tonemapping)
         );
     }
     
@@ -71,6 +75,14 @@ public class GraphicsCard {
     
     public void setFunction(String function) {
         this.function = function;
+    }
+    
+    public boolean isTonemappingSupported() {
+        return tonemapping;
+    }
+    
+    public void setTonemappingSupported(boolean tonemapping) {
+        this.tonemapping = tonemapping;
     }
     
     // Helper Functions
