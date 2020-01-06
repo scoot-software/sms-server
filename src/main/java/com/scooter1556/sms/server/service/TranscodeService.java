@@ -297,8 +297,6 @@ public class TranscodeService {
                     
                     if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH || codec == SMS.Codec.HEVC_MAIN) {
                         commands.add("vaapi");
-                    } else if(codec == SMS.Codec.HEVC_MAIN10 || codec == SMS.Codec.HEVC_HDR10) {
-                        commands.add("p010");
                     }
                     
                     commands.add("-filter_hw_device");

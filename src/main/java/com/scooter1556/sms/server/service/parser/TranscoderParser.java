@@ -419,13 +419,6 @@ public class TranscoderParser {
                         }
                     }
                     
-                    // Tonemapping support
-                    if(graphicsCard.isTonemappingSupported()) {
-                        hwAccelerator.setTonemapping(SMS.Tonemap.VAAPI);
-                    } else if(hwAccelerator.isDecodeCodecSupported(SMS.Codec.HEVC_HDR10) && hwAccelerator.getOCLDevice() != null) {
-                        hwAccelerator.setTonemapping(SMS.Tonemap.OPENCL);
-                    }
-                    
                     hwaccels.add(hwAccelerator);
                 }
             }
