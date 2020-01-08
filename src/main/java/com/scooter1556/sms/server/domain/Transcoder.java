@@ -16,6 +16,7 @@ public class Transcoder implements Serializable {
     private Integer[] encoders;
     private boolean zscale = false;
     private boolean cuda = false;
+    private boolean tonemap = false;
     
     public Transcoder(Path path) {
         this.path = path;
@@ -24,14 +25,15 @@ public class Transcoder implements Serializable {
     @Override
     public String toString() {
         return String.format(
-                "{Path=%s, Version=%s, Hardware Accelerators=%s, Decoders=%s, Encoders=%s, zscale=%s, CUDA=%s}",
+                "{Path=%s, Version=%s, Hardware Accelerators=%s, Decoders=%s, Encoders=%s, zscale=%s, CUDA=%s, Tonemap=%s}",
                 path,
                 version == null ? "N/A" : version.toString(),
                 hwaccels == null ? "N/A" : Arrays.toString(hwaccels),
                 decoders == null ? "N/A" : Arrays.toString(decoders),
                 encoders == null ? "N/A" : Arrays.toString(encoders),
                 String.valueOf(zscale),
-                String.valueOf(cuda)
+                String.valueOf(cuda),
+                String.valueOf(tonemap)
         );
     }
     
@@ -137,5 +139,13 @@ public class Transcoder implements Serializable {
     
     public void setCuda(boolean cuda) {
         this.cuda = cuda;
+    }
+    
+    public boolean hasTonemap() {
+        return tonemap;
+    }
+    
+    public void setTonemap(boolean tonemap) {
+        this.tonemap = tonemap;
     }
 }

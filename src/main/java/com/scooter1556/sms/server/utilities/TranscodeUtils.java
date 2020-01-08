@@ -788,7 +788,7 @@ public class TranscodeUtils {
     
     public static int isTranscodeRequired(ClientProfile profile, MediaElement mediaElement, VideoStream stream) {
         if(!ArrayUtils.contains(profile.getCodecs(), stream.getCodec())) {
-            return SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_CLIENT;
+            return SMS.TranscodeReason.CODEC_NOT_SUPPORTED_BY_CLIENT;
         }
         
         // Check maximum bitrate

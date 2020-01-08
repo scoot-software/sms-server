@@ -63,6 +63,7 @@ public class TranscoderParser {
     // Filters
     private static final String ZSCALE = "zscale";
     private static final String CUDA_SCALE = "scale_cuda";
+    private static final String TONEMAP = " tonemap ";
 
     
     public static Transcoder parse(Transcoder transcoder) {
@@ -288,6 +289,11 @@ public class TranscoderParser {
             
             if(line.contains(CUDA_SCALE)) {
                 transcoder.setCuda(true);
+                continue;
+            }
+            
+            if(line.contains(TONEMAP)) {
+                transcoder.setTonemap(true);
             }
         }
     }

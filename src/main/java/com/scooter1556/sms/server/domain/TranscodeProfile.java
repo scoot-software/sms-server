@@ -4,12 +4,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Arrays;
 import com.scooter1556.sms.server.transcode.format.Format;
+import java.awt.Dimension;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class TranscodeProfile {
     private byte type;
     private String mimeType;
     private Format format;
+    private Dimension maxResolution;
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
     private SubtitleTranscode[] subtitleTranscodes;
@@ -22,10 +24,11 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[Type=%s, Format=%s, Mime Type=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s, Tonemapping=%s",
+        return String.format("TranscodeProfile[Type=%s, Format=%s, Mime Type=%s, Max Resolution=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s, Tonemapping=%s",
                 String.valueOf(type),
                 format == null ? "null" : format.toString(),
                 mimeType == null ? "null" : mimeType,
+                maxResolution == null ? "null" : String.format("%dx%d", maxResolution.width, maxResolution.height),
                 videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
                 audioTranscodes == null ? "null" : Arrays.toString(audioTranscodes),
                 subtitleTranscodes == null ? "null" : Arrays.toString(subtitleTranscodes),
@@ -53,6 +56,15 @@ public class TranscodeProfile {
 
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
+    }
+    
+    @JsonIgnore
+    public Dimension getMaxResolution() {
+        return maxResolution;
+    }
+
+    public void setMaxResolution(Dimension resolution) {
+        this.maxResolution = resolution;
     }
     
     @JsonIgnore

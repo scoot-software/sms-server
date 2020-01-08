@@ -4,7 +4,8 @@ import java.util.ArrayList;
 
 public class TranscodeCommand {
     private final ArrayList<String> commands = new ArrayList<>();
-    private final ArrayList<ArrayList<String>> filters = new ArrayList<>();
+    private final ArrayList<String> videoBaseFilters = new ArrayList<>();
+    private final ArrayList<ArrayList<String>> videoEncodeFilters = new ArrayList<>();
     
     public TranscodeCommand() {}
     
@@ -12,7 +13,11 @@ public class TranscodeCommand {
         return commands;
     }
     
-    public ArrayList<ArrayList<String>> getFilters() {
-        return filters;
+    public ArrayList<String> getVideoBaseFilters() {
+        return videoBaseFilters;
+    }
+    
+    public ArrayList<ArrayList<String>> getVideoEncodeFilters() {
+        return videoEncodeFilters;
     }
 }

@@ -134,7 +134,10 @@ public class TranscodeService {
                 //  Get list of transcodes for the desired video stream
                 List<VideoTranscode> vTranscodes = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream());
                 
-                // Populate filters
+                // Base filters
+                byte memory = getVideoBaseFilters(hardwareAccelerator, profile.getMaxResolution(), profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec(), profile.getTonemapping(), commands.get(i).getVideoBaseFilters());
+                
+                // Video encode filters
                 for(int v = 0; v < vTranscodes.size(); v++) {
                     // If we are copying the stream continue with the next transcode
                     if(vTranscodes.get(v).getCodec() == SMS.Codec.COPY) {
@@ -142,18 +145,13 @@ public class TranscodeService {
                     }
                     
                     // Add a filter list for video transcode
-                    commands.get(i).getFilters().add(new ArrayList<>());
-                    
-                    if(hardwareAccelerator == null || !hardwareAccelerator.isEncodingSupported()) {
-                        commands.get(i).getFilters().get(v).addAll(getSoftwareVideoEncodingFilters(vTranscodes.get(v).getResolution()));
-                    } else {
-                        commands.get(i).getFilters().get(v).addAll(getHardwareVideoEncodingFilters(vTranscodes.get(v).getResolution(), hardwareAccelerator));
-                    }
+                    commands.get(i).getVideoEncodeFilters().add(new ArrayList<>());
+                    commands.get(i).getVideoEncodeFilters().get(v).addAll(getVideoEncodingFilters(hardwareAccelerator, vTranscodes.get(v).getResolution(), vTranscodes.get(v).getCodec(), memory));
                 }
                 
                 // Hardware decoding
                 if(hardwareAccelerator != null && hardwareAccelerator.isDecodeCodecSupported(profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec())) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec()));
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec(), profile.getTonemapping()));
                 }
                 
                 // Input media file
@@ -170,7 +168,7 @@ public class TranscodeService {
                 commands.get(i).getCommands().add("-1");
                 
                 // Filter commands
-                commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getFilters()));
+                commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getVideoBaseFilters(), commands.get(i).getVideoEncodeFilters()));
                 
                 for(int v = 0; v < vTranscodes.size(); v++) {
                     VideoTranscode transcode = vTranscodes.get(v);
@@ -182,18 +180,14 @@ public class TranscodeService {
                         commands.get(i).getCommands().add("0:" + transcode.getId());
                         
                         // Codec
-                        commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(transcode.getCodec(), transcode.getMaxBitrate()));
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(null, transcode.getCodec(), transcode.getMaxBitrate()));
                     } else {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodeCodecSupported(transcode.getCodec())) {
-                            commands.get(i).getCommands().addAll(getSoftwareVideoEncodingCommands(transcode.getCodec(), transcode.getMaxBitrate()));
-                        } else {
-                            commands.get(i).getCommands().addAll(getHardwareVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getMaxBitrate()));
-                        }
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getMaxBitrate()));
 
                         commands.get(i).getCommands().add("-force_key_frames");
                         commands.get(i).getCommands().add("expr:gte(t,n_forced*" + profile.getSegmentDuration()  + ")");
@@ -278,7 +272,7 @@ public class TranscodeService {
         return commands;
     }
     
-    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, int codec) {
+    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, int codec, boolean tonemapping) {
         Collection<String> commands = new LinkedList<>();
 
         switch(hardwareAccelerator.getType()) {
@@ -294,10 +288,7 @@ public class TranscodeService {
                     commands.add("va");
                  
                     commands.add("-hwaccel_output_format");
-                    
-                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH || codec == SMS.Codec.HEVC_MAIN) {
-                        commands.add("vaapi");
-                    }
+                    commands.add("vaapi");
                     
                     commands.add("-filter_hw_device");
                     commands.add("va");
@@ -326,6 +317,14 @@ public class TranscodeService {
                     commands.add(hardwareAccelerator.getDevice());
                 }
                 
+                // Setup OpenCL if needed
+                if(tonemapping && hardwareAccelerator.getTonemapping() == SMS.Tonemap.OPENCL && hardwareAccelerator.getOCLDevice() != null) {
+                    commands.add("-init_hw_device");
+                    commands.add("opencl=ocl:" + hardwareAccelerator.getOCLDevice());
+                    commands.add("-filter_hw_device");
+                    commands.add("ocl");
+                }
+                
                 break;
         }
         
@@ -335,146 +334,13 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given hardware accelerator.
      */
-    private Collection<String> getHardwareVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer maxrate) {
+    private Collection<String> getVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer maxrate) {
         Collection<String> commands = new LinkedList<>();
         
-        if(hardwareAccelerator != null) {
-            switch(hardwareAccelerator.getType()) {
-                case SMS.Accelerator.INTEL:
-                    commands.add("-c:v");
-                    
-                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
-                        
-                        commands.add("h264_vaapi");
-                        commands.add("-qp");
-                        commands.add("23");
-                        
-                        //  Profile
-                        commands.add("-profile:v");
-
-                        switch (codec) {
-                            case SMS.Codec.AVC_BASELINE:
-                                commands.add("constrained_baseline");
-                                break;
-                            case SMS.Codec.AVC_MAIN:
-                                commands.add("main");
-                                break;
-                            case SMS.Codec.AVC_HIGH:
-                                commands.add("high");
-                                break;
-                            default:
-                                commands.add("high");
-                                break;
-                        }
-                        
-                        break;
-                    }
-                    
-                    else if(codec == SMS.Codec.HEVC_MAIN) {
-                        commands.add("hevc_vaapi");
-                        commands.add("-qp");
-                        commands.add("25");
-                        
-                        break;
-                    }
-
-                case SMS.Accelerator.NVIDIA:
-                    commands.add("-c:v");
-                    
-                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
-                        commands.add("h264_nvenc");
-                        
-                        //  Profile
-                        commands.add("-profile:v");
-
-                        switch (codec) {
-                            case SMS.Codec.AVC_BASELINE:
-                                commands.add("baseline");
-                                break;
-                            case SMS.Codec.AVC_MAIN:
-                                commands.add("main");
-                                break;
-                            case SMS.Codec.AVC_HIGH:
-                                commands.add("high");
-                                break;
-                            default:
-                                commands.add("high");
-                                break;
-                        }
-                    
-                        commands.add("-rc:v");
-                        commands.add("vbr_hq");
-                        commands.add("-cq:v");
-                        commands.add("23");
-                    }
-                    
-                    else if(codec == SMS.Codec.HEVC_MAIN) {
-                        commands.add("hevc_nvenc");
-                        commands.add("-rc:v");
-                        commands.add("vbr_hq");
-                        commands.add("-cq:v");
-                        commands.add("25");
-                    }
-                    
-                    commands.add("-gpu");
-                    commands.add(hardwareAccelerator.getDevice());
-                    
-                    if(maxrate != null) {
-                        commands.add("-maxrate:v");
-                        commands.add(maxrate.toString() + "k");
-                    }
-                    
-                    commands.add("-preset");
-                    commands.add("fast");
-                    
-                    
-                    break;
-            }
-        }
-        
-        return commands;
-    }
-    
-    /*
-     * Returns a list of filters for a given hardware accelerator.
-     */
-    private List<String> getHardwareVideoEncodingFilters(Dimension resolution, HardwareAccelerator hardwareAccelerator) {
-        List<String> filters = new ArrayList<>();
-        
-        if(hardwareAccelerator != null) {
-            switch(hardwareAccelerator.getType()) {
-                case SMS.Accelerator.INTEL:
-                    filters.add("format=nv12|vaapi");
-                    filters.add("hwupload");
-
-                    if(resolution != null) {
-                        filters.add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
-                    }
-                    
-                    break;
-
-                case SMS.Accelerator.NVIDIA:
-                    if(resolution != null) {
-                        filters.add("scale_cuda=" + resolution.width + ":" + resolution.height);
-                    }
-                    
-                    break;
-            }
-        }
-        
-        return filters;
-    }
-    
-    /*
-     * Returns a list of commands for a given software video codec to optimise transcoding.
-     */
-    private Collection<String> getSoftwareVideoEncodingCommands(int codec, Integer maxrate) {
-        Collection<String> commands = new LinkedList<>();
-        
-        // Video Codec
         commands.add("-c:v");
-
-        switch(codec) {       
+        
+        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodeCodecSupported(codec)) {
+            switch(codec) {       
             case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH:
                 commands.add("libx264");
                 commands.add("-crf");
@@ -530,23 +396,267 @@ public class TranscodeService {
                 
             case SMS.Codec.COPY:
                 commands.add("copy");
-                break;
+                    break;
 
             default:
                 return null;
+            }
         }
+        
+        else {
+            switch(hardwareAccelerator.getType()) {
+                case SMS.Accelerator.INTEL:                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
+                        
+                        commands.add("h264_vaapi");
+                        commands.add("-qp");
+                        commands.add("23");
+                        
+                        //  Profile
+                        commands.add("-profile:v");
 
+                        switch (codec) {
+                            case SMS.Codec.AVC_BASELINE:
+                                commands.add("constrained_baseline");
+                                break;
+                            case SMS.Codec.AVC_MAIN:
+                                commands.add("main");
+                                break;
+                            case SMS.Codec.AVC_HIGH:
+                                commands.add("high");
+                                break;
+                            default:
+                                commands.add("high");
+                                break;
+                        }
+                        
+                        break;
+                    }
+                    
+                    else if(codec == SMS.Codec.HEVC_MAIN) {
+                        commands.add("hevc_vaapi");
+                        commands.add("-qp");
+                        commands.add("25");
+                        
+                        break;
+                    }
+
+                case SMS.Accelerator.NVIDIA:                    
+                    if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
+                        commands.add("h264_nvenc");
+                        
+                        //  Profile
+                        commands.add("-profile:v");
+
+                        switch (codec) {
+                            case SMS.Codec.AVC_BASELINE:
+                                commands.add("baseline");
+                                break;
+                            case SMS.Codec.AVC_MAIN:
+                                commands.add("main");
+                                break;
+                            case SMS.Codec.AVC_HIGH:
+                                commands.add("high");
+                                break;
+                            default:
+                                commands.add("high");
+                                break;
+                        }
+                    
+                        commands.add("-rc:v");
+                        commands.add("vbr_hq");
+                        commands.add("-cq:v");
+                        commands.add("23");
+                    }
+                    
+                    else if(codec == SMS.Codec.HEVC_MAIN) {
+                        commands.add("hevc_nvenc");
+                        commands.add("-rc:v");
+                        commands.add("vbr_hq");
+                        commands.add("-cq:v");
+                        commands.add("25");
+                    }
+                    
+                    commands.add("-gpu");
+                    commands.add(hardwareAccelerator.getDevice());
+                    
+                    if(maxrate != null) {
+                        commands.add("-maxrate:v");
+                        commands.add(maxrate.toString() + "k");
+                    }
+                    
+                    commands.add("-preset");
+                    commands.add("fast");
+                    
+                    
+                    break;
+            }
+        }
+        
         return commands;
     }
     
     /*
-     * Returns a list of filters for software encoding.
+     * Returns a list of base video filters.
      */
-    private List<String> getSoftwareVideoEncodingFilters(Dimension resolution) {
+    private byte getVideoBaseFilters(HardwareAccelerator hardwareAccelerator, Dimension resolution, int codec, boolean tonemapping, List<String> filters) {
+        // Track memory where frames are stored through filter chain
+        byte memory = SMS.Memory.NONE;
+        
+        if(hardwareAccelerator == null) {
+            memory = SMS.Memory.SYSTEM;
+        } else if(hardwareAccelerator.isDecodeCodecSupported(codec)) {
+            memory = SMS.Memory.HARDWARE;
+        }
+
+        // Resolution
+        if(resolution != null) {
+            if(memory == SMS.Memory.SYSTEM) {
+                filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+            }
+
+            else if(memory == SMS.Memory.HARDWARE) {
+                switch(hardwareAccelerator.getType()) {
+                    case SMS.Accelerator.INTEL:
+                        filters.add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
+                        break;
+
+                    case SMS.Accelerator.NVIDIA:
+                        if(resolution != null) {
+                            if(getTranscoder().hasCuda()) {
+                                filters.add("scale_cuda=" + resolution.width + ":" + resolution.height);
+                            } else {
+                                filters.add("hwdownload");
+
+                                switch(codec) {
+                                    case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH: case SMS.Codec.HEVC_MAIN:
+                                        filters.add("format=nv12");
+                                        break;
+
+                                    case SMS.Codec.AVC_HIGH10: case SMS.Codec.HEVC_MAIN10: case SMS.Codec.HEVC_HDR10:
+                                        filters.add("format=p010");
+                                }
+
+                                filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+                                memory = SMS.Memory.SYSTEM;
+                            }
+                        }
+
+                        break;
+                }
+            }
+        }
+        
+        // Tonemapping
+        if(tonemapping) {
+            if(hardwareAccelerator == null || hardwareAccelerator.getTonemapping() == SMS.Tonemap.NONE) {
+                // Check we can software tonemap
+                if(getTranscoder().hasZscale() && getTranscoder().hasTonemap()) {
+                    if(memory == SMS.Memory.HARDWARE) {
+                        filters.add("hwdownload");
+                        filters.add("format=p010");
+                    }
+
+                    // Tonemap
+                    filters.add("zscale=transfer=linear");
+                    filters.add("tonemap=hable");
+                    filters.add("zscale=transfer=bt709");
+                    filters.add("format=nv12");
+
+                    memory = SMS.Memory.SYSTEM;
+                }
+            }
+
+            else {
+                if(hardwareAccelerator.getTonemapping() == SMS.Tonemap.OPENCL) {
+                    if(memory == SMS.Memory.HARDWARE) {
+                        filters.add("hwdownload");
+                    }
+
+                    filters.add("format=p010");
+
+                    // Tonemap OpenCL
+                    filters.add("hwupload");
+                    filters.add("tonemap_opencl=t=bt709:tonemap=hable:format=nv12");
+                    filters.add("hwdownload");
+                    filters.add("format=nv12");
+
+                    memory = SMS.Memory.SYSTEM;
+                }
+            }
+        }
+        
+        return memory;
+    }
+    
+    /*
+     * Returns a list of video filters for a given encode.
+     */
+    private List<String> getVideoEncodingFilters(HardwareAccelerator hardwareAccelerator, Dimension resolution, int codec, byte memory) {
         List<String> filters = new ArrayList<>();
         
-        if(resolution != null) {
-            filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+        if(hardwareAccelerator == null || !hardwareAccelerator.isEncodeCodecSupported(codec)) {
+            if(memory == SMS.Memory.HARDWARE) {
+                filters.add("hwdownload");
+
+                switch(codec) {
+                    case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH: case SMS.Codec.HEVC_MAIN:
+                        filters.add("format=nv12");
+                        break;
+
+                    case SMS.Codec.AVC_HIGH10: case SMS.Codec.HEVC_MAIN10: case SMS.Codec.HEVC_HDR10:
+                        filters.add("format=p010");
+                }
+
+            }
+            
+            if(resolution != null) {
+                filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+            }
+        }
+        
+        else {
+            switch(hardwareAccelerator.getType()) {
+                case SMS.Accelerator.INTEL:
+                    if(memory == SMS.Memory.SYSTEM) {
+                        filters.add("hwupload");
+                    }
+                    
+                    if(resolution != null) {
+                        filters.add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
+                    }
+                    
+                    break;
+
+                case SMS.Accelerator.NVIDIA:
+                    if(resolution != null) {
+                        if(getTranscoder().hasCuda()) {
+                            if(memory == SMS.Memory.SYSTEM) {
+                                filters.add("hwupload_cuda");
+                            }
+                            
+                            filters.add("scale_cuda=" + resolution.width + ":" + resolution.height);
+                        } else {
+                            if(memory == SMS.Memory.HARDWARE) {
+                                filters.add("hwdownload");
+
+                                switch(codec) {
+                                    case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH: case SMS.Codec.HEVC_MAIN:
+                                        filters.add("format=nv12");
+                                        break;
+
+                                    case SMS.Codec.AVC_HIGH10: case SMS.Codec.HEVC_MAIN10: case SMS.Codec.HEVC_HDR10:
+                                        filters.add("format=p010");
+                                }
+
+                            }
+                            
+                            filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
+                        }
+                    }
+                    
+                    break;
+            }
         }
         
         return filters;
@@ -614,40 +724,66 @@ public class TranscodeService {
         return commands;
     }
     
-    public Collection<String> getFilterCommands(int streamId, ArrayList<ArrayList<String>> filters) {
+    public Collection<String> getFilterCommands(int streamId, ArrayList<String> baseFilters, ArrayList<ArrayList<String>> videoEncodeFilters) {
         Collection<String> commands = new LinkedList<>();
         
-        if(!filters.isEmpty()) {
-            commands.add("-filter_complex");
-            
-            StringBuilder filterBuilder = new StringBuilder();
-            
-            // Add each filter chain in turn
-            for(int i = 0; i < filters.size(); i++) {
-                filterBuilder.append("[0:").append(streamId).append("]");
-                
-                // If there are no filters to add utilise the 'null' filter
-                if(filters.get(i).isEmpty()) {
-                    filterBuilder.append("null");
-                } else {
-                    for(int f = 0; f < filters.get(i).size(); f++) {
-                        filterBuilder.append(filters.get(i).get(f));
-                        
-                        if(f < (filters.get(i).size() - 1)) {
-                            filterBuilder.append(",");
-                        }
-                    }
-                }
-            
-                filterBuilder.append("[v").append(i).append("]");
-                
-                if(i < (filters.size() - 1)) {
-                    filterBuilder.append(";");
+        if(baseFilters.isEmpty() && videoEncodeFilters.isEmpty()) {
+            return commands;
+        }
+        
+        commands.add("-filter_complex");
+
+        StringBuilder filterBuilder = new StringBuilder();
+        
+        filterBuilder.append("[0:").append(streamId).append("]");
+        
+        // Base filters
+        if(baseFilters.size() > 0) {
+            for(int i = 0; i < baseFilters.size(); i++) {
+                filterBuilder.append(baseFilters.get(i));
+
+                if(i < (baseFilters.size() - 1)) {
+                    filterBuilder.append(",");
                 }
             }
             
-            commands.add(filterBuilder.toString());
+            filterBuilder.append("[base];[base]");
         }
+        
+        // Split stream
+        filterBuilder.append("split=").append(videoEncodeFilters.size());
+        
+        for(int i = 0; i < videoEncodeFilters.size(); i++) {
+            filterBuilder.append("[i").append(i).append("]");
+        }
+        
+        filterBuilder.append(";");
+
+        // Add each filter chain in turn
+        for(int i = 0; i < videoEncodeFilters.size(); i++) {
+            filterBuilder.append("[i").append(i).append("]");
+            
+            // If there are no filters to add utilise the 'null' filter
+            if(videoEncodeFilters.get(i).isEmpty()) {
+                filterBuilder.append("null");
+            } else {
+                for(int f = 0; f < videoEncodeFilters.get(i).size(); f++) {
+                    filterBuilder.append(videoEncodeFilters.get(i).get(f));
+
+                    if(f < (videoEncodeFilters.get(i).size() - 1)) {
+                        filterBuilder.append(",");
+                    }
+                }
+            }
+
+            filterBuilder.append("[v").append(i).append("]");
+
+            if(i < (videoEncodeFilters.size() - 1)) {
+                filterBuilder.append(";");
+            }
+        }
+
+        commands.add(filterBuilder.toString());
         
         return commands;
     }
@@ -760,8 +896,12 @@ public class TranscodeService {
 
         if(transcodeReason == SMS.TranscodeReason.NONE) {
             if(!transcodeProfile.getFormat().isSupported(stream.getCodec())) {
-                transcodeReason = SMS.TranscodeReason.CODEC_UNSUPPORTED_BY_ENCODER;
+                transcodeReason = SMS.TranscodeReason.CODEC_NOT_SUPPORTED_BY_FORMAT;
             }
+        }
+        
+        if(transcodeReason > SMS.TranscodeReason.NONE && !clientProfile.getDirectPlay()) {
+            transcodeProfile.setMaxResolution(TranscodeUtils.getVideoResolution(stream.getResolution(), maxQuality));
         }
         
         // Check if tonemapping is required
@@ -791,7 +931,14 @@ public class TranscodeService {
 
                 // Get suitable resolution (use native resolution if direct play is enabled)
                 if(!clientProfile.getDirectPlay()) {
-                    resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);      
+                    resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);
+                    
+                    // Check if the resolution for this stream is the same as our master resolution
+                    if(resolution != null && transcodeProfile.getMaxResolution() != null) {
+                        if((Double.compare(resolution.getHeight(), transcodeProfile.getMaxResolution().getHeight()) == 0) && (Double.compare(resolution.getWidth(), transcodeProfile.getMaxResolution().getWidth()) == 0)) {
+                            resolution = null;
+                        }
+                    }
                 }
 
                 // For remote streams set our default max bitrate

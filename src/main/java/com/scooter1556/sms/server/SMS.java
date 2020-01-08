@@ -96,8 +96,8 @@ public class SMS {
     public static class TranscodeReason {
         public static final int UNKNOWN = -1;
         public static final int NONE = 0;
-        public static final int CODEC_UNSUPPORTED_BY_CLIENT = 1;
-        public static final int CODEC_UNSUPPORTED_BY_ENCODER = 2;
+        public static final int CODEC_NOT_SUPPORTED_BY_CLIENT = 1;
+        public static final int CODEC_NOT_SUPPORTED_BY_FORMAT = 2;
         public static final int BITRATE = 3;
         public static final int RESOLUTION = 4;
         public static final int SUBTITLES = 5;
@@ -167,6 +167,29 @@ public class SMS {
                     
                 case SOFTWARE:
                     return "Software";
+                    
+                default:
+                    return "Invalid";
+            }
+        }
+        
+        public static boolean isValid(byte val) {
+            return val >= 0 && val <= 2;
+        }
+    }
+    
+    public static class Memory {
+        public static final byte NONE = 0;
+        public static final byte SYSTEM = 1;
+        public static final byte HARDWARE = 2;
+                
+        public static String toString(byte value) {
+            switch(value) {
+                case SYSTEM:
+                    return "System Memory";
+                    
+                case HARDWARE:
+                    return "Dedicated Memory";
                     
                 default:
                     return "Invalid";
