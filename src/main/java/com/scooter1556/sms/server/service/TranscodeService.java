@@ -123,7 +123,7 @@ public class TranscodeService {
             commands.get(i).getCommands().add(profile.getOffset().toString());
 
             // Video
-            if(profile.getVideoTranscodes() != null && profile.getVideoStream() != null) {
+            if(profile.getVideoTranscodes() != null) {
                 HardwareAccelerator hardwareAccelerator = null;
             
                 // Software or hardware based transcoding
@@ -131,27 +131,24 @@ public class TranscodeService {
                     hardwareAccelerator = accelerators.get(i);
                 }
                 
-                //  Get list of transcodes for the desired video stream
-                List<VideoTranscode> vTranscodes = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream());
-                
                 // Base filters
-                byte memory = getVideoBaseFilters(hardwareAccelerator, profile.getMaxResolution(), profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec(), profile.getTonemapping(), commands.get(i).getVideoBaseFilters());
+                byte memory = getVideoBaseFilters(hardwareAccelerator, profile.getMaxResolution(), profile.getVideoTranscodes()[0].getOriginalCodec(), profile.getTonemapping(), commands.get(i).getVideoBaseFilters());
                 
                 // Video encode filters
-                for(int v = 0; v < vTranscodes.size(); v++) {
+                for(int v = 0; v < profile.getVideoTranscodes().length; v++) {
                     // If we are copying the stream continue with the next transcode
-                    if(vTranscodes.get(v).getCodec() == SMS.Codec.COPY) {
+                    if(profile.getVideoTranscodes()[v].getCodec() == SMS.Codec.COPY) {
                         continue;
                     }
                     
                     // Add a filter list for video transcode
                     commands.get(i).getVideoEncodeFilters().add(new ArrayList<>());
-                    commands.get(i).getVideoEncodeFilters().get(v).addAll(getVideoEncodingFilters(hardwareAccelerator, vTranscodes.get(v).getResolution(), vTranscodes.get(v).getCodec(), memory));
+                    commands.get(i).getVideoEncodeFilters().get(v).addAll(getVideoEncodingFilters(hardwareAccelerator, profile.getVideoTranscodes()[v].getResolution(), profile.getVideoTranscodes()[v].getCodec(), memory));
                 }
                 
                 // Hardware decoding
-                if(hardwareAccelerator != null && hardwareAccelerator.isDecodeCodecSupported(profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec())) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[profile.getVideoStream()].getOriginalCodec(), profile.getTonemapping()));
+                if(hardwareAccelerator != null && hardwareAccelerator.isDecodeCodecSupported(profile.getVideoTranscodes()[0].getOriginalCodec())) {
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[0].getOriginalCodec(), profile.getTonemapping()));
                 }
                 
                 // Input media file
@@ -170,8 +167,8 @@ public class TranscodeService {
                 // Filter commands
                 commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getVideoBaseFilters(), commands.get(i).getVideoEncodeFilters()));
                 
-                for(int v = 0; v < vTranscodes.size(); v++) {
-                    VideoTranscode transcode = vTranscodes.get(v);
+                for(int v = 0; v < profile.getVideoTranscodes().length; v++) {
+                    VideoTranscode transcode = profile.getVideoTranscodes()[v];
                     
                     // Stream copy
                     if(transcode.getCodec() == SMS.Codec.COPY) {
