@@ -935,7 +935,7 @@ public class TranscodeService {
                     
                     // Check if the resolution for this stream is the same as our master resolution
                     if(resolution != null && transcodeProfile.getMaxResolution() != null) {
-                        if((Double.compare(resolution.getHeight(), transcodeProfile.getMaxResolution().getHeight()) == 0) && (Double.compare(resolution.getWidth(), transcodeProfile.getMaxResolution().getWidth()) == 0)) {
+                        if(TranscodeUtils.compareDimensions(resolution, transcodeProfile.getMaxResolution()) == 2) {
                             resolution = null;
                         }
                     }
