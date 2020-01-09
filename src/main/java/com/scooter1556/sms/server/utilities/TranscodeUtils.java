@@ -799,7 +799,7 @@ public class TranscodeUtils {
         }
 
         // If client is not on the local network check stream parameters
-        if(!profile.getLocal()) {
+        if(!profile.getLocal() || !profile.getDirectPlay()) {
             // Check resolution
             if(TranscodeUtils.compareDimensions(new Dimension(stream.getWidth(), stream.getHeight()), TranscodeUtils.VIDEO_QUALITY_RESOLUTION[profile.getVideoQuality()]) == 1) {
                 return SMS.TranscodeReason.RESOLUTION;

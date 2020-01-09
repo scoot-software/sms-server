@@ -900,8 +900,10 @@ public class TranscodeService {
             }
         }
         
-        if(transcodeReason > SMS.TranscodeReason.NONE && !clientProfile.getDirectPlay()) {
-            transcodeProfile.setMaxResolution(TranscodeUtils.getVideoResolution(stream.getResolution(), maxQuality));
+        if(transcodeReason > SMS.TranscodeReason.NONE) {
+            if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE || !clientProfile.getDirectPlay()) {
+                transcodeProfile.setMaxResolution(TranscodeUtils.getVideoResolution(stream.getResolution(), maxQuality));
+            }
         }
         
         // Check if tonemapping is required
@@ -929,8 +931,8 @@ public class TranscodeService {
                     return false;
                 }
 
-                // Get suitable resolution (use native resolution if direct play is enabled)
-                if(!clientProfile.getDirectPlay()) {
+                // Get suitable resolution and bitrate if necessary (use native resolution if direct play is enabled)
+                if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE || !clientProfile.getDirectPlay()) {
                     resolution = TranscodeUtils.getVideoResolution(stream.getResolution(), quality);
                     
                     // Check if the resolution for this stream is the same as our master resolution
@@ -939,10 +941,8 @@ public class TranscodeService {
                             resolution = null;
                         }
                     }
-                }
-
-                // For remote streams set our default max bitrate
-                if(transcodeProfile.getType() == TranscodeProfile.StreamType.REMOTE) {
+                    
+                    // Set default max bitrate
                     maxBitrate = TranscodeUtils.getMaxBitrateForCodec(codec, quality);
                 }
             } else {
