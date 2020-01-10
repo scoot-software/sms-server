@@ -74,7 +74,7 @@ public class Transcoder implements Serializable {
             
             // Add hardware accelerator
             if(accelerator.isDecodingSupported() || accelerator.isEncodingSupported()) {
-                result.add(new HardwareAccelerator(accelerator));
+                result.add(accelerator);
             }
         }
         

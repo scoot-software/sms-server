@@ -94,7 +94,7 @@ public class HardwareAccelerator {
     }
     
     public int[] getDecodeCodecs() {
-        return eCodecs;
+        return dCodecs;
     }
     
     public void setDecodeCodecs(int[] dCodecs) {
