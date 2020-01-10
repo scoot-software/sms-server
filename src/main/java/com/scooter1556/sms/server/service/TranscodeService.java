@@ -148,7 +148,7 @@ public class TranscodeService {
                 
                 // Hardware decoding
                 if(hardwareAccelerator != null && hardwareAccelerator.isDecodeCodecSupported(profile.getVideoTranscodes()[0].getOriginalCodec())) {
-                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getVideoTranscodes()[0].getOriginalCodec(), profile.getTonemapping()));
+                    commands.get(i).getCommands().addAll(getHardwareAccelerationCommands(hardwareAccelerator, profile.getMaxResolution(), profile.getVideoTranscodes()[0].getOriginalCodec(), profile.getTonemapping()));
                 }
                 
                 // Input media file
@@ -269,7 +269,7 @@ public class TranscodeService {
         return commands;
     }
     
-    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, int codec, boolean tonemapping) {
+    private Collection<String> getHardwareAccelerationCommands(HardwareAccelerator hardwareAccelerator, Dimension resolution, int codec, boolean tonemapping) {
         Collection<String> commands = new LinkedList<>();
 
         switch(hardwareAccelerator.getType()) {
@@ -308,6 +308,11 @@ public class TranscodeService {
                         commands.add("mpeg2_cuvid");
                     } else if(codec == SMS.Codec.VC1) {
                         commands.add("vc1_cuvid");
+                    }
+                    
+                    if(resolution != null) {
+                        commands.add("-resize");
+                        commands.add(resolution.width + "x" + resolution.height);
                     }
                     
                     commands.add("-gpu");
@@ -516,29 +521,6 @@ public class TranscodeService {
                 switch(hardwareAccelerator.getType()) {
                     case SMS.Accelerator.INTEL:
                         filters.add("scale_vaapi=w=" + resolution.width + ":h=" + resolution.height);
-                        break;
-
-                    case SMS.Accelerator.NVIDIA:
-                        if(resolution != null) {
-                            if(getTranscoder().hasCuda()) {
-                                filters.add("scale_cuda=" + resolution.width + ":" + resolution.height);
-                            } else {
-                                filters.add("hwdownload");
-
-                                switch(codec) {
-                                    case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH: case SMS.Codec.HEVC_MAIN:
-                                        filters.add("format=nv12");
-                                        break;
-
-                                    case SMS.Codec.AVC_HIGH10: case SMS.Codec.HEVC_MAIN10: case SMS.Codec.HEVC_HDR10:
-                                        filters.add("format=p010");
-                                }
-
-                                filters.add("scale=w=" + resolution.width + ":h=" + resolution.height);
-                                memory = SMS.Memory.SYSTEM;
-                            }
-                        }
-
                         break;
                 }
             }
