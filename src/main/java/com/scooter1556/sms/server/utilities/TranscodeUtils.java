@@ -56,7 +56,8 @@ public class TranscodeUtils {
     public static final String ISO_AVC_BASELINE = "avc1.42E01E";
     public static final String ISO_AVC_MAIN = "avc1.4D401F";
     public static final String ISO_AVC_HIGH = "avc1.640029";
-    public static final String ISO_HEVC_MAIN = "hvc1.1.4.L126.B0";
+    public static final String ISO_HEVC_MAIN = "hev1.1.6.L150";
+    public static final String ISO_HEVC_MAIN10 = "hev1.2.6.L150";
     public static final String ISO_MP3 = "mp4a.69";
     public static final String ISO_AAC = "mp4a.40.2";
     public static final String ISO_AC3 = "mp4a.a5";
@@ -455,6 +456,9 @@ public class TranscodeUtils {
                 
             case SMS.Codec.HEVC_MAIN:
                 return ISO_HEVC_MAIN;
+                
+            case SMS.Codec.HEVC_MAIN10:
+                return ISO_HEVC_MAIN10;
                 
             case SMS.Codec.AAC:
                 return ISO_AAC;
