@@ -44,6 +44,7 @@ import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
@@ -404,15 +405,15 @@ public class AdaptiveStreamingService {
     }
      
     public void removeProcessById(UUID id) {
-        int index = 0;
+        Iterator pItr = processes.iterator(); 
         
-        for (AdaptiveStreamingProcess process : processes) {
+        while (pItr.hasNext()) { 
+            AdaptiveStreamingProcess process = (AdaptiveStreamingProcess) pItr.next();
+            
             if(process.getId().compareTo(id) == 0) {
-                processes.remove(index);
+                pItr.remove();
                 break;
             }
-            
-            index ++;
         }
     }
      

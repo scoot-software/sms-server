@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListener;
@@ -158,7 +157,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             }
             
             // Cleanup working directory
-            if(streamDirectory != null && streamDirectory.isDirectory()) {
+            if(streamDirectory != null && streamDirectory.exists() && streamDirectory.isDirectory()) {
                 FileUtils.deleteDirectory(streamDirectory);
             }
         } catch(InterruptedException ex) {
