@@ -106,21 +106,15 @@ public class IntelHelper {
            id.startsWith("161") ||
            id.startsWith("162") ||
            id.startsWith("163") ||
-           id.startsWith("22b")) {
+           id.startsWith("190") ||
+           id.startsWith("191") ||
+           id.startsWith("192") ||
+           id.startsWith("193") ||
+           id.startsWith("22b") ||
+           id.startsWith("5a8")) {
             codecs.add(SMS.Codec.AVC_BASELINE);
             codecs.add(SMS.Codec.AVC_MAIN);
             codecs.add(SMS.Codec.AVC_HIGH);
-        }
-        
-        else if(id.startsWith("190") ||
-                id.startsWith("191") ||
-                id.startsWith("192") ||
-                id.startsWith("193") ||
-                id.startsWith("5a8")) {
-            codecs.add(SMS.Codec.AVC_BASELINE);
-            codecs.add(SMS.Codec.AVC_MAIN);
-            codecs.add(SMS.Codec.AVC_HIGH);
-            codecs.add(SMS.Codec.HEVC_MAIN);
         }
         
         else if(id.startsWith("318") ||
