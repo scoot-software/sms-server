@@ -91,8 +91,10 @@ public class TranscodeUtils {
     
     public static final int[] AUDIO_QUALITY_MAX_BITRATE = {96,196,320,320};
     
-    public static final int[] AVC_VIDEO_QUALITY_BITRATE = {1000,1500,2000,3000,4000,8000};
-    public static final int[] HEVC_VIDEO_QUALITY_BITRATE = {500,700,1000,1500,2000,4000};
+    public static final int[] AVC_VIDEO_QUALITY_MAX_BITRATE = {1000,1500,2000,3000,4000,6000};
+    public static final int[] AVC_VIDEO_QUALITY_AVERAGE_BITRATE = {400,800,1000,1800,2500,4500};
+    public static final int[] HEVC_VIDEO_QUALITY_MAX_BITRATE = {500,700,1000,1500,2000,4000,15000};
+    public static final int[] HEVC_VIDEO_QUALITY_AVERAGE_BITRATE = {200,400,500,900,1500,2000,8000};
     
     public static final int[] VIDEO_QUALITY_AUDIO_BITRATE = {64,
                                                              64,
@@ -100,6 +102,7 @@ public class TranscodeUtils {
                                                              128,
                                                              128,
                                                              192,
+                                                             192
     };
     
     public static final Dimension[] VIDEO_QUALITY_RESOLUTION = {new Dimension(426,240),
@@ -107,7 +110,8 @@ public class TranscodeUtils {
                                                                 new Dimension(848,480),
                                                                 new Dimension(1024,576),
                                                                 new Dimension(1280,720),
-                                                                new Dimension(1920,1080)
+                                                                new Dimension(1920,1080),
+                                                                new Dimension(3840,2160)
     };
     
     public static final String[][] CHANNEL_CONFIGURATION = {
@@ -270,11 +274,11 @@ public class TranscodeUtils {
                 case SMS.Codec.AVC_BASELINE:
                 case SMS.Codec.AVC_MAIN:
                 case SMS.Codec.AVC_HIGH:
-                    requested = TranscodeUtils.AVC_VIDEO_QUALITY_BITRATE[i];
+                    requested = TranscodeUtils.AVC_VIDEO_QUALITY_MAX_BITRATE[i];
                     break;
                     
                 case SMS.Codec.HEVC_MAIN:
-                    requested = TranscodeUtils.HEVC_VIDEO_QUALITY_BITRATE[i];
+                    requested = TranscodeUtils.HEVC_VIDEO_QUALITY_MAX_BITRATE[i];
                     break;
                     
                 default:
@@ -304,10 +308,10 @@ public class TranscodeUtils {
             case SMS.Codec.AVC_BASELINE:
             case SMS.Codec.AVC_MAIN:
             case SMS.Codec.AVC_HIGH:
-                return TranscodeUtils.AVC_VIDEO_QUALITY_BITRATE[quality];
+                return TranscodeUtils.AVC_VIDEO_QUALITY_MAX_BITRATE[quality];
 
             case SMS.Codec.HEVC_MAIN:
-                return TranscodeUtils.HEVC_VIDEO_QUALITY_BITRATE[quality];
+                return TranscodeUtils.HEVC_VIDEO_QUALITY_MAX_BITRATE[quality];
 
             default:
                 return 0;
