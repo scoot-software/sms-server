@@ -65,13 +65,6 @@ public class Transcoder implements Serializable {
         List<HardwareAccelerator> result = new ArrayList<>();
                 
         for(HardwareAccelerator accelerator : hwaccels) {
-            // Check the accelerator supports bitrate limiting
-            if(streaming) {
-                if(!accelerator.isStreamingSupported()) {
-                    continue;
-                }
-            }
-            
             // Add hardware accelerator
             if(accelerator.isDecodingSupported() || accelerator.isEncodingSupported()) {
                 result.add(accelerator);

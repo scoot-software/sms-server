@@ -318,6 +318,30 @@ public class TranscodeUtils {
         }
     }
     
+    /*
+     * Returns the average bitrate for a given codec
+     */
+    public static int getAverageBitrateForCodec(int codec, int quality) {
+        // Check quality
+        if(!VideoTranscode.VideoQuality.isValid(quality)) {
+            return 0;
+        }
+        
+        // Determine average bitrate based on quality
+        switch(codec) {
+            case SMS.Codec.AVC_BASELINE:
+            case SMS.Codec.AVC_MAIN:
+            case SMS.Codec.AVC_HIGH:
+                return TranscodeUtils.AVC_VIDEO_QUALITY_AVERAGE_BITRATE[quality];
+
+            case SMS.Codec.HEVC_MAIN:
+                return TranscodeUtils.HEVC_VIDEO_QUALITY_AVERAGE_BITRATE[quality];
+
+            default:
+                return 0;
+        }
+    }
+    
     public static Integer getForcedSubtitleId(List<SubtitleStream> streams) {
         if(streams == null) {
             return null;

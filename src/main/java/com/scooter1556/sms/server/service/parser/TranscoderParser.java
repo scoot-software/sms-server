@@ -347,7 +347,6 @@ public class TranscoderParser {
 
                     HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.NVIDIA);
                     hwAccelerator.setDevice(String.valueOf(count));
-                    hwAccelerator.setStreamingSupported(true);
                     hwAccelerator.setDecodeCodecs(dCodecs);
                     hwAccelerator.setEncodeCodecs(eCodecs);
                     
@@ -403,7 +402,6 @@ public class TranscoderParser {
 
                     HardwareAccelerator hwAccelerator = new HardwareAccelerator(SMS.Accelerator.INTEL);
                     hwAccelerator.setDevice(test.toString());
-                    hwAccelerator.setStreamingSupported(false);
                     hwAccelerator.setDecodeCodecs(dCodecs);
                     hwAccelerator.setEncodeCodecs(eCodecs);
                     

@@ -177,14 +177,14 @@ public class TranscodeService {
                         commands.get(i).getCommands().add("0:" + transcode.getId());
                         
                         // Codec
-                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(null, transcode.getCodec(), transcode.getMaxBitrate()));
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(null, transcode.getCodec(), null, null));
                     } else {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getMaxBitrate()));
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getQuality(), transcode.getMaxBitrate()));
 
                         commands.get(i).getCommands().add("-force_key_frames");
                         commands.get(i).getCommands().add("expr:gte(t,n_forced*" + profile.getSegmentDuration()  + ")");
@@ -336,7 +336,7 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given hardware accelerator.
      */
-    private Collection<String> getVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer maxrate) {
+    private Collection<String> getVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer quality, Integer maxrate) {
         Collection<String> commands = new LinkedList<>();
         
         commands.add("-c:v");
@@ -381,7 +381,7 @@ public class TranscodeService {
             case SMS.Codec.HEVC_MAIN:
                 commands.add("libx265");
                 commands.add("-crf");
-                commands.add("25");
+                commands.add("28");
                 commands.add("-preset");
                 commands.add("ultrafast");
                 commands.add("-pix_fmt");
@@ -411,8 +411,11 @@ public class TranscodeService {
                     if(codec == SMS.Codec.AVC_BASELINE || codec == SMS.Codec.AVC_MAIN || codec == SMS.Codec.AVC_HIGH) {
                         
                         commands.add("h264_vaapi");
-                        commands.add("-qp");
-                        commands.add("23");
+                        
+                        if(quality != null) {
+                            commands.add("-b:v");
+                            commands.add(String.valueOf(TranscodeUtils.getAverageBitrateForCodec(codec, quality)) + "k");
+                        }
                         
                         //  Profile
                         commands.add("-profile:v");
@@ -432,13 +435,30 @@ public class TranscodeService {
                                 break;
                         }
                         
+                        if(maxrate != null) {
+                            commands.add("-maxrate:v");
+                            commands.add(maxrate.toString() + "k");
+                            commands.add("-bufsize");
+                            commands.add("2M");
+                        }
+                        
                         break;
                     }
                     
                     else if(codec == SMS.Codec.HEVC_MAIN) {
                         commands.add("hevc_vaapi");
-                        commands.add("-qp");
-                        commands.add("25");
+                        
+                        if(quality != null) {
+                            commands.add("-b:v");
+                            commands.add(String.valueOf(TranscodeUtils.getAverageBitrateForCodec(codec, quality)) + "k");
+                        }
+                        
+                        if(maxrate != null) {
+                            commands.add("-maxrate:v");
+                            commands.add(maxrate.toString() + "k");
+                            commands.add("-bufsize");
+                            commands.add("2M");
+                        }
                         
                         break;
                     }
