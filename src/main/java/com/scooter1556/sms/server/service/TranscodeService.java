@@ -245,7 +245,10 @@ public class TranscodeService {
         commands.add("0.0625");
 
         commands.add("-segment_format");
-        commands.add("matroska");
+        commands.add("mp4");
+        
+        commands.add("-segment_format_options");
+        commands.add("movflags=faststart");
 
         if(offset != null && offset > 0) {
             commands.add("-segment_start_number");
@@ -725,7 +728,7 @@ public class TranscodeService {
         
             // Codec
             commands.add("-c:s");
-            commands.add(TranscodeUtils.getEncoderForCodec(transcode.getCodec()));
+            commands.add("mov_text");
         }
         
         return commands;
@@ -817,7 +820,7 @@ public class TranscodeService {
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
             int codec;
             
-            if(transcodeProfile.getFormat().isSupported(stream.getCodec())) {
+            if(transcodeProfile.getMuxer().isSupported(stream.getCodec())) {
                 codec = SMS.Codec.COPY;
             } else {
                 switch(stream.getCodec()) {
@@ -902,7 +905,7 @@ public class TranscodeService {
         }
 
         if(transcodeReason == SMS.TranscodeReason.NONE) {
-            if(!transcodeProfile.getFormat().isSupported(stream.getCodec())) {
+            if(!transcodeProfile.getMuxer().isSupported(stream.getCodec())) {
                 transcodeReason = SMS.TranscodeReason.CODEC_NOT_SUPPORTED_BY_FORMAT;
             }
         }
@@ -931,7 +934,7 @@ public class TranscodeService {
                 }
 
                 // Get suitable codec
-                codec = transcodeProfile.getFormat().getVideoCodec(clientProfile.getCodecs());
+                codec = transcodeProfile.getMuxer().getVideoCodec(clientProfile.getCodecs());
 
                 // Check we got a suitable codec
                 if(codec == SMS.Codec.UNSUPPORTED) {
@@ -1018,7 +1021,7 @@ public class TranscodeService {
             // Check the format supports this codec for video or that we can stream this codec for audio
             if(!transcodeRequired) {
                 if(clientProfile.getFormat() != null) {
-                    transcodeRequired = !transcodeProfile.getFormat().isSupported(stream.getCodec());
+                    transcodeRequired = !transcodeProfile.getMuxer().isSupported(stream.getCodec());
                 }
             }
             
@@ -1032,7 +1035,7 @@ public class TranscodeService {
                 
                 // Combine supported codecs
                 Integer[] codecs = ArrayUtils.addAll(clientProfile.getCodecs(), clientProfile.getMchCodecs());
-                codec = transcodeProfile.getFormat().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
+                codec = transcodeProfile.getMuxer().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {

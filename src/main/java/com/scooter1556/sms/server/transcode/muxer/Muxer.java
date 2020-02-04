@@ -1,6 +1,6 @@
-package com.scooter1556.sms.server.transcode.format;
+package com.scooter1556.sms.server.transcode.muxer;
 
-public interface Format {
+public interface Muxer {
     public int getFormat();
     public boolean isSupported(int codec);
     public int getVideoCodec(Integer[] codecs);

@@ -3,14 +3,14 @@ package com.scooter1556.sms.server.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Arrays;
-import com.scooter1556.sms.server.transcode.format.Format;
 import java.awt.Dimension;
+import com.scooter1556.sms.server.transcode.muxer.Muxer;
 
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class TranscodeProfile {
     private byte type;
     private String mimeType;
-    private Format format;
+    private Muxer muxer;
     private Dimension maxResolution;
     private VideoTranscode[] videoTranscodes;
     private AudioTranscode[] audioTranscodes;
@@ -24,9 +24,9 @@ public class TranscodeProfile {
 
     @Override
     public String toString() {
-        return String.format("TranscodeProfile[Type=%s, Format=%s, Mime Type=%s, Max Resolution=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s, Tonemapping=%s",
+        return String.format("TranscodeProfile[Type=%s, Muxer=%s, Mime Type=%s, Max Resolution=%s, Video Transcodes=%s, Audio Transcodes=%s, Subtitle Transcodes=%s, Video Stream=%s, Audio Stream=%s, Subtitle Stream=%s, Offset=%s, Segment Duration=%s, Packed Audio=%s, Tonemapping=%s",
                 String.valueOf(type),
-                format == null ? "null" : format.toString(),
+                muxer == null ? "null" : muxer.toString(),
                 mimeType == null ? "null" : mimeType,
                 maxResolution == null ? "null" : String.format("%dx%d", maxResolution.width, maxResolution.height),
                 videoTranscodes == null ? "null" : Arrays.toString(videoTranscodes),
@@ -68,12 +68,12 @@ public class TranscodeProfile {
     }
     
     @JsonIgnore
-    public Format getFormat() {
-        return format;
+    public Muxer getMuxer() {
+        return muxer;
     }
     
-    public void setFormat(Format format) {
-        this.format = format;
+    public void setMuxer(Muxer muxer) {
+        this.muxer = muxer;
     }
 
     public VideoTranscode[] getVideoTranscodes() {

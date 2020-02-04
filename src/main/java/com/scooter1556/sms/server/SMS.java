@@ -58,7 +58,7 @@ public class SMS {
         public static final int FLAC= 6;
         public static final int H264 = 7;
         public static final int H265 = 8;
-        public static final int HLS = 9;
+        public static final int HLS_TS = 9;
         public static final int MATROSKA = 10;
         public static final int MP3 = 11;
         public static final int MP4 = 12;
@@ -68,6 +68,8 @@ public class SMS {
         public static final int SUBRIP = 16;
         public static final int WAV = 17;
         public static final int WEBVTT = 18;
+        public static final int HLS_FMP4 = 19;
+        public static final int MP4_SEGMENT = 20;
     }
     
     public static class MediaType {

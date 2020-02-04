@@ -75,7 +75,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
-import com.scooter1556.sms.server.transcode.format.Format;
+import com.scooter1556.sms.server.transcode.muxer.Muxer;
+import org.apache.commons.io.FilenameUtils;
 
 @Controller
 @RequestMapping(value="/stream")
@@ -184,7 +185,8 @@ public class StreamController {
             
             // Return playlist
             switch (session.getClientProfile().getFormat()) {
-                case SMS.Format.HLS:
+                case SMS.Format.HLS_TS:
+                case SMS.Format.HLS_FMP4:
                     adaptiveStreamingService.sendHLSPlaylist(job, session.getClientProfile(), type, extra, extension, false, response);
                     break;
                     
@@ -199,13 +201,12 @@ public class StreamController {
     
     @ApiOperation(value = "Get adaptive streaming segment", hidden = true)
     @ResponseBody
-    @RequestMapping(value="/segment/{sid}/{meid}/{type}/{extra}/{file}/{extension}", method=RequestMethod.GET)
+    @RequestMapping(value="/segment/{sid}/{meid}/{type}/{extra}/{file}", method=RequestMethod.GET)
     public void getSegment(@PathVariable("sid") UUID sid,
                            @PathVariable("meid") UUID meid,
                            @PathVariable("type") String type,
                            @PathVariable("extra") Integer extra,
                            @PathVariable("file") String file,
-                           @PathVariable("extension") String extension,
                            HttpServletRequest request, 
                            HttpServletResponse response) {
         Session session;
@@ -259,11 +260,11 @@ public class StreamController {
             }
             
             // Initialise segment information
-            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + File.separator + "streams" + File.separator + job.getId() + File.separator + file + "-" + type + "-" + extra + "." + extension);
+            segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + File.separator + "streams" + File.separator + job.getId() + File.separator + extra + "-" + type + "-" + file);
             
-            if(session.getClientProfile().getFormat() == SMS.Format.HLS) {
+            if((session.getClientProfile().getFormat() == SMS.Format.HLS_TS || session.getClientProfile().getFormat() == SMS.Format.HLS_FMP4) && !file.startsWith("init")) {
                 // Update segment tracking
-                int num = Integer.parseInt(file);
+                int num = Integer.parseInt(FilenameUtils.getBaseName(file));
                 int oldNum = transcodeProcess.getSegmentNum();
                 transcodeProcess.setSegmentNum(num);
                 
@@ -337,7 +338,7 @@ public class StreamController {
             }
             
             // Get file type
-            String mimeType = MediaUtils.getMimeType(MediaUtils.getType(type), MediaUtils.getFormatForExtension(extension));
+            String mimeType = MediaUtils.getMimeType(MediaUtils.getType(type), MediaUtils.getFormatForExtension(FilenameUtils.getExtension(file)));
             
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Job ID=" + job.getId() + " Segment=" + file + " Type=" + type + " Extra=" + extra + " MimeType=" + mimeType, null);
             
@@ -512,7 +513,7 @@ public class StreamController {
         try {
             switch(transcodeProfile.getType()) {
                 case StreamType.LOCAL: case StreamType.REMOTE:
-                    if(clientProfile.getFormat() == SMS.Format.HLS) {
+                    if(clientProfile.getFormat() == SMS.Format.HLS_TS || clientProfile.getFormat() == SMS.Format.HLS_FMP4) {
                         adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, null, request.getMethod().equals("HEAD"), response);
                     }
                 
@@ -674,18 +675,18 @@ public class StreamController {
         // If necessary process all streams ready for streaming and/or transcoding
         if(transcodeRequired) {
             // Get a suitable encoder
-            Format format = TranscodeUtils.getTranscodeFormat(clientProfile.getFormat());
+            Muxer muxer = TranscodeUtils.getTranscodeMuxer(clientProfile.getFormat());
 
-            if(format == null) {
-                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable encoder for format " + clientProfile.getFormat() + ".", null);
+            if(muxer == null) {
+                LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable muxer for format " + clientProfile.getFormat() + ".", null);
                 return null;
             }
             
             // Set client in encoder
-            format.setClient(clientProfile.getClient());
+            muxer.setClient(clientProfile.getClient());
 
-            // Set encoder in transcode profile
-            transcodeProfile.setFormat(format);
+            // Set muxer in transcode profile
+            transcodeProfile.setMuxer(muxer);
             
             // Set default segment duration
             transcodeProfile.setSegmentDuration(TranscodeUtils.DEFAULT_SEGMENT_DURATION);

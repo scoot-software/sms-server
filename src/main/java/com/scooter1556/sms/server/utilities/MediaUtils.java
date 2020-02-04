@@ -344,6 +344,9 @@ public class MediaUtils {
             case "m4v": case "m4a": case "mp4":
                 return SMS.Format.MP4;
                 
+            case "m4s":
+                return SMS.Format.MP4_SEGMENT;
+                
             case "mpg": case "mpeg":
                 return SMS.Format.MPEG;
                 
@@ -389,10 +392,6 @@ public class MediaUtils {
                 return "mp3";
 
             case SMS.Format.MP4:
-                if(type == SMS.MediaType.AUDIO) {
-                    return "m4a";
-                }
-
                 return "mp4";
 
             case SMS.Format.MPEGTS:
@@ -426,8 +425,9 @@ public class MediaUtils {
         
         // Handle special cases
         switch(format) {
-            case SMS.Format.HLS:
-                mimeType.append("application/x-mpegurl");
+            case SMS.Format.HLS_TS:
+            case SMS.Format.HLS_FMP4:
+                mimeType.append("application/vnd.apple.mpegurl");
                 return mimeType.toString();
         }
         
@@ -473,6 +473,10 @@ public class MediaUtils {
                 mimeType.append("mp4");
                 break;
                 
+            case SMS.Format.MP4_SEGMENT:
+                mimeType.append("mp4");
+                break;
+                
             case SMS.Format.MPEGTS:
                 mimeType.append("MP2T");
                 break;
@@ -491,6 +495,10 @@ public class MediaUtils {
                 
             case SMS.Format.AC3:
                 mimeType.append("ac3");
+                break;
+                
+            case SMS.Format.WEBVTT:
+                mimeType.append("vtt");
                 break;
                 
             default:
@@ -524,23 +532,51 @@ public class MediaUtils {
         switch(format) {
             case SMS.Format.MPEGTS:
                 switch(codec) {
-                        case SMS.Codec.AVC_BASELINE:
-                        case SMS.Codec.AVC_HIGH:
-                        case SMS.Codec.AVC_HIGH10:
-                        case SMS.Codec.AVC_MAIN:
-                        case SMS.Codec.MPEG2:
-                        case SMS.Codec.AAC:
-                        case SMS.Codec.AC3:
-                        case SMS.Codec.EAC3:
-                        case SMS.Codec.TRUEHD:
-                        case SMS.Codec.DTS:
-                        case SMS.Codec.DTSHD:
-                        case SMS.Codec.MP3:
-                        case SMS.Codec.DVB:
-                            return true;
-                            
-                        default:
-                            return false;
+                    case SMS.Codec.HEVC_MAIN:
+                    case SMS.Codec.HEVC_MAIN10:
+                    case SMS.Codec.AVC_BASELINE:
+                    case SMS.Codec.AVC_HIGH:
+                    case SMS.Codec.AVC_HIGH10:
+                    case SMS.Codec.AVC_MAIN:
+                    case SMS.Codec.MPEG2:
+                    case SMS.Codec.AAC:
+                    case SMS.Codec.AC3:
+                    case SMS.Codec.EAC3:
+                    case SMS.Codec.TRUEHD:
+                    case SMS.Codec.DTS:
+                    case SMS.Codec.DTSHD:
+                    case SMS.Codec.MP3:
+                    case SMS.Codec.DVB:
+                        return true;
+
+                    default:
+                        return false;
+                }
+                
+                case SMS.Format.MP4:
+                switch(codec) {
+                    case SMS.Codec.HEVC_MAIN:
+                    case SMS.Codec.HEVC_MAIN10:
+                    case SMS.Codec.HEVC_HDR10:
+                    case SMS.Codec.AVC_BASELINE:
+                    case SMS.Codec.AVC_HIGH:
+                    case SMS.Codec.AVC_HIGH10:
+                    case SMS.Codec.AVC_MAIN:
+                    case SMS.Codec.MPEG2:
+                    case SMS.Codec.AAC:
+                    case SMS.Codec.AC3:
+                    case SMS.Codec.ALAC:
+                    case SMS.Codec.EAC3:
+                    case SMS.Codec.TRUEHD:
+                    case SMS.Codec.DTS:
+                    case SMS.Codec.DTSHD:
+                    case SMS.Codec.MP3:
+                    case SMS.Codec.PCM:
+                    case SMS.Codec.WEBVTT:
+                        return true;
+
+                    default:
+                        return false;
                 }
                                 
             default:

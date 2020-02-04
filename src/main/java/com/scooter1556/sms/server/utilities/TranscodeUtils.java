@@ -15,7 +15,7 @@ import com.scooter1556.sms.server.domain.SubtitleTranscode;
 import com.scooter1556.sms.server.domain.TranscodeProfile;
 import com.scooter1556.sms.server.domain.Transcoder;
 import com.scooter1556.sms.server.domain.VideoTranscode;
-import com.scooter1556.sms.server.transcode.format.HLSFormat;
+import com.scooter1556.sms.server.transcode.muxer.HLSMuxer;
 import com.scooter1556.sms.server.io.NullStream;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SettingsService;
@@ -32,7 +32,7 @@ import java.util.Set;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
-import com.scooter1556.sms.server.transcode.format.Format;
+import com.scooter1556.sms.server.transcode.muxer.Muxer;
 
 public class TranscodeUtils {
     
@@ -685,10 +685,11 @@ public class TranscodeUtils {
         return null;
     }
     
-    public static Format getTranscodeFormat(int format) {
+    public static Muxer getTranscodeMuxer(int format) {
         switch(format) {
-            case  SMS.Format.HLS:
-                return new HLSFormat();
+            case SMS.Format.HLS_TS:
+            case SMS.Format.HLS_FMP4:
+                return new HLSMuxer(format);
                 
             default:
                 return null;

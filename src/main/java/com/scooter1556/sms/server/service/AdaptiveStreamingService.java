@@ -137,14 +137,21 @@ public class AdaptiveStreamingService {
                 }
                 
                 // Determine format to use
-                int format = SMS.Format.MPEGTS;
+                int format = -1;
+                
+                if(clientProfile.getFormat() == SMS.Format.HLS_TS) {
+                    format = SMS.Format.MPEGTS;
+                } else if(clientProfile.getFormat() == SMS.Format.HLS_FMP4) {
+                    format = SMS.Format.MP4;
+                }
+                
                 int codec = transcode.getCodec();
 
                 if(codec == SMS.Codec.COPY) {
                     codec = transcode.getOriginalCodec();
                 }
 
-                if(!MediaUtils.isCodecSupportedByFormat(SMS.Format.MPEGTS, codec) || profile.getPackedAudio()) {
+                if(!MediaUtils.isCodecSupportedByFormat(format, codec) || profile.getPackedAudio()) {
                     format = MediaUtils.getFormatForCodec(codec);
                 }
 
@@ -170,14 +177,21 @@ public class AdaptiveStreamingService {
                     }
 
                     // Determine format to use
-                    int format = SMS.Format.MPEGTS;
+                    int format = -1;
+
+                    if(clientProfile.getFormat() == SMS.Format.HLS_TS) {
+                        format = SMS.Format.MPEGTS;
+                    } else if(clientProfile.getFormat() == SMS.Format.HLS_FMP4) {
+                        format = SMS.Format.MP4;
+                    }
+                
                     int codec = transcode.getCodec();
 
                     if(codec == SMS.Codec.COPY) {
                         codec = stream.getCodec();
                     }
                     
-                    if(!MediaUtils.isCodecSupportedByFormat(SMS.Format.MPEGTS, codec) || profile.getPackedAudio()) {
+                    if(!MediaUtils.isCodecSupportedByFormat(format, codec) || profile.getPackedAudio()) {
                         format = MediaUtils.getFormatForCodec(codec);
                     }
 
@@ -238,7 +252,13 @@ public class AdaptiveStreamingService {
                 }
 
                 // Determine extension for segment
-                String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.VIDEO, SMS.Format.MPEGTS);
+                String extension = "";
+                
+                if(clientProfile.getFormat() == SMS.Format.HLS_TS) {
+                    extension = MediaUtils.getExtensionForFormat(SMS.MediaType.VIDEO, SMS.Format.MPEGTS);
+                } else if(clientProfile.getFormat() == SMS.Format.HLS_FMP4) {
+                    extension = MediaUtils.getExtensionForFormat(SMS.MediaType.VIDEO, SMS.Format.MP4);
+                }
 
                 // Determine resolution
                 Dimension resolution = transcode.getResolution();
@@ -300,15 +320,22 @@ public class AdaptiveStreamingService {
         List<String> playlist = new ArrayList<>();
         
         playlist.add("#EXTM3U");
-        playlist.add("#EXT-X-VERSION:4");
+        playlist.add("#EXT-X-VERSION:7");
         playlist.add("#EXT-X-TARGETDURATION:" + String.valueOf(job.getTranscodeProfile().getSegmentDuration() + 1));
         playlist.add("#EXT-X-MEDIA-SEQUENCE:0");
         playlist.add("#EXT-X-PLAYLIST-TYPE:VOD");
         
+        if(clientProfile.getFormat() == SMS.Format.HLS_FMP4 && extension.equals("mp4")) {
+            playlist.add("#EXT-X-MAP:URI=\"" + clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/init.mp4" + "\"");
+            
+            // Update extension for segments
+            extension = "m4s";
+        }
+        
         // Get Video Segments
         for (int i = 0; i < Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration()); i++) {
             playlist.add("#EXTINF:" + job.getTranscodeProfile().getSegmentDuration().floatValue() + ",");
-            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "/" + extension);
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "." + extension);
         }   
 
         // Determine the duration of the final segment.
@@ -317,7 +344,7 @@ public class AdaptiveStreamingService {
             long i = Double.valueOf(Math.floor(mediaElement.getDuration() / job.getTranscodeProfile().getSegmentDuration())).longValue();
             
             playlist.add("#EXTINF:" + Precision.round(remainder, 1, BigDecimal.ROUND_HALF_UP) + ",");
-            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "/" + extension);
+            playlist.add(clientProfile.getUrl() + "/stream/segment/" + job.getSessionId() + "/" + mediaElement.getID() + "/" + type + "/" + extra + "/" + i + "." + extension);
         }
 
         playlist.add("#EXT-X-ENDLIST");

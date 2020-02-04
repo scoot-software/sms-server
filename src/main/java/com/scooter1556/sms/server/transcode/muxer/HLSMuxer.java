@@ -1,4 +1,4 @@
-package com.scooter1556.sms.server.transcode.format;
+package com.scooter1556.sms.server.transcode.muxer;
 
 import com.scooter1556.sms.server.SMS;
 import com.scooter1556.sms.server.domain.AudioTranscode;
@@ -6,13 +6,17 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 
-public class HLSFormat implements Format {    
+public class HLSMuxer implements Muxer {
+    private int format = SMS.Format.HLS_TS;
+    
     List<Integer> codecs = new ArrayList<>();
     
     // Client ID
     int client = SMS.Client.NONE;
     
-    public HLSFormat(){
+    public HLSMuxer(int format){
+        this.format = format;
+        
         // Populate default codecs
         codecs.add(SMS.Codec.AVC_BASELINE);
         codecs.add(SMS.Codec.AVC_MAIN);
@@ -21,11 +25,15 @@ public class HLSFormat implements Format {
         codecs.add(SMS.Codec.AC3);
         codecs.add(SMS.Codec.EAC3);
         codecs.add(SMS.Codec.WEBVTT);
+        
+        if(this.format == SMS.Format.HLS_FMP4) {
+            codecs.add(SMS.Codec.HEVC_MAIN);
+        }
     };
     
     @Override
     public int getFormat() {
-        return SMS.Format.HLS;
+        return this.format;
     }
 
     @Override
@@ -107,11 +115,6 @@ public class HLSFormat implements Format {
         // Update codecs
         if(client == SMS.Client.KODI) {
             codecs.add(SMS.Codec.FLAC);
-        }
-        
-        // Chromecast doesn't support HEVC in HLS
-        if(client != SMS.Client.CHROMECAST) {
-            codecs.add(SMS.Codec.HEVC_MAIN);
         }
     }
     
