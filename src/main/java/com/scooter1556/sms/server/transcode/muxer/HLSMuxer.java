@@ -83,11 +83,6 @@ public class HLSMuxer implements Muxer {
                 break;
                 
             default:
-                // Lossless
-                if(quality == AudioTranscode.AudioQuality.LOSSLESS && ArrayUtils.contains(codecs, SMS.Codec.FLAC) && this.codecs.contains(SMS.Codec.FLAC)) {
-                    return SMS.Codec.FLAC;
-                }
-                    
                 if(channels > 2) {
                     if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
                         return SMS.Codec.EAC3;
@@ -111,11 +106,6 @@ public class HLSMuxer implements Muxer {
     @Override
     public void setClient(int client) {
         this.client = client;
-        
-        // Update codecs
-        if(client == SMS.Client.KODI) {
-            codecs.add(SMS.Codec.FLAC);
-        }
     }
     
     @Override
