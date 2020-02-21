@@ -70,7 +70,7 @@ public class SessionController {
         @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Client profile is invalid")
     })
     @CrossOrigin
-    @RequestMapping(value="/add", method=RequestMethod.GET)
+    @RequestMapping(value="/add", method=RequestMethod.POST)
     public ResponseEntity<String> addSession(
             @ApiParam(value = "Session ID", required = false) @RequestParam(value = "id", required = false) UUID id,
             @ApiParam(value = "Client profile for session", required = false) @RequestBody(required = false) ClientProfile profile,
@@ -139,17 +139,17 @@ public class SessionController {
     @ApiOperation(value = "End session")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Session ended successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Session does not exist")
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Session does not exist")
     })
     @CrossOrigin
-    @RequestMapping(value="/end/{sid}", method=RequestMethod.GET)
+    @RequestMapping(value="/end/{sid}", method=RequestMethod.DELETE)
     public ResponseEntity<String> endSession(
             @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid)
     {        
         // Check session is valid
         if (!sessionService.isSessionAvailable(sid)) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
-            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NO_CONTENT);
         }
         
         // Remove session
@@ -162,10 +162,10 @@ public class SessionController {
     @ApiOperation(value = "End job")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Job(s) ended successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Session or job does not exist")
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Session or job does not exist")
     })
     @CrossOrigin
-    @RequestMapping(value="/end/{sid}/{meid}", method=RequestMethod.GET)
+    @RequestMapping(value="/end/{sid}/{meid}", method=RequestMethod.DELETE)
     public ResponseEntity<String> endJob(
             @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
             @ApiParam(value = "Media element ID (or 'all' to end all jobs for session)", required = true) @PathVariable("meid") String meid)
@@ -175,7 +175,7 @@ public class SessionController {
         // Check session is valid
         if (session == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
-            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NO_CONTENT);
         }
         
         // Check for special case where all jobs for a given session should be ended
@@ -191,7 +191,7 @@ public class SessionController {
         // Check job exists
         if (job == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Job does not exist for media element with ID: " + meid, null);
-            return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NO_CONTENT);
         }
 
         LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, session.getUsername() + " finished streaming '" + job.getMediaElement().getTitle() + "'.", null);
