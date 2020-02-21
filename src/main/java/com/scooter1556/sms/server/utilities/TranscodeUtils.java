@@ -60,8 +60,8 @@ public class TranscodeUtils {
     public static final String ISO_HEVC_MAIN10 = "hev1.2.6.L150";
     public static final String ISO_MP3 = "mp4a.69";
     public static final String ISO_AAC = "mp4a.40.2";
-    public static final String ISO_AC3 = "mp4a.a5";
-    public static final String ISO_EAC3 = "mp4a.a6";
+    public static final String ISO_AC3 = "ac-3";
+    public static final String ISO_EAC3 = "ec-3";
     public static final String ISO_VORBIS = "vorbis";
     public static final String ISO_PCM = "1";
     

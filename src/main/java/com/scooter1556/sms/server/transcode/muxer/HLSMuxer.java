@@ -66,22 +66,6 @@ public class HLSMuxer implements Muxer {
     public int getAudioCodec(Integer[] codecs, int channels, int quality) {
         
         switch(client) {
-            // For Chromecast the codec needs to be the same for all streams...
-            case SMS.Client.CHROMECAST:
-                if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
-                    return SMS.Codec.EAC3;
-                }
-
-                if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
-                    return SMS.Codec.AC3;
-                }
-
-                if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
-                    return SMS.Codec.AAC;
-                }
-                
-                break;
-                
             default:
                 if(channels > 2) {
                     if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {

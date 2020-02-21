@@ -729,11 +729,6 @@ public class StreamController {
             if(clientProfile.getFormat() != null) {
                 transcodeProfile.setMimeType(MediaUtils.getMimeType(mediaElement.getType(), clientProfile.getFormat()));
             }
-
-            // Packed Audio
-            if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
-                transcodeProfile.setPackedAudio(true);
-            }
         }
         
         return transcodeProfile;

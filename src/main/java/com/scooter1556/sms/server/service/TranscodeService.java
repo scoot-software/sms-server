@@ -688,7 +688,7 @@ public class TranscodeService {
             commands.add(TranscodeUtils.getEncoderForCodec(transcode.getCodec()));
             
             // Quality
-            if(transcode.getBitrate() > 0) {
+            if(transcode.getBitrate() > 0 && transcode.getChannelCount() <= 2) {
                 commands.add("-b:a");
                 commands.add(String.valueOf(transcode.getBitrate()) + "k");
             }

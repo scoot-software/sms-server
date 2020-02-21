@@ -220,7 +220,9 @@ public class FileDownloadProcess extends SMSProcess {
         
         // Enable CORS
         response.setHeader(("Access-Control-Allow-Origin"), "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range");
+        response.setHeader("Access-Control-Expose-Headers", "Content-Length,Content-Range");
         response.setIntHeader("Access-Control-Max-Age", 3600);
 
         // Send requested file (part(s)) to client ------------------------------------------------
