@@ -48,6 +48,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.util.Precision;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -162,7 +163,7 @@ public class AdaptiveStreamingService {
                 playlist.add(clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + i + "/" + extension);
             }
         } else if(mediaElement.getType() == MediaElementType.VIDEO && profile.getVideoTranscodes() != null) {
-            String audio = "";
+            List<String> audioCodecs = new ArrayList<>();
             boolean subtitles = false;
             
             // Process audio streams
@@ -198,8 +199,12 @@ public class AdaptiveStreamingService {
                     // Determine extension for segment
                     String extension = MediaUtils.getExtensionForFormat(SMS.MediaType.AUDIO, format);
 
-                    // Represent audio track
-                    audio = TranscodeUtils.getIsoSpecForCodec(codec);
+                    // Add ISO interpretation of codec to list
+                    String audioCodec = TranscodeUtils.getIsoSpecForCodec(codec);
+                    
+                    if(!audioCodecs.contains(audioCodec)) {
+                        audioCodecs.add(audioCodec);
+                    }
 
                     playlist.add("#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"audio\",LANGUAGE=\"" + stream.getLanguage() + "\",NAME=\"" + MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage()) + "\",AUTOSELECT=YES,DEFAULT=" + isDefault + ",URI=\"" + clientProfile.getUrl() + "/stream/playlist/" + job.getSessionId() + "/" + mediaElement.getID() + "/audio/" + a + "/" + extension + "\"");
                 }                
@@ -280,8 +285,12 @@ public class AdaptiveStreamingService {
                     builder.append(TranscodeUtils.getIsoSpecForCodec(transcode.getCodec()));
                 }
                 
-                if(!audio.isEmpty()) {
-                    builder.append(",").append(audio).append("\",AUDIO=\"audio\"");
+                if(!audioCodecs.isEmpty()) {
+                    for(String aCodec : audioCodecs) {
+                        builder.append(",").append(aCodec);
+                    }
+                    
+                    builder.append("\",AUDIO=\"audio\"");
                 }
                 
                 if(subtitles) {
@@ -376,12 +385,14 @@ public class AdaptiveStreamingService {
 
         // Set Header Parameters
         response.reset();
-        response.setContentType("application/x-mpegurl");
+        response.setContentType("application/vnd.apple.mpegurl");
         response.setContentLength(playlistWriter.toString().length());
         
         // Enable CORS
         response.setHeader(("Access-Control-Allow-Origin"), "*");
-        response.setHeader("Access-Control-Allow-Methods", "GET");
+        response.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range");
+        response.setHeader("Access-Control-Expose-Headers", "Content-Length,Content-Range");
         response.setIntHeader("Access-Control-Max-Age", 3600);
         
         /*********************** DEBUG: Response Headers *********************************/        
