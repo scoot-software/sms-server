@@ -235,6 +235,16 @@ public class TranscodeService {
         
         Collection<String> commands = new LinkedList<>();
         
+        
+        // Calculate number of first segment
+        int startNum = 0;
+        
+        if(offset != null && offset > 0) {
+            startNum += (offset / duration);
+        } else {
+            offset = 0;
+        }
+        
         commands.add("-f");
         commands.add("segment");
 
@@ -250,13 +260,12 @@ public class TranscodeService {
         commands.add("-segment_format_options");
         commands.add("movflags=faststart");
 
-        if(offset != null && offset > 0) {
-            commands.add("-segment_start_number");
-            commands.add(String.valueOf(offset / duration));
+        
+        commands.add("-segment_start_number");
+        commands.add(String.valueOf(startNum));
             
-            commands.add("-initial_offset");
-            commands.add(String.valueOf(offset));
-        }
+        commands.add("-initial_offset");
+        commands.add(String.valueOf(offset));
 
         commands.add("-segment_list_size");
         commands.add("0");

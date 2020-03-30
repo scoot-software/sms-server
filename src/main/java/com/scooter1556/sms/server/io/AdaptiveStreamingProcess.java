@@ -207,7 +207,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             if(profile.getMuxer().getFormat() == SMS.Format.HLS_TS) {
                 vFormat = SMS.Format.MPEGTS;
                 aFormat = SMS.Format.MPEGTS;
-            } else if(profile.getMuxer().getFormat() == SMS.Format.HLS_FMP4) {
+            } else if(profile.getMuxer().getFormat() == SMS.Format.HLS_FMP4 || profile.getMuxer().getFormat() == SMS.Format.MPEG_DASH) {
                 vFormat = SMS.Format.MP4;
                 aFormat = SMS.Format.MP4;
             }

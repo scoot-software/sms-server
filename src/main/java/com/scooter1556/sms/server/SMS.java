@@ -70,6 +70,7 @@ public class SMS {
         public static final int WEBVTT = 18;
         public static final int HLS_FMP4 = 19;
         public static final int MP4_SEGMENT = 20;
+        public static final int MPEG_DASH = 21;
     }
     
     public static class MediaType {

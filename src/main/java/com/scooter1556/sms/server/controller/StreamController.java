@@ -262,7 +262,7 @@ public class StreamController {
             // Initialise segment information
             segment = new File(SettingsService.getInstance().getCacheDirectory().getPath() + File.separator + "streams" + File.separator + job.getId() + File.separator + extra + "-" + type + "-" + file);
             
-            if((session.getClientProfile().getFormat() == SMS.Format.HLS_TS || session.getClientProfile().getFormat() == SMS.Format.HLS_FMP4) && !file.startsWith("init")) {
+            if(!file.startsWith("init")) {
                 // Update segment tracking
                 int num = Integer.parseInt(FilenameUtils.getBaseName(file));
                 int oldNum = transcodeProcess.getSegmentNum();
@@ -513,8 +513,14 @@ public class StreamController {
         try {
             switch(transcodeProfile.getType()) {
                 case StreamType.LOCAL: case StreamType.REMOTE:
+                    // HLS
                     if(clientProfile.getFormat() == SMS.Format.HLS_TS || clientProfile.getFormat() == SMS.Format.HLS_FMP4) {
                         adaptiveStreamingService.sendHLSPlaylist(job, clientProfile, null, null, null, request.getMethod().equals("HEAD"), response);
+                    }
+                    
+                    // MPEG-Dash
+                    if(clientProfile.getFormat() == SMS.Format.MPEG_DASH) {
+                        adaptiveStreamingService.sendDashPlaylist(job, clientProfile, request.getMethod().equals("HEAD"), response);
                     }
                 
                     break;

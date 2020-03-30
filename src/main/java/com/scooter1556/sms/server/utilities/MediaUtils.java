@@ -429,6 +429,10 @@ public class MediaUtils {
             case SMS.Format.HLS_FMP4:
                 mimeType.append("application/vnd.apple.mpegurl");
                 return mimeType.toString();
+                
+            case SMS.Format.MPEG_DASH:
+                mimeType.append("application/dash+xml");
+                return mimeType.toString();
         }
         
         switch(type) {

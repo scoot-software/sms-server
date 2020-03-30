@@ -20,6 +20,7 @@ import com.scooter1556.sms.server.io.NullStream;
 import com.scooter1556.sms.server.service.LogService;
 import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.service.parser.TranscoderParser;
+import com.scooter1556.sms.server.transcode.muxer.DashMuxer;
 import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
@@ -690,6 +691,9 @@ public class TranscodeUtils {
             case SMS.Format.HLS_TS:
             case SMS.Format.HLS_FMP4:
                 return new HLSMuxer(format);
+                
+            case SMS.Format.MPEG_DASH:
+                return new DashMuxer();
                 
             default:
                 return null;
