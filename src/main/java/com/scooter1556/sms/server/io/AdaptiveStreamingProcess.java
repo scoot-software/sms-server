@@ -36,7 +36,6 @@ import com.scooter1556.sms.server.service.SettingsService;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -64,6 +63,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
     
     Tailer tailer = null;
     ExecutorService postProcessExecutor = null;
+    
+    int count = 0;
 
     public AdaptiveStreamingProcess() {};
     
@@ -109,6 +110,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
             // Reset flags
             ended = false;
+            count = 0;
             
             // Setup thread pool for post-processing segments
             postProcessExecutor = Executors.newCachedThreadPool();
@@ -184,13 +186,18 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                 return;
             }
             
+            // Start post-processing job
+            boolean initialised = count > 0;
+            
             postProcessExecutor.submit(() -> {
-                postProcess(segment);
+                postProcess(segment, initialised);
             });
+            
+            count++;
       }
   }
     
-    private void postProcess(File segment) {
+    private void postProcess(File segment, boolean initialised) {
         // Path to extracted stream segments
         List<String> segmentPaths = new ArrayList<>();
         
@@ -241,7 +248,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                         File tmpInit = new File(init.getPath() + ".tmp");
                         File newSegment = new File(segment.getParent() + "/" + i + "-video-" + segment.getName() + ".m4s.tmp");
                         
-                        if(!init.exists()) {
+                        if(!initialised) {
+                            // Generate initialisation segment
                             FragmentedMp4Builder initBuilder = new FragmentedMp4Builder();
                             Container initContainer = initBuilder.build(segment.getAbsolutePath(), i, Integer.valueOf(segment.getName()), true);
                             FileOutputStream initfos = new FileOutputStream(tmpInit);
@@ -320,7 +328,8 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                         File tmpInit = new File(init.getPath() + ".tmp");
                         File newSegment = new File(segment.getParent() + "/" + i + "-audio-" + segment.getName() + ".m4s.tmp");
                         
-                        if(!init.exists()) {
+                        if(!initialised) {
+                            // Generate initialisation segment
                             FragmentedMp4Builder initBuilder = new FragmentedMp4Builder();
                             Container initContainer = initBuilder.build(segment.getAbsolutePath(), trackId, Integer.valueOf(segment.getName()), true);
                             FileOutputStream initfos = new FileOutputStream(tmpInit);
