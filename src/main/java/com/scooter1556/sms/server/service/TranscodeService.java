@@ -1017,7 +1017,14 @@ public class TranscodeService {
         // Process each audio stream
         List<AudioTranscode> transcodes = new ArrayList<>();
 
-        mediaElement.getAudioStreams().forEach((AudioStream stream) -> {
+        for(AudioStream stream : mediaElement.getAudioStreams()) {
+            // Chromecast doesn't support multiple audio streams with different codecs
+            if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
+                if(!stream.getStreamId().equals(transcodeProfile.getAudioStream())) {
+                    continue;
+                }
+            }
+            
             Integer codec;
             int bitrate = -1;
             Integer sampleRate = null;
@@ -1088,7 +1095,7 @@ public class TranscodeService {
             
             // Add transcode properties to array
             transcodes.add(new AudioTranscode(stream.getStreamId(), stream.getCodec(), codec, bitrate, sampleRate, numChannels, replaygain));
-        });
+        }
         
         // Update profile with audio transcode properties
         transcodeProfile.setAudioTranscodes(transcodes.toArray(new AudioTranscode[transcodes.size()]));
