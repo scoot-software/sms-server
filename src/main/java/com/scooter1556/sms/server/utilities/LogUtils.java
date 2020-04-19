@@ -15,6 +15,9 @@ public class LogUtils {
             return;
         }
         
+        // Output to console
+        System.out.println(line);
+        
         try {
             PrintWriter out;
             out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
