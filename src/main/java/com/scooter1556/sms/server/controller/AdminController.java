@@ -596,7 +596,8 @@ public class AdminController {
         List<MediaFolder> mediaFolders = new ArrayList<>();
         
         if(id == null) {
-            mediaFolders.addAll(settingsDao.getMediaFolders(null));
+            
+            mediaFolders = settingsDao.getMediaFolders(null);
         } else {
             MediaFolder folder = settingsDao.getMediaFolderByID(id);
             
@@ -608,7 +609,7 @@ public class AdminController {
         }
         
         // Check we have media folders to scan
-        if(mediaFolders.isEmpty()) {
+        if(mediaFolders == null || mediaFolders.isEmpty()) {
             return new ResponseEntity<>("No media folders to scan for this request.", HttpStatus.NOT_FOUND);
         }
         
