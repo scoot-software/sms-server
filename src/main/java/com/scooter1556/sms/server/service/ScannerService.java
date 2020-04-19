@@ -54,6 +54,8 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Date;
@@ -233,7 +235,7 @@ public class ScannerService implements DisposableBean {
         abortScan = false;
         
         // Log
-        final String log = SettingsService.getInstance().getLogDirectory() + "/mediascanner-" + new Timestamp(new Date().getTime()) + ".log";
+        final String log = SettingsService.getInstance().getLogDirectory() + File.separator + "mediascanner-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss")) + ".log";
         
         // Create media scanning threads
         scanningThreads = Executors.newFixedThreadPool(folders.size());
@@ -293,8 +295,7 @@ public class ScannerService implements DisposableBean {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "deepScan()", null);
         
         // Create log file
-        Timestamp scanTime = new Timestamp(new Date().getTime());
-        deepScanLog = SettingsService.getInstance().getLogDirectory() + "/deepscan-" + scanTime + ".log";
+        deepScanLog = SettingsService.getInstance().getLogDirectory() + File.separator + "deepscan-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("YYYYMMdd_HHmmss")) + ".log";
         
         // Reset counter
         dTotal = 0;

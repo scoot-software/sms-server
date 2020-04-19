@@ -596,7 +596,6 @@ public class AdminController {
         List<MediaFolder> mediaFolders = new ArrayList<>();
         
         if(id == null) {
-            
             mediaFolders = settingsDao.getMediaFolders(null);
         } else {
             MediaFolder folder = settingsDao.getMediaFolderByID(id);

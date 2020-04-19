@@ -40,7 +40,7 @@ import java.util.List;
 
 public final class LogService {
     
-    private final String LOG_FILE = SettingsService.getInstance().getLogDirectory() + "/" + Project.getArtifactId() + ".log";
+    private final String LOG_FILE = SettingsService.getInstance().getLogDirectory() + File.separator + Project.getArtifactId() + ".log";
     private static final int LOG_BUFFER_SIZE = 50;
     
     private final List<LogEntry> logEntries = new ArrayList<>();
