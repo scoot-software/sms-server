@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.SystemUtils;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -15,9 +14,7 @@ import org.w3c.dom.NodeList;
 public class ParserUtils {
     
     public static final String METADATA_PARSER = "ffprobe";
-    
-    public static final String LINUX_HARDWARE_PARSER = "lshw";
-    
+        
     public static final String[] METADATA_PARSER_PATH_LINUX = {
         "/usr/local/bin/ffprobe",
         "/usr/bin/ffprobe",
@@ -53,14 +50,6 @@ public class ParserUtils {
         
         // Out of ideas
         return null;
-    }
-    
-    public static String getHardwareParser() {
-        if(SystemUtils.IS_OS_LINUX) {
-            return LINUX_HARDWARE_PARSER;
-        } else {
-            return null;
-        }
     }
     
     public static boolean isValid(String parser, File path) {
