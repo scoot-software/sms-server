@@ -122,6 +122,11 @@
             <artifactId>muxer</artifactId>
             <version>1.9.41</version>
         </dependency>
+        <dependency>
+            <groupId>com.profesorfalken</groupId>
+            <artifactId>WMI4Java</artifactId>
+            <version>1.6.3</version>
+        </dependency>
     </dependencies>
 
     <build>

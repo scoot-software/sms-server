@@ -1,5 +1,6 @@
 package com.scooter1556.sms.server.service.parser;
 
+import com.profesorfalken.wmi4java.WMI4Java;
 import com.scooter1556.sms.server.domain.GraphicsCard;
 import com.scooter1556.sms.server.domain.HardwareAccelerator;
 import com.scooter1556.sms.server.domain.OpenCLDevice;
@@ -10,7 +11,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.SystemUtils;
 
 import static org.jocl.CL.*;
@@ -21,7 +26,7 @@ public class HardwareParser {
     private static final String CLASS_NAME = "HardwareParser";
     
     private static final String LINUX_PCI_BUS_PATH = "/proc/bus/pci/devices";
-    
+
     public static GraphicsCard[] getGraphicsCards() {
         // Linux
         if(SystemUtils.IS_OS_LINUX) {
@@ -94,6 +99,71 @@ public class HardwareParser {
                 return null;
             }
 
+        }
+        
+        // Windows
+        else if(SystemUtils.IS_OS_WINDOWS) {
+            // Retrieve list of video controllers using WMI
+            List<Map<String, String>> wmiObjectListProperties = WMI4Java.get().properties(Arrays.asList("PNPDeviceID")).getWMIObjectList("Win32_VideoController");
+            
+            if(wmiObjectListProperties.isEmpty()) {
+                return null;
+            }
+            
+            List<GraphicsCard> graphicsCards = new ArrayList<>();
+            
+            for(Map<String, String> map : wmiObjectListProperties) {
+                for(Entry entry : map.entrySet()) {
+                    if(entry.getKey().equals("PNPDeviceID")) {
+                        String deviceId = entry.getValue().toString();
+                        String sDeviceId[] = deviceId.split(Pattern.quote(File.separator));
+                        
+                        // Check returned value is expected
+                        if(sDeviceId.length != 3) {
+                            break;
+                        }
+                        
+                        String properties = sDeviceId[1];
+                        String sProperties[] = properties.split("&");
+                        
+                        String vendor = null;
+                        String id = null;
+                        
+                        for(String property : sProperties) {
+                            if(property.startsWith("VEN")) {
+                                vendor = property.split("_")[1].toLowerCase();
+                            } else if(property.startsWith("DEV")) {
+                                id = property.split("_")[1].toLowerCase();
+                            }
+                        }
+                        
+                        if(vendor == null || id == null) {
+                            break;
+                        }
+                        
+                        if(vendor.equals(HardwareAccelerator.VENDOR_NVIDIA) || vendor.equals(HardwareAccelerator.VENDOR_INTEL)) {
+                            // Create new graphics card instance
+                            GraphicsCard graphicsCard = new GraphicsCard(id,
+                                                                         vendor,
+                                                                         null,
+                                                                         null,
+                                                                         null,
+                                                                         false
+                            );
+
+                            // Add to array
+                            graphicsCards.add(graphicsCard);
+                        }
+                    }
+                }
+            }
+            
+            if(graphicsCards.isEmpty()) {
+                LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "No graphics cards found.", null);
+                return null;
+            }
+
+            return graphicsCards.toArray(new GraphicsCard[graphicsCards.size()]);
         }
         
         return null;
