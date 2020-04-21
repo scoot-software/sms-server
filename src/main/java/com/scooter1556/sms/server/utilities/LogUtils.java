@@ -10,13 +10,15 @@ public class LogUtils {
     
     private static final String CLASS_NAME = "LogUtils";
     
-    public static void writeToLog(String path, String line, byte level) {
+    public static void writeToLog(String path, String line, byte level, boolean console) {
         if(LogService.getInstance().getLogLevel() < level) {
             return;
         }
         
         // Output to console
-        System.out.println(line);
+        if(console) {
+            System.out.println(line);
+        }
         
         try {
             PrintWriter out;

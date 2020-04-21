@@ -304,12 +304,12 @@ public class ScannerService implements DisposableBean {
         deepScanExecutor = Executors.newSingleThreadExecutor();
 
         deepScanExecutor.submit(() -> {
-            LogUtils.writeToLog(deepScanLog, "Found " + streams.size() + " streams to parse.", Level.DEBUG);
+            LogUtils.writeToLog(deepScanLog, "Found " + streams.size() + " streams to parse.", Level.DEBUG, true);
             
             for(VideoStream stream : streams) {
                 dTotal ++;
                 
-                LogUtils.writeToLog(deepScanLog, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                LogUtils.writeToLog(deepScanLog, "Scanning stream " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG, true);
                 
                 VideoStream update = frameParser.parse(stream);
                 
@@ -320,10 +320,10 @@ public class ScannerService implements DisposableBean {
                 
                 if(update != null) {
                     mediaDao.updateVideoStream(update);
-                    LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG);
+                    LogUtils.writeToLog(deepScanLog, stream.toString(), Level.DEBUG, true);
                 }
                 
-                LogUtils.writeToLog(deepScanLog, "Finished Scanning stream: " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG);
+                LogUtils.writeToLog(deepScanLog, "Finished Scanning stream: " + stream.getStreamId() + " for media element with id " + stream.getMediaElementId(), Level.DEBUG, true);
             }
             
             if(!abortDeepScan) {
@@ -341,7 +341,7 @@ public class ScannerService implements DisposableBean {
             abortDeepScan = true;
             frameParser.stop();
             
-            LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG);
+            LogUtils.writeToLog(deepScanLog, "Deep scan terminated early!", Level.DEBUG, true);
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Deep scan stopped.", null);
         }
     }
@@ -513,11 +513,11 @@ public class ScannerService implements DisposableBean {
             
             // Check if we need to scan this directory
             if(!MediaUtils.containsMedia(dir.toFile(), true) && !PlaylistUtils.containsPlaylists(dir.toFile())) {
-                LogUtils.writeToLog(log, "Skipping directory " + dir.toString(), Level.DEBUG);
+                LogUtils.writeToLog(log, "Skipping directory " + dir.toString(), Level.DEBUG, true);
                 return SKIP_SUBTREE;
             }
             
-            LogUtils.writeToLog(log, "Parsing directory " + dir.toString(), Level.DEBUG);
+            LogUtils.writeToLog(log, "Parsing directory " + dir.toString(), Level.DEBUG, true);
             
             // Initialise variables
             directoryChanged = false;
@@ -567,7 +567,7 @@ public class ScannerService implements DisposableBean {
             
             // Determine type of file and how to process it
             if(MediaUtils.isMediaFile(file)) {
-                LogUtils.writeToLog(log, "Parsing file " + file.toString(), Level.DEBUG);
+                LogUtils.writeToLog(log, "Parsing file " + file.toString(), Level.DEBUG, true);
                 
                 // Update statistics
                 mTotal++;
@@ -582,7 +582,7 @@ public class ScannerService implements DisposableBean {
                 
                 // Determine if we need to process the file
                 if(folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned()) || mediaElement.getLastScanned().equals(scanTime)) {
-                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG);
+                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG, true);
                     
                     // Add parent directory to update list
                     directoriesToUpdate.add(file.getParent());
@@ -597,7 +597,7 @@ public class ScannerService implements DisposableBean {
                     
                     // If we don't support this media file move on...
                     if(mediaElement.getType() == MediaElementType.NONE) {
-                        LogUtils.writeToLog(log, "No media streams found for file " + file.toString(), Level.DEBUG);
+                        LogUtils.writeToLog(log, "No media streams found for file " + file.toString(), Level.DEBUG, true);
                         return CONTINUE;
                     }
                     
@@ -626,7 +626,7 @@ public class ScannerService implements DisposableBean {
                 }
                 
             } else if(PlaylistUtils.isPlaylist(file)) {
-                LogUtils.writeToLog(log, "Parsing playlist " + file.toString(), Level.DEBUG);
+                LogUtils.writeToLog(log, "Parsing playlist " + file.toString(), Level.DEBUG, true);
                 
                 // Update statistics
                 mTotal++;
@@ -641,7 +641,7 @@ public class ScannerService implements DisposableBean {
                     newPlaylists.add(playlist);
                 } else {
                     if(folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
-                        LogUtils.writeToLog(log, "Processing playlist " + file.toString(), Level.DEBUG);
+                        LogUtils.writeToLog(log, "Processing playlist " + file.toString(), Level.DEBUG, true);
                         playlist.setLastScanned(null);
                     }
                     
@@ -651,7 +651,7 @@ public class ScannerService implements DisposableBean {
             } else if(isInfoFile(file)) {
                 // Determine if we need to parse this file
                 if(directoryChanged || folder.getLastScanned() == null || new Timestamp(attr.lastModifiedTime().toMillis()).after(folder.getLastScanned())) {
-                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG);
+                    LogUtils.writeToLog(log, "Processing file " + file.toString(), Level.DEBUG, true);
                     nfoData.add(nfoParser.parse(file));
                 }
             }
@@ -697,7 +697,7 @@ public class ScannerService implements DisposableBean {
                     // Test for file specific data
                     for(NFOData test : dirData) {
                         if(test.getPath().getFileName().toString().contains(element.getTitle())) {
-                            LogUtils.writeToLog(log, "Parsing NFO file " + test.getPath(), Level.DEBUG);
+                            LogUtils.writeToLog(log, "Parsing NFO file " + test.getPath(), Level.DEBUG, true);
                             nfoParser.updateMediaElement(element, test);
                             dirData.remove(test);
                             dataFound = true;
@@ -708,7 +708,7 @@ public class ScannerService implements DisposableBean {
                     // Use generic data for directory
                     if(!dataFound) {
                         NFOData data = dirData.getFirst();
-                        LogUtils.writeToLog(log, "Parsing NFO file " + data.getPath(), Level.DEBUG);
+                        LogUtils.writeToLog(log, "Parsing NFO file " + data.getPath(), Level.DEBUG, true);
                         nfoParser.updateMediaElement(element, data);
                     }
                 }
@@ -721,12 +721,12 @@ public class ScannerService implements DisposableBean {
                     updatedElements.add(element);
                 }
                 
-                LogUtils.writeToLog(log, element.toString(), Level.INSANE);
+                LogUtils.writeToLog(log, element.toString(), Level.INSANE, true);
             }
             
             // Update directory element if necessary
             if(directory != null && directoriesToUpdate.contains(dir)) {
-                LogUtils.writeToLog(log, "Processing directory " + dir.toString(), Level.DEBUG);
+                LogUtils.writeToLog(log, "Processing directory " + dir.toString(), Level.DEBUG, true);
                 
                 if(!dirData.isEmpty()) {
                     nfoParser.updateMediaElement(directory, dirData.removeFirst());
@@ -789,7 +789,7 @@ public class ScannerService implements DisposableBean {
                     directory.setExcluded(true);
                 }
                 
-                LogUtils.writeToLog(log, directory.toString(), Level.INSANE);
+                LogUtils.writeToLog(log, directory.toString(), Level.INSANE, true);
             }
             
             // Set media elements to add or update
@@ -802,7 +802,7 @@ public class ScannerService implements DisposableBean {
                 }                
             }
             
-            LogUtils.writeToLog(log, "Finished parsing directory " + dir.toString(), Level.DEBUG);
+            LogUtils.writeToLog(log, "Finished parsing directory " + dir.toString(), Level.DEBUG, true);
             
             return CONTINUE;
         }

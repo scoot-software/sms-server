@@ -68,13 +68,13 @@ public class TranscodeAnalysisStream extends Thread {
             String line;
             
             // Write command to log
-            LogUtils.writeToLog(log, command, Level.DEBUG);
+            LogUtils.writeToLog(log, command, Level.DEBUG, false);
             
             while ((line = buffer.readLine()) != null) {
                 Matcher matcher;
                 
                 // Write to log
-                LogUtils.writeToLog(log, line, Level.DEBUG);
+                LogUtils.writeToLog(log, line, Level.DEBUG, false);
                 
                 // FPS
                 matcher = FPS.matcher(line);

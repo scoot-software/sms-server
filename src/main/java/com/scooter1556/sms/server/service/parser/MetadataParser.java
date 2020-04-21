@@ -77,7 +77,7 @@ public class MetadataParser {
                 return mediaElement;
             }
             
-            LogUtils.writeToLog(log, json.toString(), LogService.Level.INSANE);
+            LogUtils.writeToLog(log, json.toString(), LogService.Level.INSANE, true);
                         
             JsonArray streams = json.asObject().get("streams").asArray();
             JsonValue format = json.asObject().get("format").asObject();

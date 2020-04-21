@@ -720,7 +720,7 @@ public class AdaptiveStreamingService {
         response.getWriter().write(playlistWriter.toString());
         
         // Log playlist
-        LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, "\n************\nPlaylist\n************\n" + playlistWriter.toString(), null);
+        LogService.getInstance().addLogEntry(type == null ? LogService.Level.DEBUG : LogService.Level.INSANE, CLASS_NAME, "\n************\nPlaylist\n************\n" + playlistWriter.toString(), null);
     }
     
     public void addProcess(AdaptiveStreamingProcess process) {
