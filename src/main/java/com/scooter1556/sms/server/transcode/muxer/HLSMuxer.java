@@ -1,7 +1,6 @@
 package com.scooter1556.sms.server.transcode.muxer;
 
 import com.scooter1556.sms.server.SMS;
-import com.scooter1556.sms.server.domain.AudioTranscode;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
@@ -64,24 +63,17 @@ public class HLSMuxer implements Muxer {
 
     @Override
     public int getAudioCodec(Integer[] codecs, int channels, int quality) {
-        
-        switch(client) {
-            default:
-                if(channels > 2) {
-                    if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
-                        return SMS.Codec.EAC3;
-                    }
+        // HLS requires the same codec to be used for all streams in a group
+        if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+            return SMS.Codec.EAC3;
+        }
 
-                    if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
-                        return SMS.Codec.AC3;
-                    }
-                }
+        if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+            return SMS.Codec.AC3;
+        }
 
-                if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
-                    return SMS.Codec.AAC;
-                }
-                
-                break;
+        if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+            return SMS.Codec.AAC;
         }
         
         return SMS.Codec.UNSUPPORTED;
