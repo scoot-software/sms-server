@@ -208,9 +208,11 @@ public class TranscodeService {
                     commands.get(i).getCommands().add(job.getMediaElement().getPath());
                 }
                 
-                for(AudioTranscode transcode : profile.getAudioTranscodes()) {
+                for(int a = 0; a < profile.getAudioTranscodes().length; a++) {
+                    AudioTranscode aTranscode = profile.getAudioTranscodes()[a];
+                    
                     // Transcode commands
-                    commands.get(i).getCommands().addAll(getAudioCommands(transcode));
+                    commands.get(i).getCommands().addAll(getAudioCommands(aTranscode, a));
                 }
             }
             
@@ -684,7 +686,7 @@ public class TranscodeService {
     /*
      * Returns a list of commands for an audio stream.
      */
-    private Collection<String> getAudioCommands(AudioTranscode transcode) {
+    private Collection<String> getAudioCommands(AudioTranscode transcode, int num) {
         Collection<String> commands = new LinkedList<>();
         
         if(transcode.getCodec() != null) {
@@ -693,30 +695,30 @@ public class TranscodeService {
             commands.add("0:" + transcode.getId());
         
             // Codec
-            commands.add("-c:a");
+            commands.add("-c:a:" + num);
             commands.add(TranscodeUtils.getEncoderForCodec(transcode.getCodec()));
             
             // Quality
             if(transcode.getBitrate() > 0 && transcode.getChannelCount() <= 2) {
-                commands.add("-b:a");
+                commands.add("-b:a:" + num);
                 commands.add(String.valueOf(transcode.getBitrate()) + "k");
             }
             
             // Downmix
             if(transcode.getChannelCount() > 0) {
-                commands.add("-ac");
+                commands.add("-ac:a:" + num);
                 commands.add(String.valueOf(transcode.getChannelCount()));
             }
             
             // Sample rate
             if(transcode.getSampleRate() != null) {
-                commands.add("-ar");
+                commands.add("-ar:a:" + num);
                 commands.add(String.valueOf(transcode.getSampleRate()));
             }
             
             // Replaygain
             if(transcode.getReplaygain() != null && transcode.getReplaygain() != 0f) {
-                commands.add("-af");
+                commands.add("-af:a:" + num);
                 commands.add("volume=volume="+ String.valueOf(transcode.getReplaygain()) + "dB");
             }
         }
