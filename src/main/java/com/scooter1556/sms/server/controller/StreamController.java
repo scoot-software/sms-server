@@ -705,7 +705,7 @@ public class StreamController {
                 }
 
                 // Process subtitles
-                if(!transcodeService.processSubtitles(transcodeProfile, mediaElement)) {
+                if(!transcodeService.processSubtitles(transcodeProfile, clientProfile, mediaElement)) {
                     LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to process subtitle streams: " + ArrayUtils.toString(mediaElement.getSubtitleStreams()) + " " + clientProfile, null);
                     return null;
                 }

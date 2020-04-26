@@ -1,6 +1,7 @@
 package com.scooter1556.sms.server.transcode.muxer;
 
 import com.scooter1556.sms.server.SMS;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
@@ -36,7 +37,25 @@ public class HLSMuxer implements Muxer {
     }
 
     @Override
-    public boolean isSupported(int codec) {
+    public boolean isSupported(Integer[] clientCodecs, int codec) {
+        // Audio
+        if(MediaUtils.getCodecType(codec) == SMS.MediaType.AUDIO) {
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.EAC3)) {
+                return codec == SMS.Codec.EAC3;
+            }
+            
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.AC3)) {
+                return codec == SMS.Codec.EAC3;
+            }
+            
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.AAC)) {
+                return codec == SMS.Codec.AAC;
+            }
+            
+            return false;
+        }
+        
+        // Video, Subtitles
         return codecs.contains(codec);
     }
 

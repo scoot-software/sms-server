@@ -32,7 +32,7 @@ public class DashMuxer implements Muxer {
     }
 
     @Override
-    public boolean isSupported(int codec) {
+    public boolean isSupported(Integer[] clientCodecs, int codec) {
         return codecs.contains(codec);
     }
 

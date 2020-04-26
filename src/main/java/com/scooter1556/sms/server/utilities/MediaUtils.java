@@ -273,6 +273,45 @@ public class MediaUtils {
         }
     }
     
+    public static int getCodecType(int codec) {
+        switch(codec) {
+            case SMS.Codec.AVC_BASELINE:
+            case SMS.Codec.AVC_HIGH:
+            case SMS.Codec.AVC_HIGH10:
+            case SMS.Codec.AVC_MAIN:
+            case SMS.Codec.HEVC_HDR10:
+            case SMS.Codec.HEVC_MAIN:
+            case SMS.Codec.HEVC_MAIN10:
+            case SMS.Codec.MPEG2:
+            case SMS.Codec.VC1:
+                return SMS.MediaType.VIDEO;
+                
+            case SMS.Codec.AAC:
+            case SMS.Codec.AC3:
+            case SMS.Codec.ALAC:
+            case SMS.Codec.DSD:
+            case SMS.Codec.DTS:
+            case SMS.Codec.DTSHD:
+            case SMS.Codec.EAC3:
+            case SMS.Codec.FLAC:
+            case SMS.Codec.MP3:
+            case SMS.Codec.PCM:
+            case SMS.Codec.TRUEHD:
+            case SMS.Codec.VORBIS:
+                return SMS.MediaType.AUDIO;
+                
+            case SMS.Codec.DVB:
+            case SMS.Codec.DVD:
+            case SMS.Codec.PGS:
+            case SMS.Codec.SUBRIP:
+            case SMS.Codec.WEBVTT:
+                return SMS.MediaType.SUBTITLE;
+                
+            default:
+                return SMS.MediaType.UNSUPPORTED;
+        }
+    }
+    
     public static String getFormat(int format) {
         switch(format) {
             case SMS.Format.AVI:

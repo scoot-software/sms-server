@@ -74,6 +74,7 @@ public class SMS {
     }
     
     public static class MediaType {
+        public static final int UNSUPPORTED = -1;
         public static final int AUDIO = 0;
         public static final int VIDEO = 1;
         public static final int SUBTITLE = 2;

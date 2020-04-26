@@ -168,23 +168,23 @@ public class TranscodeService {
                 commands.get(i).getCommands().addAll(getFilterCommands(profile.getVideoStream(), commands.get(i).getVideoBaseFilters(), commands.get(i).getVideoEncodeFilters()));
                 
                 for(int v = 0; v < profile.getVideoTranscodes().length; v++) {
-                    VideoTranscode transcode = profile.getVideoTranscodes()[v];
+                    VideoTranscode vTranscode = profile.getVideoTranscodes()[v];
                     
                     // Stream copy
-                    if(transcode.getCodec() == SMS.Codec.COPY) {
+                    if(vTranscode.getCodec() == SMS.Codec.COPY) {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
-                        commands.get(i).getCommands().add("0:" + transcode.getId());
+                        commands.get(i).getCommands().add("0:" + vTranscode.getId());
                         
                         // Codec
-                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(null, transcode.getCodec(), null, null));
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(null, vTranscode.getCodec(), null, null, v));
                     } else {
                         // Map video stream
                         commands.get(i).getCommands().add("-map");
                         commands.get(i).getCommands().add("[v" + v + "]");
 
                         // Encoding
-                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(hardwareAccelerator, transcode.getCodec(), transcode.getQuality(), transcode.getMaxBitrate()));
+                        commands.get(i).getCommands().addAll(getVideoEncodingCommands(hardwareAccelerator, vTranscode.getCodec(), vTranscode.getQuality(), vTranscode.getMaxBitrate(), v));
 
                         commands.get(i).getCommands().add("-force_key_frames");
                         commands.get(i).getCommands().add("expr:gte(t,n_forced*" + profile.getSegmentDuration()  + ")");
@@ -193,9 +193,11 @@ public class TranscodeService {
                 
                 // Subtitles
                 if(profile.getSubtitleTranscodes() != null) {
-                    for(SubtitleTranscode transcode : profile.getSubtitleTranscodes()) {
+                    for(int s = 0; s < profile.getSubtitleTranscodes().length; s++) {
+                        SubtitleTranscode sTranscode = profile.getSubtitleTranscodes()[s];
+                        
                         // Transcode commands
-                        commands.get(i).getCommands().addAll(getSubtitleCommands(transcode));
+                        commands.get(i).getCommands().addAll(getSubtitleCommands(sTranscode, s));
                     }
                 }
             }
@@ -336,22 +338,22 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a given hardware accelerator.
      */
-    private Collection<String> getVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer quality, Integer maxrate) {
+    private Collection<String> getVideoEncodingCommands(HardwareAccelerator hardwareAccelerator, int codec, Integer quality, Integer maxrate, int num) {
         Collection<String> commands = new LinkedList<>();
         
-        commands.add("-c:v");
+        commands.add("-c:v:" + num);
         
         if(hardwareAccelerator == null || !hardwareAccelerator.isEncodeCodecSupported(codec)) {
             switch(codec) {       
             case SMS.Codec.AVC_BASELINE: case SMS.Codec.AVC_MAIN: case SMS.Codec.AVC_HIGH:
                 commands.add("libx264");
-                commands.add("-crf");
+                commands.add("-crf:v:" + num);
                 commands.add("25");
-                commands.add("-preset");
+                commands.add("-preset:v:" + num);
                 commands.add("superfast");
-                commands.add("-pix_fmt");
+                commands.add("-pix_fmt:v:" + num);
                 commands.add("yuv420p");
-                commands.add("-profile:v");
+                commands.add("-profile:v:" + num);
                 
                 //  Profile
                 switch (codec) {
@@ -370,9 +372,9 @@ public class TranscodeService {
                 }
 
                 if(maxrate != null) {
-                    commands.add("-maxrate:v");
+                    commands.add("-maxrate:v:" + num);
                     commands.add(maxrate.toString() + "k");
-                    commands.add("-bufsize");
+                    commands.add("-bufsize:v:" + num);
                     commands.add("2M");
                 }
 
@@ -380,17 +382,17 @@ public class TranscodeService {
                 
             case SMS.Codec.HEVC_MAIN:
                 commands.add("libx265");
-                commands.add("-crf");
+                commands.add("-crf:v:" + num);
                 commands.add("28");
-                commands.add("-preset");
+                commands.add("-preset:v:" + num);
                 commands.add("ultrafast");
-                commands.add("-pix_fmt");
+                commands.add("-pix_fmt:v:" + num);
                 commands.add("yuv420p");
 
                 if(maxrate != null) {
-                    commands.add("-maxrate:v");
+                    commands.add("-maxrate:v:" + num);
                     commands.add(maxrate.toString() + "k");
-                    commands.add("-bufsize");
+                    commands.add("-bufsize:v:" + num);
                     commands.add("2M");
                 }
 
@@ -413,12 +415,12 @@ public class TranscodeService {
                         commands.add("h264_vaapi");
                         
                         if(quality != null) {
-                            commands.add("-b:v");
+                            commands.add("-b:v:" + num);
                             commands.add(String.valueOf(TranscodeUtils.getAverageBitrateForCodec(codec, quality)) + "k");
                         }
                         
                         //  Profile
-                        commands.add("-profile:v");
+                        commands.add("-profile:v:" + num);
 
                         switch (codec) {
                             case SMS.Codec.AVC_BASELINE:
@@ -436,9 +438,9 @@ public class TranscodeService {
                         }
                         
                         if(maxrate != null) {
-                            commands.add("-maxrate:v");
+                            commands.add("-maxrate:v:" + num);
                             commands.add(maxrate.toString() + "k");
-                            commands.add("-bufsize");
+                            commands.add("-bufsize:v:" + num);
                             commands.add("2M");
                         }
                         
@@ -449,14 +451,14 @@ public class TranscodeService {
                         commands.add("hevc_vaapi");
                         
                         if(quality != null) {
-                            commands.add("-b:v");
+                            commands.add("-b:v:" + num);
                             commands.add(String.valueOf(TranscodeUtils.getAverageBitrateForCodec(codec, quality)) + "k");
                         }
                         
                         if(maxrate != null) {
-                            commands.add("-maxrate:v");
+                            commands.add("-maxrate:v:" + num);
                             commands.add(maxrate.toString() + "k");
-                            commands.add("-bufsize");
+                            commands.add("-bufsize:v:" + num);
                             commands.add("2M");
                         }
                         
@@ -468,7 +470,7 @@ public class TranscodeService {
                         commands.add("h264_nvenc");
                         
                         //  Profile
-                        commands.add("-profile:v");
+                        commands.add("-profile:v:" + num);
 
                         switch (codec) {
                             case SMS.Codec.AVC_BASELINE:
@@ -485,31 +487,30 @@ public class TranscodeService {
                                 break;
                         }
                     
-                        commands.add("-rc:v");
+                        commands.add("-rc:v:" + num);
                         commands.add("vbr_hq");
-                        commands.add("-cq:v");
+                        commands.add("-cq:v:" + num);
                         commands.add("23");
                     }
                     
                     else if(codec == SMS.Codec.HEVC_MAIN) {
                         commands.add("hevc_nvenc");
-                        commands.add("-rc:v");
+                        commands.add("-rc:v:" + num);
                         commands.add("vbr_hq");
-                        commands.add("-cq:v");
+                        commands.add("-cq:v:" + num);
                         commands.add("25");
                     }
                     
-                    commands.add("-gpu");
-                    commands.add(hardwareAccelerator.getDevice());
-                    
                     if(maxrate != null) {
-                        commands.add("-maxrate:v");
+                        commands.add("-maxrate:v:" + num);
                         commands.add(maxrate.toString() + "k");
                     }
                     
-                    commands.add("-preset");
+                    commands.add("-preset:v:" + num);
                     commands.add("fast");
                     
+                    commands.add("-gpu:v:" + num);
+                    commands.add(hardwareAccelerator.getDevice());
                     
                     break;
             }
@@ -729,7 +730,7 @@ public class TranscodeService {
     /*
      * Returns a list of commands for a subtitle stream.
      */
-    private Collection<String> getSubtitleCommands(SubtitleTranscode transcode) {
+    private Collection<String> getSubtitleCommands(SubtitleTranscode transcode, int num) {
         Collection<String> commands = new LinkedList<>();
         
         if(transcode.getCodec() != null) {
@@ -738,7 +739,7 @@ public class TranscodeService {
             commands.add("0:" + transcode.getId());
         
             // Codec
-            commands.add("-c:s");
+            commands.add("-c:s:" + num);
             commands.add("mov_text");
         }
         
@@ -809,7 +810,7 @@ public class TranscodeService {
         return commands;
     }
     
-    public boolean processSubtitles(TranscodeProfile transcodeProfile, MediaElement mediaElement) {
+    public boolean processSubtitles(TranscodeProfile transcodeProfile, ClientProfile clientProfile, MediaElement mediaElement) {
         // Check variables
         if(mediaElement == null) {
             return false;
@@ -831,7 +832,7 @@ public class TranscodeService {
         for(SubtitleStream stream : mediaElement.getSubtitleStreams()) {
             int codec;
             
-            if(transcodeProfile.getMuxer().isSupported(stream.getCodec())) {
+            if(transcodeProfile.getMuxer().isSupported(clientProfile.getAllCodecs(), stream.getCodec())) {
                 codec = SMS.Codec.COPY;
             } else {
                 switch(stream.getCodec()) {
@@ -916,7 +917,7 @@ public class TranscodeService {
         }
 
         if(transcodeReason == SMS.TranscodeReason.NONE) {
-            if(!transcodeProfile.getMuxer().isSupported(stream.getCodec())) {
+            if(!transcodeProfile.getMuxer().isSupported(clientProfile.getAllCodecs(), stream.getCodec())) {
                 transcodeReason = SMS.TranscodeReason.CODEC_NOT_SUPPORTED_BY_FORMAT;
             }
         }
@@ -1039,7 +1040,7 @@ public class TranscodeService {
             // Check the format supports this codec for video or that we can stream this codec for audio
             if(!transcodeRequired) {
                 if(clientProfile.getFormat() != null) {
-                    transcodeRequired = !transcodeProfile.getMuxer().isSupported(stream.getCodec());
+                    transcodeRequired = !transcodeProfile.getMuxer().isSupported(clientProfile.getAllCodecs(), stream.getCodec());
                 }
             }
             
@@ -1051,9 +1052,7 @@ public class TranscodeService {
                     numChannels = 2;
                 }
                 
-                // Combine supported codecs
-                Integer[] codecs = ArrayUtils.addAll(clientProfile.getCodecs(), clientProfile.getMchCodecs());
-                codec = transcodeProfile.getMuxer().getAudioCodec(codecs, numChannels, clientProfile.getAudioQuality());
+                codec = transcodeProfile.getMuxer().getAudioCodec(clientProfile.getAllCodecs(), numChannels, clientProfile.getAudioQuality());
                 
                 // Check audio parameters for codec
                 if(codec != SMS.Codec.UNSUPPORTED) {

@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import java.io.Serializable;
 import java.util.Arrays;
+import org.apache.commons.lang3.ArrayUtils;
 
 @ApiModel(description = "Client Profile")
 public class ClientProfile implements Serializable {
@@ -90,6 +91,10 @@ public class ClientProfile implements Serializable {
 
     public void setMchCodecs(Integer[] mchCodecs) {
         this.mchCodecs = mchCodecs;
+    }
+    
+    public Integer[] getAllCodecs() {
+        return ArrayUtils.addAll(codecs, mchCodecs);
     }
 
     public String getUrl() {
