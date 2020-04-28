@@ -681,7 +681,7 @@ public class StreamController {
         // If necessary process all streams ready for streaming and/or transcoding
         if(transcodeRequired) {
             // Get a suitable encoder
-            Muxer muxer = TranscodeUtils.getTranscodeMuxer(clientProfile.getFormat());
+            Muxer muxer = TranscodeUtils.getTranscodeMuxer(TranscodeUtils.getMuxerMode(mediaElement.getType()), clientProfile.getFormat());
 
             if(muxer == null) {
                 LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to get a suitable muxer for format " + clientProfile.getFormat() + ".", null);

@@ -8,13 +8,14 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public class HLSMuxer implements Muxer {
     private int format = SMS.Format.HLS_TS;
+    private int mode = SMS.MuxerMode.UNSUPPORTED;
     
     List<Integer> codecs = new ArrayList<>();
     
     // Client ID
     int client = SMS.Client.NONE;
     
-    public HLSMuxer(int format){
+    public HLSMuxer(int mode, int format){
         this.format = format;
         
         // Populate default codecs
@@ -29,6 +30,9 @@ public class HLSMuxer implements Muxer {
         if(this.format == SMS.Format.HLS_FMP4) {
             codecs.add(SMS.Codec.HEVC_MAIN);
         }
+        
+        // Set mode
+        this.mode = mode;
     };
     
     @Override
@@ -38,14 +42,14 @@ public class HLSMuxer implements Muxer {
 
     @Override
     public boolean isSupported(Integer[] clientCodecs, int codec) {
-        // Audio
-        if(MediaUtils.getCodecType(codec) == SMS.MediaType.AUDIO) {
+        // Strict Audio
+        if(this.mode == SMS.MuxerMode.VIDEO && MediaUtils.getCodecType(codec) == SMS.MediaType.AUDIO) {
             if(ArrayUtils.contains(clientCodecs, SMS.Codec.EAC3)) {
                 return codec == SMS.Codec.EAC3;
             }
             
             if(ArrayUtils.contains(clientCodecs, SMS.Codec.AC3)) {
-                return codec == SMS.Codec.EAC3;
+                return codec == SMS.Codec.AC3;
             }
             
             if(ArrayUtils.contains(clientCodecs, SMS.Codec.AAC)) {
@@ -55,7 +59,6 @@ public class HLSMuxer implements Muxer {
             return false;
         }
         
-        // Video, Subtitles
         return codecs.contains(codec);
     }
 
@@ -82,17 +85,32 @@ public class HLSMuxer implements Muxer {
 
     @Override
     public int getAudioCodec(Integer[] codecs, int channels, int quality) {
-        // HLS requires the same codec to be used for all streams in a group
-        if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
-            return SMS.Codec.EAC3;
-        }
+        if(mode == SMS.MuxerMode.VIDEO) {
+            if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                return SMS.Codec.EAC3;
+            }
 
-        if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
-            return SMS.Codec.AC3;
-        }
+            if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                return SMS.Codec.AC3;
+            }
 
-        if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
-            return SMS.Codec.AAC;
+            if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                return SMS.Codec.AAC;
+            }
+        } else {
+            if(channels > 2) {
+                if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                    return SMS.Codec.EAC3;
+                }
+
+                if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                    return SMS.Codec.AC3;
+                }
+            }
+
+            if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                return SMS.Codec.AAC;
+            }
         }
         
         return SMS.Codec.UNSUPPORTED;

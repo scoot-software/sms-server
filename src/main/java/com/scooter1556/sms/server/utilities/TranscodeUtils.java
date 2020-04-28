@@ -686,20 +686,33 @@ public class TranscodeUtils {
         return null;
     }
     
-    public static Muxer getTranscodeMuxer(int format) {
+    public static Muxer getTranscodeMuxer(int mode, int format) {
         switch(format) {
             case SMS.Format.HLS_TS:
             case SMS.Format.HLS_FMP4:
-                return new HLSMuxer(format);
+                return new HLSMuxer(mode, format);
                 
             case SMS.Format.MPEG_DASH:
-                return new DashMuxer();
+                return new DashMuxer(mode);
                 
             default:
                 return null;
         }
     }
     
+    public static int getMuxerMode(int type) {
+        switch(type) {
+            case MediaElement.MediaElementType.VIDEO:
+                return SMS.MuxerMode.VIDEO;
+                
+            case MediaElement.MediaElementType.AUDIO:
+                return SMS.MuxerMode.AUDIO;
+                
+            default:
+                return SMS.MuxerMode.UNSUPPORTED;
+        }
+    }
+
     public static StreamProfile getStreamProfile(MediaElement mediaElement, TranscodeProfile transcodeProfile) {
         // Checks
         if(mediaElement == null || transcodeProfile == null) {

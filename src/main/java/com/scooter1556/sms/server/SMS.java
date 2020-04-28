@@ -80,6 +80,12 @@ public class SMS {
         public static final int SUBTITLE = 2;
     }
     
+    public static class MuxerMode {
+        public static final int UNSUPPORTED = -1;
+        public static final int AUDIO = 0;
+        public static final int VIDEO = 1;
+    }
+    
     public static class Client {
         public static final int UNSUPPORTED = -1;
         public static final int NONE = 0;

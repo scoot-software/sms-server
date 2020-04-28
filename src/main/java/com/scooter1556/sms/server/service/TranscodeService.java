@@ -1021,13 +1021,6 @@ public class TranscodeService {
         List<AudioTranscode> transcodes = new ArrayList<>();
 
         for(AudioStream stream : mediaElement.getAudioStreams()) {
-            // Chromecast doesn't support multiple audio streams with different codecs
-            if(clientProfile.getClient() == SMS.Client.CHROMECAST) {
-                if(!stream.getStreamId().equals(transcodeProfile.getAudioStream())) {
-                    continue;
-                }
-            }
-            
             Integer codec;
             int bitrate = -1;
             Integer sampleRate = null;

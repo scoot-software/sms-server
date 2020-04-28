@@ -1,20 +1,24 @@
 package com.scooter1556.sms.server.transcode.muxer;
 
 import com.scooter1556.sms.server.SMS;
-import com.scooter1556.sms.server.domain.AudioTranscode;
+import com.scooter1556.sms.server.utilities.MediaUtils;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 
 public class DashMuxer implements Muxer {
     private int format = SMS.Format.MPEG_DASH;
+    private int mode = SMS.MuxerMode.UNSUPPORTED;
     
     List<Integer> codecs = new ArrayList<>();
     
     // Client ID
     int client = SMS.Client.NONE;
     
-    public DashMuxer(){        
+    // Flags
+    boolean strictMode = false;
+    
+    public DashMuxer(int mode){
         // Populate default codecs
         codecs.add(SMS.Codec.AVC_BASELINE);
         codecs.add(SMS.Codec.AVC_MAIN);
@@ -24,6 +28,9 @@ public class DashMuxer implements Muxer {
         codecs.add(SMS.Codec.AC3);
         codecs.add(SMS.Codec.EAC3);
         codecs.add(SMS.Codec.WEBVTT);
+        
+        // Set mode
+        this.mode = mode;
     };
     
     @Override
@@ -33,6 +40,23 @@ public class DashMuxer implements Muxer {
 
     @Override
     public boolean isSupported(Integer[] clientCodecs, int codec) {
+        // Scrict Mode
+        if(strictMode && mode == SMS.MuxerMode.VIDEO && MediaUtils.getCodecType(codec) == SMS.MediaType.AUDIO) {
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.EAC3)) {
+                return codec == SMS.Codec.EAC3;
+            }
+
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.AC3)) {
+                return codec == SMS.Codec.AC3;
+            }
+
+            if(ArrayUtils.contains(clientCodecs, SMS.Codec.AAC)) {
+                return codec == SMS.Codec.AAC;
+            }
+
+            return false;
+        }
+        
         return codecs.contains(codec);
     }
 
@@ -59,32 +83,45 @@ public class DashMuxer implements Muxer {
 
     @Override
     public int getAudioCodec(Integer[] codecs, int channels, int quality) {
-        
-        switch(client) {
-            default:
-                if(channels > 2) {
-                    if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
-                        return SMS.Codec.EAC3;
-                    }
+        if(strictMode && mode == SMS.MuxerMode.VIDEO) {
+            if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                return SMS.Codec.EAC3;
+            }
 
-                    if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
-                        return SMS.Codec.AC3;
-                    }
+            if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                return SMS.Codec.AC3;
+            }
+
+            if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                return SMS.Codec.AAC;
+            }
+        } else {
+            if(channels > 2) {
+                if(this.codecs.contains(SMS.Codec.EAC3) && ArrayUtils.contains(codecs, SMS.Codec.EAC3)) {
+                    return SMS.Codec.EAC3;
                 }
 
-                if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
-                    return SMS.Codec.AAC;
+                if(this.codecs.contains(SMS.Codec.AC3) && ArrayUtils.contains(codecs, SMS.Codec.AC3)) {
+                    return SMS.Codec.AC3;
                 }
-                
-                break;
+            }
+
+            if(this.codecs.contains(SMS.Codec.AAC) && ArrayUtils.contains(codecs, SMS.Codec.AAC)) {
+                return SMS.Codec.AAC;
+            }
         }
-        
+
         return SMS.Codec.UNSUPPORTED;
     }
     
     @Override
     public void setClient(int client) {
         this.client = client;
+        
+        // Specify strict mode for Chromecast
+        if(client == SMS.Client.CHROMECAST) {
+            this.strictMode = true;
+        }
     }
     
     @Override
