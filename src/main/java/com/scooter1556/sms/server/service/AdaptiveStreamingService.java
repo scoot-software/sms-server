@@ -295,6 +295,13 @@ public class AdaptiveStreamingService {
                     
                     aBaseUrl.appendChild(playlist.createTextNode("audio/" + String.valueOf(a) + "/"));
                     
+                    // Audio Channel Configuration
+                    Element channelConfig = playlist.createElement("AudioChannelConfiguration");
+                    representation.appendChild(channelConfig);
+                    
+                    channelConfig.setAttribute("schemeIdUri", "urn:mpeg:dash:23003:3:audio_channel_configuration:2011");
+                    channelConfig.setAttribute("value", String.valueOf(transcode.getChannelCount()));
+                    
                     Element segmentTemplate = playlist.createElement("SegmentTemplate");
                     representation.appendChild(segmentTemplate);
 
