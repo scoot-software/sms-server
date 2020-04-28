@@ -161,12 +161,6 @@ public class AdaptiveStreamingService {
                 vAdaptationSet.setAttribute("segmentAlignment", "true");
                 vAdaptationSet.setAttribute("mimeType", "video/mp4");
                 
-                Element vRole = playlist.createElement("Role");
-                vAdaptationSet.appendChild(vRole);
-                
-                vRole.setAttribute("schemeIdUrn", "urn:mpeg:DASH:role:2011");
-                vRole.setAttribute("value", "main");
-                
                 for(int v = 0; v < TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size(); v++) {
                     VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(v);
                     VideoStream stream = MediaUtils.getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId());
@@ -271,6 +265,13 @@ public class AdaptiveStreamingService {
                         continue;
                     }
                     
+                    if(mediaElement.getType() == MediaElementType.VIDEO) {
+                        Element aLabel = playlist.createElement("Label");
+                        aAdaptationSet.appendChild(aLabel);
+
+                        aLabel.appendChild(playlist.createTextNode(MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage())));
+                    }
+                    
                     Element aRole = playlist.createElement("Role");
                     aAdaptationSet.appendChild(aRole);
 
@@ -337,6 +338,13 @@ public class AdaptiveStreamingService {
                     sAdaptationSet.setAttribute("contentType", "text");
                     sAdaptationSet.setAttribute("mimeType", MediaUtils.getMimeType(SMS.MediaType.SUBTITLE, format));
                     sAdaptationSet.setAttribute("lang", stream.getLanguage());
+                    
+                    if(mediaElement.getType() == MediaElementType.VIDEO) {
+                        Element sLabel = playlist.createElement("Label");
+                        sAdaptationSet.appendChild(sLabel);
+
+                        sLabel.appendChild(playlist.createTextNode(MediaUtils.getTitleForStream(stream.getTitle(), stream.getLanguage())));
+                    }
                     
                     Element sRole = playlist.createElement("Role");
                     sAdaptationSet.appendChild(sRole);
