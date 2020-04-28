@@ -161,6 +161,12 @@ public class AdaptiveStreamingService {
                 vAdaptationSet.setAttribute("segmentAlignment", "true");
                 vAdaptationSet.setAttribute("mimeType", "video/mp4");
                 
+                Element vRole = playlist.createElement("Role");
+                vAdaptationSet.appendChild(vRole);
+                
+                vRole.setAttribute("schemeIdUrn", "urn:mpeg:DASH:role:2011");
+                vRole.setAttribute("value", "main");
+                
                 for(int v = 0; v < TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).size(); v++) {
                     VideoTranscode transcode = TranscodeUtils.getVideoTranscodesById(profile.getVideoTranscodes(), profile.getVideoStream()).get(v);
                     VideoStream stream = MediaUtils.getVideoStreamById(mediaElement.getVideoStreams(), transcode.getId());
@@ -265,6 +271,17 @@ public class AdaptiveStreamingService {
                         continue;
                     }
                     
+                    Element aRole = playlist.createElement("Role");
+                    aAdaptationSet.appendChild(aRole);
+
+                    aRole.setAttribute("schemeIdUrn", "urn:mpeg:DASH:role:2011");
+                    
+                    if(transcode.getId().equals(profile.getAudioStream())) {
+                        aRole.setAttribute("value", "main");
+                    } else {
+                        aRole.setAttribute("value", "alternate");
+                    }
+                    
                     Element representation = playlist.createElement("Representation");
                     aAdaptationSet.appendChild(representation);
                     
@@ -313,6 +330,17 @@ public class AdaptiveStreamingService {
                     sAdaptationSet.setAttribute("contentType", "text");
                     sAdaptationSet.setAttribute("mimeType", MediaUtils.getMimeType(SMS.MediaType.SUBTITLE, format));
                     sAdaptationSet.setAttribute("lang", stream.getLanguage());
+                    
+                    Element sRole = playlist.createElement("Role");
+                    sAdaptationSet.appendChild(sRole);
+
+                    sRole.setAttribute("schemeIdUrn", "urn:mpeg:DASH:role:2011");
+                    
+                    if(profile.getSubtitleStream() != null && transcode.getId().equals(profile.getSubtitleStream())) {
+                        sRole.setAttribute("value", "main");
+                    } else {
+                        sRole.setAttribute("value", "alternate");
+                    }
                     
                     Element representation = playlist.createElement("Representation");
                     sAdaptationSet.appendChild(representation);
