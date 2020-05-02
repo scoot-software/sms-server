@@ -599,7 +599,7 @@ public class TranscodeService {
 
                     // Tonemap OpenCL
                     filters.add("hwupload");
-                    filters.add("tonemap_opencl=t=bt709:tonemap=hable:format=nv12");
+                    filters.add("tonemap_opencl=t=bt709:tonemap=hable:threshold=0.0:format=nv12");
                     filters.add("hwdownload");
                     filters.add("format=nv12");
 
