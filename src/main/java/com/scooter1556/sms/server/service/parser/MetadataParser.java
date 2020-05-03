@@ -337,6 +337,8 @@ public class MetadataParser {
                     // Title
                     if(tags.asObject().get("title") != null) {
                         mediaElement.setTitle(tags.asObject().getString("title", mediaElement.getTitle()));
+                    } else if(tags.asObject().get("Title") != null) {
+                        mediaElement.setTitle(tags.asObject().getString("Title", mediaElement.getTitle()));
                     } else if(tags.asObject().get("TITLE") != null) {
                         mediaElement.setTitle(tags.asObject().getString("TITLE", mediaElement.getTitle()));
                     }
@@ -344,10 +346,14 @@ public class MetadataParser {
                     // Artist
                     if(tags.asObject().get("artist") != null) {
                         mediaElement.setArtist(tags.asObject().getString("artist", ""));
+                    } else if(tags.asObject().get("Artist") != null) {
+                        mediaElement.setArtist(tags.asObject().getString("Artist", ""));
                     } else if(tags.asObject().get("ARTIST") != null) {
                         mediaElement.setArtist(tags.asObject().getString("ARTIST", ""));
                     } else if(tags.asObject().get("band") != null) {
                         mediaElement.setArtist(tags.asObject().getString("band", ""));
+                    } else if(tags.asObject().get("Band") != null) {
+                        mediaElement.setArtist(tags.asObject().getString("Band", ""));
                     } else if(tags.asObject().get("BAND") != null) {
                         mediaElement.setArtist(tags.asObject().getString("BAND", ""));
                     }
@@ -362,6 +368,8 @@ public class MetadataParser {
                     // Album
                     if(tags.asObject().get("album") != null) {
                         mediaElement.setAlbum(tags.asObject().getString("album", ""));
+                    } else if(tags.asObject().get("Album") != null) {
+                        mediaElement.setAlbum(tags.asObject().getString("Album", ""));
                     } else if(tags.asObject().get("ALBUM") != null) {
                         mediaElement.setAlbum(tags.asObject().getString("ALBUM", ""));
                     }
@@ -369,6 +377,8 @@ public class MetadataParser {
                     // Comment
                     if(tags.asObject().get("comment") != null) {
                         mediaElement.setDescription(tags.asObject().getString("comment", ""));
+                    } else if(tags.asObject().get("Comment") != null) {
+                        mediaElement.setDescription(tags.asObject().getString("Comment", ""));
                     } else if(tags.asObject().get("COMMENT") != null) {
                         mediaElement.setDescription(tags.asObject().getString("COMMENT", ""));
                     }
@@ -376,6 +386,8 @@ public class MetadataParser {
                     // Genre
                     if(tags.asObject().get("genre") != null) {
                         mediaElement.setGenre(tags.asObject().getString("genre", ""));
+                    } else if(tags.asObject().get("Genre") != null) {
+                        mediaElement.setGenre(tags.asObject().getString("Genre", ""));
                     } else if(tags.asObject().get("GENRE") != null) {
                         mediaElement.setGenre(tags.asObject().getString("GENRE", ""));
                     }
@@ -385,14 +397,20 @@ public class MetadataParser {
                     
                     if(tags.asObject().get("date") != null) {
                         date = tags.asObject().getString("date", "0");
+                    } else if(tags.asObject().get("Date") != null) {
+                        date = tags.asObject().getString("Date", "0");
                     } else if(tags.asObject().get("DATE") != null) {
                         date = tags.asObject().getString("DATE", "0");
                     } else if(tags.asObject().get("year") != null) {
                         date = tags.asObject().getString("year", "0");
+                    } else if(tags.asObject().get("Year") != null) {
+                        date = tags.asObject().getString("Year", "0");
                     } else if(tags.asObject().get("YEAR") != null) {
                         date = tags.asObject().getString("YEAR", "0");
                     } else if(tags.asObject().get("tyer") != null) {
                         date = tags.asObject().getString("tyer", "0");
+                    } else if(tags.asObject().get("Tyer") != null) {
+                        date = tags.asObject().getString("Tyer", "0");
                     } else if(tags.asObject().get("TYER") != null) {
                         date = tags.asObject().getString("TYER", "0");
                     } else if(tags.asObject().get("DATE_RECORDED") != null) {
@@ -433,6 +451,8 @@ public class MetadataParser {
                         discNumber = tags.asObject().getString("DISCNUMBER", "0");
                     } else if(tags.asObject().get("disc") != null) {
                         discNumber = tags.asObject().getString("disc", "0");
+                    } else if(tags.asObject().get("Disc") != null) {
+                        discNumber = tags.asObject().getString("Disc", "0");
                     } else if(tags.asObject().get("DISC") != null) {
                         discNumber = tags.asObject().getString("DISC", "0");
                     }
@@ -461,6 +481,8 @@ public class MetadataParser {
                     
                     if(tags.asObject().get("track") != null) {
                         track = tags.asObject().getString("track", "0");
+                    } else if(tags.asObject().get("Track") != null) {
+                        track = tags.asObject().getString("Track", "0");
                     } else if(tags.asObject().get("TRACK") != null) {
                         track = tags.asObject().getString("TRACK", "0");
                     }
