@@ -39,6 +39,8 @@ import com.scooter1556.sms.server.io.AdaptiveStreamingProcess;
 import com.scooter1556.sms.server.utilities.MediaUtils;
 import com.scooter1556.sms.server.utilities.TranscodeUtils;
 import java.awt.Dimension;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigDecimal;
@@ -811,6 +813,41 @@ public class AdaptiveStreamingService {
         if(process != null) {
             process.end();
             removeProcessById(id);
-        }        
+        }
+        
+        // Check if we should clean temporary files
+        if(processes.isEmpty()) {
+            cleanTempFiles();
+        }
+    }
+    
+    public void cleanTempFiles() {
+        // Get temp directory
+        String strTmp = System.getProperty("java.io.tmpdir");
+        File tmpDir = new File(strTmp);
+        
+        if(!tmpDir.isDirectory()) {
+            return;
+        }
+
+        FilenameFilter filter = new FilenameFilter() {
+            @Override
+            public boolean accept(File f, String name) {
+                // Search for MediaDataBox temporary files
+                return name.startsWith("MediaDataBox");
+            }
+        };
+
+        File[] tmpFiles = tmpDir.listFiles(filter);
+        
+        if(tmpFiles.length == 0) {
+            return;
+        }
+        
+        LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Cleaned up " + tmpFiles.length + " temporary files", null);
+
+        for (File tmpFile : tmpFiles) {
+            tmpFile.delete();
+        }
     }
 }
