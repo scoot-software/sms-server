@@ -104,10 +104,10 @@ public class NFOParser {
                 }
             }
 
-            if (document.getElementsByTagName("outline").getLength() > 0) {
-                if (!document.getElementsByTagName("outline").item(0).getTextContent().equals("")) {
-                    data.setDescription(document.getElementsByTagName("outline").item(0).getTextContent());
-                }
+            if (document.getElementsByTagName("outline").getLength() > 0 && !document.getElementsByTagName("outline").item(0).getTextContent().equals("")) {
+                data.setDescription(document.getElementsByTagName("outline").item(0).getTextContent());
+            } else if (document.getElementsByTagName("plot").getLength() > 0 && !document.getElementsByTagName("plot").item(0).getTextContent().equals("")) {
+                data.setDescription(document.getElementsByTagName("plot").item(0).getTextContent());
             }
 
             if (document.getElementsByTagName("tagline").getLength() > 0) {
