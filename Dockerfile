@@ -77,7 +77,7 @@ RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n4.3.1
 
 WORKDIR /FFmpeg
 
-RUN ./configure ${FFMPEG_CONFIG} && make install
+RUN ./configure ${FFMPEG_CONFIG} && make -j$(nproc) install
 
 FROM archlinux
 
