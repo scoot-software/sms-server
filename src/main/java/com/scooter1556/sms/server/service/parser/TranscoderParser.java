@@ -350,7 +350,7 @@ public class TranscoderParser {
                     hwAccelerator.setDecodeCodecs(dCodecs);
                     hwAccelerator.setEncodeCodecs(eCodecs);
                     
-                    // Associate OpenCL device is applicable
+                    // Associate OpenCL device if applicable
                     if(!oclDevices.isEmpty()) {
                         Iterator<OpenCLDevice> oclIterator = oclDevices.iterator();
                         
