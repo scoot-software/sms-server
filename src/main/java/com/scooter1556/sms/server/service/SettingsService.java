@@ -106,8 +106,15 @@ public final class SettingsService {
     * @throws RuntimeException If directory doesn't exist.
     */
     public synchronized File getDataDirectory() {
+        // Test for container mount point
+        File dataDir = new File("/data");
+
+        if(dataDir.exists() && dataDir.isDirectory() && dataDir.canWrite()) {
+            return dataDir;
+        }
+
         AppDirs dirs = AppDirsFactory.getInstance();
-        File dataDir = new File(dirs.getUserDataDir(Project.getArtifactId(), null, Project.getOrganisation()));
+        dataDir = new File(dirs.getUserDataDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create data directory if it doesn't exist.
         if (!dataDir.exists() || !dataDir.isDirectory()) {
@@ -131,8 +138,15 @@ public final class SettingsService {
     * @throws RuntimeException If directory doesn't exist.
     */
     public synchronized File getConfigDirectory() {
+        // Test for container mount point
+        File configDir = new File("/config");
+
+        if(configDir.exists() && configDir.isDirectory() && configDir.canWrite()) {
+            return configDir;
+        }
+
         AppDirs dirs = AppDirsFactory.getInstance();
-        File configDir = new File(dirs.getUserConfigDir(Project.getArtifactId(), null, Project.getOrganisation()));
+        configDir = new File(dirs.getUserConfigDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create config directory if it doesn't exist.
         if (!configDir.exists() || !configDir.isDirectory()) {
@@ -156,8 +170,15 @@ public final class SettingsService {
     * @throws RuntimeException If directory doesn't exist.
     */
     public synchronized File getCacheDirectory() {
+        // Test for container mount point
+        File cacheDir = new File("/cache");
+
+        if(cacheDir.exists() && cacheDir.isDirectory() && cacheDir.canWrite()) {
+            return cacheDir;
+        }
+
         AppDirs dirs = AppDirsFactory.getInstance();
-        File cacheDir = new File(dirs.getUserCacheDir(Project.getArtifactId(), null, Project.getOrganisation()));
+        cacheDir = new File(dirs.getUserCacheDir(Project.getArtifactId(), null, Project.getOrganisation()));
 
         // Attempt to create cache directory if it doesn't exist.
         if (!cacheDir.exists() || !cacheDir.isDirectory()) {
