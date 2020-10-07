@@ -67,9 +67,7 @@ public class TranscodeUtils {
     public static final String ISO_PCM = "1";
     
     public static final Integer DEFAULT_SEGMENT_DURATION = 10;
-        
-    public static final String[] SUPPORTED_HARDWARE_ACCELERATORS = {"vaapi","cuvid"};
-            
+
     public static final String[][] AUDIO_CODEC_FORMAT = {
         {"aac", "adts"},
         {"ac3", "ac3"},
