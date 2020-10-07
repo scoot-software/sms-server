@@ -60,6 +60,7 @@ ARG FFMPEG_CONFIG="\
     --enable-libzimg \
     --disable-zlib \
     --enable-cuda-llvm \
+    --enable-nvenc \
 "             
 
 RUN pacman -Syu ${BUILD_DEPS} --noconfirm               

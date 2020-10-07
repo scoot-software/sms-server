@@ -332,7 +332,7 @@ public class TranscoderParser {
         }
         
         // Determine if we have a supported Nvidia GPU
-        if(Arrays.asList(result).contains("cuvid")) {
+        if(Arrays.asList(result).contains("cuda")) {
             int count = 0;
                     
             for(GraphicsCard graphicsCard : graphicsCards) {
