@@ -84,11 +84,13 @@ FROM archlinux
 
 ARG DEPS="\
     intel-compute-runtime \
+    intel-media-driver \
     jre-openjdk-headless \
     lame \
     libfdk-aac \
     libogg \
     libva \
+    libva-intel-driver \
     libvorbis \
     nvidia-utils \
     ocl-icd \
