@@ -186,7 +186,7 @@ public class AdaptiveStreamingService {
                     }
                     
                     // Resolution
-                    Dimension resolution = transcode.getResolution();
+                    Dimension resolution = transcode.getResolution() == null ? profile.getMaxResolution() : transcode.getResolution();
 
                     if(resolution == null) {
                         resolution = stream.getResolution();
@@ -619,8 +619,8 @@ public class AdaptiveStreamingService {
                     extension = MediaUtils.getExtensionForFormat(SMS.MediaType.VIDEO, SMS.Format.MP4);
                 }
 
-                // Determine resolution
-                Dimension resolution = transcode.getResolution();
+                // Resolution
+                Dimension resolution = transcode.getResolution() == null ? profile.getMaxResolution() : transcode.getResolution();
 
                 if(resolution == null) {
                     resolution = stream.getResolution();
