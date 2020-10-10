@@ -92,9 +92,7 @@ ARG DEPS="\
     libva \
     libva-intel-driver \
     libvorbis \
-    nvidia-utils \
     ocl-icd \
-    opencl-nvidia \
     x264 \
     x265 \
     zimg \
@@ -102,7 +100,11 @@ ARG DEPS="\
 "
 
 RUN pacman -Syu ${DEPS} --noconfirm
-RUN pacman -Scc --noconfirm
+RUN find /var/cache/pacman/ -type f -delete
+
+RUN mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
 
 COPY --from=build /sms-server/target/sms-server*.war /opt/scootmediastreamer/sms-server/sms-server.war
 
