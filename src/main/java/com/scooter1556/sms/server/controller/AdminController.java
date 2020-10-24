@@ -300,7 +300,7 @@ public class AdminController {
         @ApiResponse(code = HttpServletResponse.SC_EXPECTATION_FAILED, message = "Required data is missing or invalid"),
         @ApiResponse(code = HttpServletResponse.SC_BAD_REQUEST, message = "Username provided is invalid"),
         @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Unable to add rules for administrators"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media folder or element doesn't exist"),
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Media doesn't exist"),
         @ApiResponse(code = HttpServletResponse.SC_INTERNAL_SERVER_ERROR, message = "Failed to update user rules")
     })
     @RequestMapping(value="/user/rule", method=RequestMethod.POST, headers = {"Content-type=application/json"})
@@ -316,7 +316,7 @@ public class AdminController {
         // Check user
         User user = userDao.getUserByUsername(userRule.getUsername());
         if(user == null) {
-            return new ResponseEntity<>("Username doesn't exist.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>("User doesn't exist.", HttpStatus.BAD_REQUEST);
         }
         
         // Check user roles
@@ -328,12 +328,16 @@ public class AdminController {
                 return new ResponseEntity<>("Cannot add rules for administrators.", HttpStatus.FORBIDDEN);
             }
         }
-        
-        // Fetch media folder or element
+
+        // Fetch media folder, element or playlist
         String path = null;
-        
+
         if(userRule.getFolder() == null) {
             userRule.setFolder(false);
+        }
+
+        if(userRule.getPlaylist() == null) {
+            userRule.setPlaylist(false);
         }
 
         if(userRule.getFolder()) {
@@ -344,13 +348,25 @@ public class AdminController {
             }
             
             path = folder.getPath();
+        } else if(userRule.getPlaylist()) {
+            Playlist playlist = mediaDao.getPlaylistByID(userRule.getID());
+
+            if(playlist == null) {
+                return new ResponseEntity<>("Playlist not found.", HttpStatus.NOT_FOUND);
+            }
+
+            if(playlist.getPath() == null) {
+                return new ResponseEntity<>("Playlist not supported.", HttpStatus.NOT_FOUND);
+            }
+
+            path = playlist.getPath();
         } else {
             MediaElement mediaElement = mediaDao.getMediaElementByID(userRule.getID());
-            
+
             if(mediaElement == null) {
                 return new ResponseEntity<>("Media element not found.", HttpStatus.NOT_FOUND);
             }
-            
+
             path = mediaElement.getPath();
         }
         
