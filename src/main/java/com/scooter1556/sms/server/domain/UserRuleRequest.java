@@ -44,24 +44,29 @@ public class UserRuleRequest implements Serializable {
     @ApiModelProperty(value = "Whether this request is associated with a media folder", required = false, example = "false")
     private Boolean folder;
 
+    @ApiModelProperty(value = "Whether this request is associated with a playlist", required = false, example = "false")
+    private Boolean playlist;
+
     public UserRuleRequest() {};
     
-    public UserRuleRequest(String username, UUID id, Byte rule, Boolean folder)
+    public UserRuleRequest(String username, UUID id, Byte rule, Boolean folder, Boolean playlist)
     {
         this.username = username;
         this.id = id;
         this.rule = rule;
         this.folder = folder;
+        this.playlist = playlist;
     }
     
     @Override
     public String toString() {
         return String.format(
-                "User[Username=%s, Path=%s, Rule=%s]",
+                "UserRuleRequest[Username=%s, ID=%s, Rule=%s, Folder=%s, Playlist=%s]",
                 username == null ? "N/A" : username,
                 id == null ? "N/A" : id,
                 rule == null ? "N/A" : SMS.Rule.toString(rule),
-                folder == null? "N/A" : folder.toString()
+                folder == null? "N/A" : folder.toString(),
+                playlist == null ? "N/A" : playlist.toString()
         );
     }
 
@@ -95,5 +100,13 @@ public class UserRuleRequest implements Serializable {
     
     public void setFolder(Boolean folder) {
         this.folder = folder;
+    }
+
+    public Boolean getPlaylist() {
+        return playlist;
+    }
+
+    public void setPlaylist(Boolean playlist) {
+        this.playlist = playlist;
     }
 }
