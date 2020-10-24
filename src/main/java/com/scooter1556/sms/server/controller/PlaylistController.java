@@ -37,15 +37,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value="/playlist")
 public class PlaylistController {
-    
+
     @Autowired
     private MediaDao mediaDao;
-    
+
     @Autowired
     private UserService userService;
-    
+
     private static final String CLASS_NAME = "PlaylistController";
-    
+
     @ApiOperation(value = "Create a new playlist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Playlist created successfully"),
@@ -67,20 +67,20 @@ public class PlaylistController {
         if(playlist.getName() == null) {
             return new ResponseEntity<>("Missing required parameter.", HttpStatus.BAD_REQUEST);
         }
-        
+
         // Set playlist user
         playlist.setUsername(request.getUserPrincipal().getName());
-        
+
         // Add playlist to the database.
         if(!mediaDao.createPlaylist(playlist)) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error adding playlist to database.", null);
             return new ResponseEntity<>("Error adding playlist to database.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Playlist '" + playlist.getName() + "' for user '" + playlist.getUsername() + "' created successfully.", null);
         return new ResponseEntity<>("Playlist created successfully.", HttpStatus.CREATED);
     }
-    
+
     @ApiOperation(value = "Update a playlist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_ACCEPTED, message = "Playlist updated successfully"),
@@ -96,35 +96,35 @@ public class PlaylistController {
             HttpServletRequest request)
     {
         Playlist playlist = mediaDao.getPlaylistByID(id);
-        
+
         if(playlist == null) {
             return new ResponseEntity<>("Playlist does not exist.", HttpStatus.BAD_REQUEST);
         }
-        
+
         // Check user owns the playlist
         if(!playlist.getUsername().equals(request.getUserPrincipal().getName())) {
             return new ResponseEntity<>("You are not authorised to update this playlist.", HttpStatus.FORBIDDEN);
         }
-        
+
         // Update playlist details
         if(update.getName() != null) {
             playlist.setName(update.getName());
         }
-        
+
         if(update.getDescription() == null) {
             playlist.setDescription(update.getDescription());
         }
-        
+
         // Update database
         if(!mediaDao.updatePlaylist(playlist)) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error updating playlist with ID: " + playlist.getID(), null);
             return new ResponseEntity<>("Error updating playlist.",HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Playlist '" + playlist.getName() + "' for user '" + playlist.getUsername() + "' updated successfully.", null);
         return new ResponseEntity<>("Playlist updated successfully.", HttpStatus.ACCEPTED);
     }
-    
+
     @ApiOperation(value = "Update playlist contents")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_CREATED, message = "Playlist content updated successfully"),
@@ -142,54 +142,54 @@ public class PlaylistController {
         if(content.getID() == null || content.getMedia() == null) {
             return new ResponseEntity<>("Content is missing required fields.", HttpStatus.BAD_REQUEST);
         }
-        
+
         // Check playlist exists
         Playlist playlist = mediaDao.getPlaylistByID(content.getID());
-        
+
         if(playlist == null) {
             return new ResponseEntity<>("Playlist does not exist.", HttpStatus.NOT_FOUND);
         }
-        
+
         // Check user owns the playlist
         if(!playlist.getUsername().equals(request.getUserPrincipal().getName())) {
             return new ResponseEntity<>("You are not authorised to update this playlist.", HttpStatus.FORBIDDEN);
         }
-        
+
         // Check content
         if(content.getMedia().isEmpty()) {
             return new ResponseEntity<>("Playlist content is empty.", HttpStatus.NO_CONTENT);
         }
-        
+
         // Remove duplicate entries
         Set<UUID> tmp = new LinkedHashSet<>();
-        
+
         content.getMedia().stream().filter((id) -> (!tmp.contains(id))).forEachOrdered((id) -> {
             tmp.add(id);
         });
-        
+
         content.getMedia().clear();
         tmp.forEach((m) -> content.getMedia().add(m));
-        
+
         // Check media elements
         content.getMedia().stream().filter((mediaElement) -> (mediaDao.getMediaElementByID(mediaElement) == null)).forEachOrdered((mediaElement) -> {
             content.getMedia().remove(mediaElement);
         });
-        
+
         // Remove existing content for playlist
         if(!mediaDao.removePlaylistContent(content.getID())) {
             return new ResponseEntity<>("Failed to remove existing content for playlist.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
+
         // Add new content for playlist
         if(!mediaDao.setPlaylistContentFromIds(content.getID(), content.getMedia())) {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Error adding playlist content to database.", null);
             return new ResponseEntity<>("Error adding playlist content to database.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Content updated for playlist with ID: " + playlist.getID(), null);
         return new ResponseEntity<>("Playlist content updated successfully", HttpStatus.CREATED);
     }
-    
+
     @ApiOperation(value = "Delete a playlist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist deleted successfully"),
@@ -201,54 +201,67 @@ public class PlaylistController {
             @ApiParam(value = "ID of the playlist to delete", required = true) @PathVariable("id") UUID id,
             HttpServletRequest request) {
         Playlist playlist = mediaDao.getPlaylistByID(id);
-        
+
         if(playlist == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
         // Check user is allowed to delete the playlist
         if(!playlist.getUsername().equals(request.getUserPrincipal().getName())) {
             return new ResponseEntity<>("You are not authorised to delete this playlist.", HttpStatus.FORBIDDEN);
         }
-        
+
         // Remove playlist from database
         mediaDao.removePlaylist(id);
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Removed playlist '" + playlist.getName() + "' for user '" + playlist.getUsername() + "'.", null);
-        
+
         return new ResponseEntity<>("Playlist deleted.", HttpStatus.OK);
     }
-    
+
     @ApiOperation(value = "Get all playlists")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlists returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No playlists found")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "No playlists found"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "User is not permitted to access content")
     })
     @RequestMapping(method=RequestMethod.GET)
     public ResponseEntity<List<Playlist>> getPlaylists(HttpServletRequest request) {
         List<Playlist> playlists = mediaDao.getPlaylistsByUsername(request.getUserPrincipal().getName());
-        
+
         if (playlists == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
+        playlists = userService.processPlaylistsForUser(request.getUserPrincipal().getName(), playlists);
+
+        if (playlists == null) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
         return new ResponseEntity<>(playlists, HttpStatus.OK);
     }
-    
+
     @ApiOperation(value = "Get playlist")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Playlist returned successfully"),
-        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist does not exist")
+        @ApiResponse(code = HttpServletResponse.SC_NOT_FOUND, message = "Playlist does not exist"),
+        @ApiResponse(code = HttpServletResponse.SC_FORBIDDEN, message = "Not authorised to retrieve playlist")
     })
     @RequestMapping(value="/{id}", method=RequestMethod.GET)
     public ResponseEntity<Playlist> getPlaylist(
-            @ApiParam(value = "ID of the playlist", required = true) @PathVariable("id") UUID id)
+            @ApiParam(value = "ID of the playlist", required = true) @PathVariable("id") UUID id, HttpServletRequest request)
     {
         Playlist playlist = mediaDao.getPlaylistByID(id);
-        
+
         if (playlist == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
+        // Check user has permission to get playlist
+        if(!userService.processPlaylistForUser(request.getUserPrincipal().getName(), playlist)) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+
         return new ResponseEntity<>(playlist, HttpStatus.OK);
     }
 
@@ -265,39 +278,37 @@ public class PlaylistController {
             HttpServletRequest request)
     {
         Playlist playlist = mediaDao.getPlaylistByID(id);
-        
+
         if(playlist == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
         // Check user has permission to get playlist content
-        if(playlist.getUsername() != null) {
-            if(!playlist.getUsername().equals(request.getUserPrincipal().getName())) {
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-            }
+        if(!userService.processPlaylistForUser(request.getUserPrincipal().getName(), playlist)) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
-        
+
         // Retrieve content
         List<MediaElement> mediaElements = mediaDao.getPlaylistContent(id);
-        
+
         if(mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        
+
         // Process conents for user
         mediaElements = userService.processMediaElementsForUser(request.getUserPrincipal().getName(), mediaElements);
-        
+
         if (mediaElements == null) {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
-        
+
         // Check if we need to send a randomised playlist
         if(random != null) {
             if(random) {
                 Collections.shuffle(mediaElements);
             }
         }
-        
+
         return new ResponseEntity<>(mediaElements, HttpStatus.OK);
     }
 }
