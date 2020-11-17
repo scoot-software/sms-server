@@ -37,16 +37,10 @@ public class Application extends SpringBootServletInitializer {
     protected SpringApplicationBuilder configure(SpringApplicationBuilder application) {
         return application.sources(Application.class);
     }
-    
+
     public static void main(String[] args) {
         System.getProperties().put( "server.port", 1556 );
         ApplicationContext ctx = SpringApplication.run(Application.class, args);
-        
-        String[] beanNames = ctx.getBeanDefinitionNames();
-        Arrays.sort(beanNames);
-        for (String beanName : beanNames) {
-            System.out.println(beanName);
-        }
     }
-    
+
 }
