@@ -38,7 +38,10 @@ import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,13 +59,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value="/session")
 public class SessionController {
     private static final String CLASS_NAME = "SessionController";
-    
+
     @Autowired
     private SessionService sessionService;
-    
+
     @Autowired
     private NetworkService networkService;
-    
+
     @ApiOperation(value = "Add a new session")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Session added successfully"),
@@ -84,19 +87,19 @@ public class SessionController {
 
             // Set client status in profile
             profile.setLocal(isLocal(request));
-            profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
+            profile.setUrl(getURL(request));
         }
-        
+
         // Add session
         UUID sid  = sessionService.addSession(id, request.getUserPrincipal().getName(), profile);
-        
+
         if(sid == null) {
             return new ResponseEntity<>("Failed to add session!", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        
+
         return new ResponseEntity<>(sid.toString(), HttpStatus.OK);
     }
-    
+
     @ApiOperation(value = "Add client profile for a given session")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Client profile updated successfully"),
@@ -118,24 +121,24 @@ public class SessionController {
 
         // Retrieve session
         Session session = sessionService.getSessionById(sid);
-        
+
         // Check session is valid
         if (session == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NOT_FOUND);
         }
-        
+
         // Set client status in profile
         profile.setLocal(isLocal(request));
-        profile.setUrl(request.getRequestURL().toString().replaceFirst("/session(.*)", ""));
-        
+        profile.setUrl(getURL(request));
+
         // Update client profile
         session.setClientProfile(profile);
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Session updated: " + session.toString(), null);
         return new ResponseEntity<>("Client profile updated successfully.", HttpStatus.OK);
     }
-    
+
     @ApiOperation(value = "End session")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Session ended successfully"),
@@ -145,20 +148,20 @@ public class SessionController {
     @RequestMapping(value="/end/{sid}", method=RequestMethod.DELETE)
     public ResponseEntity<String> endSession(
             @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid)
-    {        
+    {
         // Check session is valid
         if (!sessionService.isSessionAvailable(sid)) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NO_CONTENT);
         }
-        
+
         // Remove session
         sessionService.removeSessions(sid);
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Ended session with ID: " + sid, null);
         return new ResponseEntity<>("Ended session with ID: " + sid, HttpStatus.OK);
     }
-    
+
     @ApiOperation(value = "End job")
     @ApiResponses(value = {
         @ApiResponse(code = HttpServletResponse.SC_OK, message = "Job(s) ended successfully"),
@@ -169,23 +172,23 @@ public class SessionController {
     public ResponseEntity<String> endJob(
             @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
             @ApiParam(value = "Media element ID (or 'all' to end all jobs for session)", required = true) @PathVariable("meid") String meid)
-    {        
+    {
         Session session = sessionService.getSessionById(sid);
-        
+
         // Check session is valid
         if (session == null) {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
             return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NO_CONTENT);
         }
-        
+
         // Check for special case where all jobs for a given session should be ended
         if(meid.equalsIgnoreCase("all")) {
             sessionService.endJobs(session, null);
-            
+
             LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended all jobs for session with ID: " + sid, null);
             return new ResponseEntity<>("Ended all jobs for session with ID: " + sid, HttpStatus.OK);
         }
-        
+
         Job job = session.getJobByMediaElementId(UUID.fromString(meid));
 
         // Check job exists
@@ -202,7 +205,7 @@ public class SessionController {
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Ended job with ID: " + job.getId(), null);
         return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);
     }
-    
+
     //
     // Helper Functions
     //
@@ -213,6 +216,22 @@ public class SessionController {
         try {
             InetAddress local = InetAddress.getByName(request.getLocalAddr());
             InetAddress remote = InetAddress.getByName(request.getRemoteAddr());
+
+            // Handle reverse-proxy
+            if(request.getHeaderNames() != null) {
+                for (Enumeration<String> headers = request.getHeaderNames(); headers.hasMoreElements();) {
+                    String name = headers.nextElement();
+                    if(name.equalsIgnoreCase("X-Forwarded-For")) {
+                        String addresses = request.getHeader(name);
+
+                        if(addresses != null) {
+                            String ip = addresses.split(",")[0];
+                            remote = InetAddress.getByName(ip);
+                        }
+                    }
+                }
+            }
+
             NetworkInterface networkInterface = NetworkInterface.getByInetAddress(local);
 
             LogService.getInstance().addLogEntry(LogService.Level.INFO, CLASS_NAME, "Client connected with IP " + remote.toString(), null);
@@ -237,7 +256,41 @@ public class SessionController {
             LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Failed to check IP adress of client.", ex);
             return false;
         }
-        
+
         return isLocal;
+    }
+
+    public static String getURL(HttpServletRequest request) {
+        if(request == null) {
+            return null;
+        }
+
+        // Handle reverse-proxy
+        if(request.getHeaderNames() != null) {
+            String protocol = null;
+            String host = null;
+
+            for (Enumeration<String> headers = request.getHeaderNames(); headers.hasMoreElements();) {
+                String name = headers.nextElement();
+
+                // Check for host
+                if(name.equalsIgnoreCase("X-Forwarded-Host")) {
+                    host = request.getHeader(name);
+                }
+
+                // Check for protocol
+                if(name.equalsIgnoreCase("X-Forwarded-Proto")) {
+                    protocol = request.getHeader(name);
+                }
+            }
+
+            if(protocol != null && host != null) {
+                // Build URL
+                String url = protocol + "://" + host;
+                return url;
+            }
+        }
+
+        return request.getRequestURL().toString().replaceFirst("/session(.*)", "");
     }
 }
