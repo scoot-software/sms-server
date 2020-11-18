@@ -1,16 +1,7 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.scooter1556.sms.server.utilities;
 
 import java.util.Arrays;
 
-/**
- *
- * @author scott2ware
- */
 public class HttpUtils {
     /**
          * Returns true if the given accept header accepts the given value.
