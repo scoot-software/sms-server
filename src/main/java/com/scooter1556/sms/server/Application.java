@@ -26,6 +26,7 @@ package com.scooter1556.sms.server;
 import java.util.Arrays;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import static org.springframework.boot.autoconfigure.web.ServerProperties.ForwardHeadersStrategy.NATIVE;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.ApplicationContext;
@@ -40,6 +41,7 @@ public class Application extends SpringBootServletInitializer {
 
     public static void main(String[] args) {
         System.getProperties().put( "server.port", 1556 );
+        //System.getProperties().put( "server.forward-headers-strategy", NATIVE );
         ApplicationContext ctx = SpringApplication.run(Application.class, args);
     }
 
