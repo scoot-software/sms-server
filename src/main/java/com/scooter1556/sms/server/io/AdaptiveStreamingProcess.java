@@ -52,52 +52,54 @@ import org.apache.commons.io.input.TailerListenerAdapter;
 import org.mp4parser.Container;
 
 public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
-    
+
     private static final String CLASS_NAME = "AdaptiveStreamingProcess";
-    
+
     File streamDirectory = null;
     int segmentNum = 0;
     TranscodeProfile profile = null;
     MediaElement mediaElement = null;
     Transcoder transcoder = null;
-    
+
     Tailer tailer = null;
     ExecutorService postProcessExecutor = null;
-    
+
     int count = 0;
 
+    private boolean suspended = false;
+
     public AdaptiveStreamingProcess() {};
-    
+
     public AdaptiveStreamingProcess(UUID id) {
         this.id = id;
     }
-    
+
     public void initialise() {
         // Stop transcode process if one is already running
         if(process != null) {
             process.destroy();
         }
-        
+
         // Stop segment tracking if re-initialising
         if(tailer != null) {
             tailer.stop();
         }
-        
+
         // Stop post-processing execution if already running
         if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
             postProcessExecutor.shutdownNow();
         }
-        
+
         // Determine stream directory
         streamDirectory = new File(SettingsService.getInstance().getCacheDirectory().getPath() + "/streams/" + id);
-        
+
         try {
-            if(streamDirectory.exists()) {                
+            if(streamDirectory.exists()) {
                 // Wait for process to finish
                 if(process != null) {
                     process.waitFor();
                 }
-                                
+
                 FileUtils.cleanDirectory(streamDirectory);
             } else {
                 boolean success = streamDirectory.mkdirs();
@@ -110,57 +112,58 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
             // Reset flags
             ended = false;
+            suspended = false;
             count = 0;
-            
+
             // Setup thread pool for post-processing segments
             postProcessExecutor = Executors.newCachedThreadPool();
-            
+
             // Setup tailer for segment list
             TailerListener listener = new SegmentListener();
             tailer = new Tailer(new File(streamDirectory + "/segments.txt"), listener);
             Thread thread = new Thread(tailer);
             thread.setDaemon(true);
             thread.start();
-        
+
             // Start transcoding
             start();
         } catch(Exception ex) {
             if(process != null) {
                 process.destroy();
             }
-            
+
             ended = true;
-            
+
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Error starting adaptive streaming process.", ex);
         }
     }
-    
+
     @Override
     public void start() {
         new Thread(this).start();
     }
-    
+
     @Override
     public void end() {
         // Stop transcode process
         if(process != null) {
             process.destroy();
         }
-        
+
         //  Stop segment tracking
         tailer.stop();
-        
+
         // Stop post-processing execution
         if(postProcessExecutor != null && !postProcessExecutor.isTerminated()) {
             postProcessExecutor.shutdownNow();
         }
-               
+
         try {
             // Wait for process to finish
             if(process != null) {
                 process.waitFor();
             }
-            
+
             // Cleanup working directory
             if(streamDirectory != null && streamDirectory.exists() && streamDirectory.isDirectory()) {
                 FileUtils.deleteDirectory(streamDirectory);
@@ -170,42 +173,42 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         } catch(IOException ex) {
             LogService.getInstance().addLogEntry(Level.ERROR, CLASS_NAME, "Failed to remove working directory for Adaptive Streaming job " + id, ex);
         }
-        
+
         ended = true;
     }
-    
+
     public class SegmentListener extends TailerListenerAdapter {
         @Override
         public void handle(String line) {
             // Check segment exists
             String segmentPath = streamDirectory + "/" + line;
             File segment = new File(segmentPath);
-            
+
             if(!segment.exists()) {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Segment does not exist: " + segmentPath, null);
                 return;
             }
-            
+
             // Start post-processing job
             boolean initialised = count > 0;
-            
+
             postProcessExecutor.submit(() -> {
                 postProcess(segment, initialised);
             });
-            
+
             count++;
       }
   }
-    
+
     private void postProcess(File segment, boolean initialised) {
         // Path to extracted stream segments
         List<String> segmentPaths = new ArrayList<>();
-        
+
         // Process for transcoding
         Process postProcess = null;
-        
+
         LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Post-processing segment: " + segment.getAbsolutePath(), null);
-        
+
         try {
             // Determine format to use
             int vFormat = SMS.Format.UNSUPPORTED;
@@ -221,33 +224,33 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
             // Generate post-process command
             List<String> command = new  ArrayList<>();
-            
+
             if(profile.getVideoTranscodes() != null) {
                 for(int i = 0; i < profile.getVideoTranscodes().length; i++) {
                     if(vFormat == SMS.Format.MPEGTS) {
                         if(command.isEmpty()) {
                             initialiseTranscode(command, segment.getAbsolutePath());
                         }
-                        
+
                         command.add("-map");
                         command.add("0:v:" + i);
 
                         command.add("-c:v");
                         command.add("copy");
-                    
+
                         command.add("-f");
                         command.add("mpegts");
-                    
+
                         String path = segment.getParent() + "/" + i + "-video-" + segment.getName() + ".ts" + ".tmp";
                         command.add(path);
-                        
+
                         // Add to segment list
                         segmentPaths.add(path);
                     } else if(vFormat == SMS.Format.MP4) {
                         File init = new File(segment.getParent() + "/" + i + "-video-init.mp4");
                         File tmpInit = new File(init.getPath() + ".tmp");
                         File newSegment = new File(segment.getParent() + "/" + i + "-video-" + segment.getName() + ".m4s.tmp");
-                        
+
                         if(!initialised) {
                             // Generate initialisation segment
                             FragmentedMp4Builder initBuilder = new FragmentedMp4Builder();
@@ -267,67 +270,67 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
                     }
                 }
             }
-            
+
             if(profile.getSubtitleTranscodes() != null) {
                 for(int i = 0; i < profile.getSubtitleTranscodes().length; i++) {
                     SubtitleTranscode transcode = profile.getSubtitleTranscodes()[i];
-                    
+
                     // Determine format to use
                     int codec = transcode.getCodec();
-                    
+
                     if(codec == SMS.Codec.COPY) {
                         codec = transcode.getOriginalCodec();
                     }
-                    
+
                     int sFormat = MediaUtils.getFormatForCodec(codec);
-                    
+
                     if(command.isEmpty()) {
                         initialiseTranscode(command, segment.getAbsolutePath());
                     }
-                    
+
                     command.add("-map");
                     command.add("0:s:" + i);
-                    
+
                     command.add("-c:s");
                     command.add(TranscodeUtils.getEncoderForCodec(codec));
-                    
+
                     command.add("-f");
                     command.add(MediaUtils.getFormat(sFormat));
-                    
+
                     String path = segment.getParent() + "/" + i + "-subtitle-" + segment.getName() + "." + MediaUtils.getExtensionForFormat(SMS.MediaType.SUBTITLE, sFormat) + ".tmp";
-                    
+
                     command.add(path);
-                    
+
                     // Add to segment list
                     segmentPaths.add(path);
                 }
             }
-            
+
             if(profile.getAudioTranscodes() != null) {
                 for(int i = 0; i < profile.getAudioTranscodes().length; i++) {
                     AudioTranscode transcode = profile.getAudioTranscodes()[i];
-                    
+
                     int codec = transcode.getCodec();
-                    
+
                     if(codec == SMS.Codec.COPY) {
                         codec = transcode.getOriginalCodec();
                     }
-                    
+
                     if(!MediaUtils.isCodecSupportedByFormat(aFormat, codec) || profile.getPackedAudio()) {
                         aFormat = MediaUtils.getFormatForCodec(codec);
                     }
-                    
+
                     if(aFormat == SMS.Format.MP4) {
                         // Get track ID
-                        int trackId = 
-                                i 
+                        int trackId =
+                                i
                                 + (profile.getVideoTranscodes() == null ? 0 : profile.getVideoTranscodes().length)
                                 + (profile.getSubtitleTranscodes() == null ? 0 : profile.getSubtitleTranscodes().length);
-                        
+
                         File init = new File(segment.getParent() + "/" + i + "-audio-init.mp4");
                         File tmpInit = new File(init.getPath() + ".tmp");
                         File newSegment = new File(segment.getParent() + "/" + i + "-audio-" + segment.getName() + ".m4s.tmp");
-                        
+
                         if(!initialised) {
                             // Generate initialisation segment
                             FragmentedMp4Builder initBuilder = new FragmentedMp4Builder();
@@ -357,33 +360,33 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
                         command.add("-f");
                         command.add(MediaUtils.getFormat(aFormat));
-                    
+
                         String path = segment.getParent() + "/" + i + "-audio-" + segment.getName() + "." + MediaUtils.getExtensionForFormat(SMS.MediaType.AUDIO, aFormat) + ".tmp";
                         command.add(path);
-                        
+
                         // Add to segment list
                         segmentPaths.add(path);
                     }
                 }
             }
-            
+
             // Check if we need to start a transcode process
             if(!command.isEmpty()) {
                 LogService.getInstance().addLogEntry(LogService.Level.INSANE, CLASS_NAME, StringUtils.join(command, " "), null);
-                
+
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 postProcess = processBuilder.redirectErrorStream(true).start();
                 new NullStream(postProcess.getInputStream()).start();
-            
+
                 // Wait for process to finish
                 postProcess.waitFor();
             }
-            
+
             // Rename temporary files once complete
             segmentPaths.stream().map((path) -> new File(path)).forEachOrdered((tmpSegment) -> {
                 finaliseTmpFile(tmpSegment);
             });
-            
+
             // Remove original segment
             if(segment.exists()) {
                 segment.delete();
@@ -398,7 +401,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             }
         }
     }
-    
+
     private void initialiseTranscode(List<String> command, String path) {
         command.add(transcoder.getPath().toString());
         command.add("-y");
@@ -408,7 +411,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
         command.add("-copyts");
     }
-    
+
     private void finaliseTmpFile(File tmp) {
         File finalised = new File(FilenameUtils.getFullPath(tmp.getPath()) + FilenameUtils.getBaseName(tmp.getPath()));
 
@@ -418,25 +421,35 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             LogService.getInstance().addLogEntry(LogService.Level.ERROR, CLASS_NAME, "Failed to rename file: " + tmp.toString(), null);
         }
     }
-    
+
     public void setSegmentNum(int num) {
         this.segmentNum = num;
     }
-    
+
     public int getSegmentNum() {
         return this.segmentNum;
     }
-    
+
     public void setTranscodeProfile(TranscodeProfile profile) {
         this.profile = profile;
     }
-    
+
     public void setMediaElement(MediaElement element) {
         this.mediaElement = element;
     }
-    
+
     public void setTranscoder(Transcoder transcoder) {
         this.transcoder = transcoder;
+    }
+
+    public void suspend() {
+        // Stop the current process
+        end();
+        suspended = true;
+    }
+
+    public boolean isSuspended() {
+        return this.suspended;
     }
 
     @Override
@@ -444,10 +457,10 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
         try {
             for(String[] command : commands) {
                 LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, StringUtils.join(command, " "), null);
-                
+
                 // Clean stream directory
                 FileUtils.cleanDirectory(streamDirectory);
-                
+
                 ProcessBuilder processBuilder = new ProcessBuilder(command);
                 process = processBuilder.start();
                 new NullStream(process.getInputStream()).start();
@@ -456,7 +469,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
 
                 // Wait for process to finish
                 int code = process.waitFor();
-                
+
                 LogService.getInstance().addLogEntry(Level.DEBUG, CLASS_NAME, "Transcode process exited with code " + code, null);
 
                 // Check for error
@@ -475,7 +488,7 @@ public class AdaptiveStreamingProcess extends SMSProcess implements Runnable {
             if(process != null) {
                 process.destroy();
             }
-                        
+
             ended = true;
         }
     }

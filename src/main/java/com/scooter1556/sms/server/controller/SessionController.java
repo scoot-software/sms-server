@@ -206,6 +206,42 @@ public class SessionController {
         return new ResponseEntity<>("Ended job with ID: " + job.getId(), HttpStatus.OK);
     }
 
+    @ApiOperation(value = "Suspend job")
+    @ApiResponses(value = {
+        @ApiResponse(code = HttpServletResponse.SC_OK, message = "Job suspended successfully"),
+        @ApiResponse(code = HttpServletResponse.SC_NO_CONTENT, message = "Session or job does not exist")
+    })
+    @CrossOrigin
+    @RequestMapping(value="/suspend/{sid}/{meid}", method=RequestMethod.PUT)
+    public ResponseEntity<String> suspendJob(
+            @ApiParam(value = "Session ID", required = true) @PathVariable("sid") UUID sid,
+            @ApiParam(value = "Media element ID", required = true) @PathVariable("meid") String meid)
+    {
+        Session session = sessionService.getSessionById(sid);
+
+        // Check session is valid
+        if (session == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Session does not exist with ID: " + sid, null);
+            return new ResponseEntity<>("Session does not exist with ID: " + sid, HttpStatus.NO_CONTENT);
+        }
+
+        // Check job exists
+        Job job = session.getJobByMediaElementId(UUID.fromString(meid));
+
+        if (job == null) {
+            LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, "Job does not exist for media element with ID: " + meid, null);
+            return new ResponseEntity<>("Job does not exist for media element with ID: " + meid, HttpStatus.NO_CONTENT);
+        }
+
+        LogService.getInstance().addLogEntry(LogService.Level.WARN, CLASS_NAME, session.getUsername() + " finished streaming '" + job.getMediaElement().getTitle() + "'.", null);
+
+        // Suspend job
+        sessionService.suspendJobs(session, UUID.fromString(meid));
+
+        LogService.getInstance().addLogEntry(LogService.Level.DEBUG, CLASS_NAME, "Suspended job with ID: " + job.getId(), null);
+        return new ResponseEntity<>("Suspended job with ID: " + job.getId(), HttpStatus.OK);
+    }
+
     //
     // Helper Functions
     //
