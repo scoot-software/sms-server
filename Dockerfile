@@ -63,7 +63,11 @@ ARG FFMPEG_CONFIG="\
     --enable-nvenc \
 "             
 
-RUN pacman -Syu ${BUILD_DEPS} --noconfirm               
+RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
+curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
+bsdtar -C / -xvf "$patched_glibc"
+
+RUN pacman -Syu ${BUILD_DEPS} --noconfirm
 
 ADD ./pom.xml /sms-server/pom.xml
 ADD . /sms-server
@@ -74,7 +78,7 @@ RUN JAVA_HOME=/usr/lib64/jvm/default mvn install
 
 WORKDIR /
 
-RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n4.3.1
+RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n4.3.2
 
 WORKDIR /FFmpeg
 
@@ -99,6 +103,10 @@ ARG DEPS="\
     zlib \
 "
 
+RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
+curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
+bsdtar -C / -xvf "$patched_glibc"
+
 RUN pacman -Syu ${DEPS} --noconfirm
 RUN find /var/cache/pacman/ -type f -delete
 
@@ -106,7 +114,7 @@ RUN mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/v
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility,video
 
-COPY --from=build /sms-server/target/sms-server*.war /opt/scootmediastreamer/sms-server/sms-server.war
+COPY --from=build /sms-server/target/sms-server*.war /opt/scootmediastreamer/sms-server/
 
 COPY --from=build /usr/local/bin/* /usr/local/bin/
 COPY --from=build /usr/local/lib/*.a /usr/local/lib/
