@@ -1,29 +1,24 @@
-FROM archlinux as build
+FROM ubuntu:rolling as build
                 
 ARG BUILD_DEPS="\
+    ca-certificates \
     clang \
-    diffutils \
-    ffnvcodec-headers \
     gcc \
     git \
-    jdk-openjdk \
-    lame \
-    libfdk-aac \
-    libogg \
+    libmp3lame-dev \
+    libfdk-aac-dev \
+    libogg-dev \
     libtool \
-    libva \
-    libvorbis \
+    libva-dev \
+    libvorbis-dev \
+    libzimg-dev \
     make \
-    maven \
     nasm \
-    ocl-icd \
-    opencl-headers \
-    pkgconf \
-    x264 \
-    x265 \
+    ocl-icd-opencl-dev \
+    libx264-dev \
+    libx265-dev \
     yasm \
-    zimg \
-    zlib \
+    zlib1g-dev \
 "
                 
 ARG FFMPEG_CONFIG="\
@@ -61,38 +56,49 @@ ARG FFMPEG_CONFIG="\
     --disable-zlib \
     --enable-cuda-llvm \
     --enable-nvenc \
-"             
-
-RUN pacman -Syu ${BUILD_DEPS} --noconfirm
-
-RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n4.3.2
-
-WORKDIR /FFmpeg
-
-RUN ./configure ${FFMPEG_CONFIG} && make -j$(nproc) install
-
-FROM archlinux
-
-ARG DEPS="\
-    git \
-    intel-compute-runtime \
-    intel-media-driver \
-    jdk-openjdk \
-    lame \
-    libfdk-aac \
-    libogg \
-    libva \
-    libva-intel-driver \
-    libvorbis \
-    maven \
-    ocl-icd \
-    x264 \
-    x265 \
-    zimg \
-    zlib \
 "
 
-RUN pacman -Syu ${DEPS} --noconfirm
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y --no-install-recommends ${BUILD_DEPS}
+RUN rm -rf /var/lib/apt/lists/*
+
+WORKDIR /
+
+# Clone source code
+RUN git clone https://github.com/FFmpeg/nv-codec-headers.git -b n12.0.16.0
+RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n6.0
+
+# Build nv-codec-headers
+WORKDIR /nv-codec-headers
+RUN make -j$(nproc) install
+
+# Build FFmpeg
+WORKDIR /FFmpeg
+RUN ./configure ${FFMPEG_CONFIG} && make -j$(nproc) install
+
+FROM ubuntu:rolling
+
+ARG DEPS="\
+    default-jdk \
+    intel-opencl-icd \
+    libmp3lame0 \
+    libfdk-aac2 \
+    libogg0 \
+    libva2 \
+    libvorbis0a \
+    libzimg2 \
+    maven \
+    ocl-icd-libopencl1 \
+    x264 \
+    x265 \
+    zlib1g \
+"
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y --no-install-recommends ${DEPS}
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
 ENV NVIDIA_VISIBLE_DEVICES all
@@ -102,5 +108,3 @@ COPY --from=build /usr/local/bin/* /usr/local/bin/
 COPY --from=build /usr/local/lib/*.a /usr/local/lib/
 
 EXPOSE 1556
-
-ENV JAVA_HOME=/usr/lib64/jvm/default

@@ -1,29 +1,25 @@
-FROM archlinux as build
+FROM ubuntu:rolling as build
                 
 ARG BUILD_DEPS="\
     clang \
-    diffutils \
-    ffnvcodec-headers \
     gcc \
     git \
-    jdk-openjdk \
-    lame \
-    libfdk-aac \
-    libogg \
+    default-jdk \
+    libmp3lame-dev \
+    libfdk-aac-dev \
+    libogg-dev \
     libtool \
-    libva \
-    libvorbis \
+    libva-dev \
+    libvorbis-dev \
+    libzimg-dev \
     make \
     maven \
     nasm \
-    ocl-icd \
-    opencl-headers \
-    pkgconf \
-    x264 \
-    x265 \
+    ocl-icd-opencl-dev \
+    libx264-dev \
+    libx265-dev \
     yasm \
-    zimg \
-    zlib \
+    zlib1g-dev \
 "
                 
 ARG FFMPEG_CONFIG="\
@@ -61,54 +57,55 @@ ARG FFMPEG_CONFIG="\
     --disable-zlib \
     --enable-cuda-llvm \
     --enable-nvenc \
-"             
+"
 
-RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
-curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
-bsdtar -C / -xvf "$patched_glibc"
-
-RUN pacman -Syu ${BUILD_DEPS} --noconfirm
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y --no-install-recommends ${BUILD_DEPS}
+RUN rm -rf /var/lib/apt/lists/*
 
 ADD ./pom.xml /sms-server/pom.xml
 ADD . /sms-server
 
 WORKDIR /sms-server
 
-RUN JAVA_HOME=/usr/lib64/jvm/default mvn install
+RUN mvn install
 
 WORKDIR /
 
-RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n4.3.2
+# Clone source code
+RUN git clone https://github.com/FFmpeg/nv-codec-headers.git -b n12.0.16.0
+RUN git clone https://github.com/FFmpeg/FFmpeg.git -b n6.0
 
+# Build nv-codec-headers
+WORKDIR /nv-codec-headers
+RUN make -j$(nproc) install
+
+# Build FFmpeg
 WORKDIR /FFmpeg
-
 RUN ./configure ${FFMPEG_CONFIG} && make -j$(nproc) install
 
-FROM archlinux
+FROM ubuntu:rolling
 
 ARG DEPS="\
-    intel-compute-runtime \
-    intel-media-driver \
-    jre-openjdk-headless \
-    lame \
-    libfdk-aac \
-    libogg \
-    libva \
-    libva-intel-driver \
-    libvorbis \
-    ocl-icd \
+    default-jre-headless \
+    intel-opencl-icd \
+    libmp3lame0 \
+    libfdk-aac2 \
+    libogg0 \
+    libva2 \
+    libvorbis0a \
+    libzimg2 \
+    ocl-icd-libopencl1 \
     x264 \
     x265 \
-    zimg \
-    zlib \
+    zlib1g \
 "
 
-RUN patched_glibc=glibc-linux4-2.33-4-x86_64.pkg.tar.zst && \
-curl -LO "https://repo.archlinuxcn.org/x86_64/$patched_glibc" && \
-bsdtar -C / -xvf "$patched_glibc"
-
-RUN pacman -Syu ${DEPS} --noconfirm
-RUN find /var/cache/pacman/ -type f -delete
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y --no-install-recommends ${DEPS}
+RUN rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /etc/OpenCL/vendors && echo "libnvidia-opencl.so.1" > /etc/OpenCL/vendors/nvidia.icd
 ENV NVIDIA_VISIBLE_DEVICES all
